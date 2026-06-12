@@ -6,7 +6,31 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/orange/hivemind/internal/domain/deployment"
+	"github.com/orange/hivemind/internal/domain/user"
 )
+
+// TokenService issues and validates authentication tokens (JWT in the
+// reference implementation). Kept behind a port so the auth use case stays
+// independent of the signing technology.
+type TokenService interface {
+	GenerateAccessToken(u *user.User) (token string, expiresAt time.Time, err error)
+	GenerateRefreshToken(u *user.User) (token string, expiresAt time.Time, err error)
+	Parse(tokenString string) (*TokenClaims, error)
+}
+
+type TokenType string
+
+const (
+	TokenTypeAccess  TokenType = "access"
+	TokenTypeRefresh TokenType = "refresh"
+)
+
+type TokenClaims struct {
+	UserID    uuid.UUID
+	Email     string
+	Role      string
+	TokenType TokenType
+}
 
 // Orchestrator abstracts Docker Swarm (and future Kubernetes).
 type Orchestrator interface {

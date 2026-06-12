@@ -1,0 +1,169 @@
+basePath: /api/v1
+definitions:
+  github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse:
+    properties:
+      code:
+        type: string
+      details: {}
+      message:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.MeResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      role:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse:
+    properties:
+      access_expires_at:
+        type: string
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: issadicko78@gmail.com
+    name: Équipe technique Hivemind
+  description: Plateforme de déploiement autonome pour Docker Swarm.
+  license:
+    name: Proprietary
+  title: Hivemind API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Returns an access token (15 min) and a refresh token (7 days).
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: invalid email or password
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: account inactive
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "429":
+          description: account temporarily locked
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      summary: Authenticate by email/password
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: 'Stateless JWT: the client discards both tokens. A server-side
+        blocklist will be added post-MVP.'
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Log out
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Returns id, email and role of the user owning the access token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Return the authenticated user
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: The old refresh token is implicitly invalidated on the client side
+        (stateless MVP).
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: invalid or expired token
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      summary: Exchange a refresh token for a new token pair
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    description: 'Format: "Bearer <token>"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

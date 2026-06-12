@@ -1,0 +1,19 @@
+# Secrets & local config
+.env
+certs/
+*.pem
+
+# Build artifacts
+/bin/
+/tmp/
+hivemind-server
+
+# Go
+*.test
+*.out
+coverage.*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

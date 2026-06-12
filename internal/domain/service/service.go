@@ -62,19 +62,20 @@ func DefaultUpdateConfig() UpdateConfig {
 }
 
 type Service struct {
-	ID           uuid.UUID
-	Name         string
-	Description  string
-	Image        string
-	Tag          string
-	Replicas     uint64
-	Command      []string
-	Entrypoint   []string
-	Resources    Resources
-	UpdateConfig UpdateConfig
-	Status       Status
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID             uuid.UUID
+	Name           string
+	Description    string
+	Image          string
+	Tag            string
+	Replicas       uint64
+	Command        []string
+	Entrypoint     []string
+	Resources      Resources
+	UpdateConfig   UpdateConfig
+	Status         Status
+	SwarmServiceID string // set after first deploy
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 func New(name, image, tag string, replicas uint64) (*Service, error) {
