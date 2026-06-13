@@ -367,6 +367,7 @@ func toServiceTasksResponse(s *ports.ServiceState) dto.ServiceTasksResponse {
 	for i, t := range s.Tasks {
 		resp.Tasks[i] = dto.TaskStateResponse{
 			ID:           t.ID,
+			ContainerID:  t.ContainerID,
 			Node:         t.Node,
 			CurrentState: t.CurrentState,
 			DesiredState: t.DesiredState,

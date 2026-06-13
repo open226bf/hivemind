@@ -21,6 +21,7 @@ import (
 var (
 	ErrOrchestratorUnavailable = errors.New("deployment engine is not configured")
 	ErrServiceNotDeployed      = errors.New("service is not deployed")
+	ErrContainerNotInService   = errors.New("container does not belong to this service")
 )
 
 const defaultConvergenceTimeout = 2 * time.Minute
@@ -213,6 +214,39 @@ func (s *DeploymentService) ServiceLogs(ctx context.Context, serviceID uuid.UUID
 		return nil, ErrServiceNotDeployed
 	}
 	return s.orchestrator.ServiceLogs(ctx, svc.SwarmServiceID, opts)
+}
+
+// ExecContainer opens an interactive exec session in one of the service's
+// containers (web terminal). The containerID is validated against the service's
+// live tasks so a caller cannot exec into an unrelated container.
+func (s *DeploymentService) ExecContainer(ctx context.Context, serviceID uuid.UUID, containerID string, opts ports.ExecOptions) (ports.ExecStream, error) {
+	if s.orchestrator == nil {
+		return nil, ErrOrchestratorUnavailable
+	}
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	if svc.SwarmServiceID == "" {
+		return nil, ErrServiceNotDeployed
+	}
+
+	state, err := s.orchestrator.GetServiceState(ctx, svc.SwarmServiceID)
+	if err != nil {
+		return nil, err
+	}
+	found := false
+	for _, t := range state.Tasks {
+		if t.ContainerID != "" && t.ContainerID == containerID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, ErrContainerNotInService
+	}
+
+	return s.orchestrator.ExecContainer(ctx, containerID, opts)
 }
 
 // ─── Engine internals ─────────────────────────────────────────────────────────

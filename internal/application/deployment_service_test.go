@@ -133,6 +133,9 @@ func (o *fakeOrchestrator) WaitConvergence(context.Context, string, time.Duratio
 func (o *fakeOrchestrator) ServiceLogs(context.Context, string, ports.LogOptions) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader("line one\nline two\n")), nil
 }
+func (o *fakeOrchestrator) ExecContainer(context.Context, string, ports.ExecOptions) (ports.ExecStream, error) {
+	return nil, nil
+}
 func (o *fakeOrchestrator) CreateSecret(_ context.Context, name string, _ []byte) (string, error) {
 	o.createdSecrets = append(o.createdSecrets, name)
 	return "swarm-secret-" + name, nil
