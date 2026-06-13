@@ -3,16 +3,19 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"io"
 	"path"
 	"sort"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
+	"github.com/docker/docker/pkg/stdcopy"
 
 	"github.com/orange/hivemind/internal/ports"
 )
@@ -109,6 +112,35 @@ func (o *SwarmOrchestrator) GetServiceState(ctx context.Context, swarmServiceID 
 	}
 	state.Updating = svc.UpdateStatus != nil && svc.UpdateStatus.State == swarm.UpdateStateUpdating
 	return state, nil
+}
+
+func (o *SwarmOrchestrator) ServiceLogs(ctx context.Context, swarmServiceID string, opts ports.LogOptions) (io.ReadCloser, error) {
+	tail := opts.Tail
+	if tail == "" {
+		tail = "200"
+	}
+	stream, err := o.cli.ServiceLogs(ctx, swarmServiceID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     opts.Follow,
+		Tail:       tail,
+		Timestamps: opts.Timestamps,
+		Since:      opts.Since,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("service logs: %w", err)
+	}
+
+	// Docker multiplexes stdout/stderr into a single framed stream (8-byte
+	// header per frame). Demultiplex it into merged plain bytes via a pipe so
+	// callers receive clean log lines.
+	pr, pw := io.Pipe()
+	go func() {
+		_, copyErr := stdcopy.StdCopy(pw, pw, stream)
+		stream.Close()
+		pw.CloseWithError(copyErr)
+	}()
+	return pr, nil
 }
 
 func (o *SwarmOrchestrator) WaitConvergence(ctx context.Context, swarmServiceID string, timeout time.Duration) error {

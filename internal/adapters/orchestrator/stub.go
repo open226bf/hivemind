@@ -9,7 +9,9 @@ package orchestrator
 
 import (
 	"context"
+	"io"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -48,6 +50,12 @@ func (*StubOrchestrator) GetServiceState(_ context.Context, swarmServiceID strin
 
 func (*StubOrchestrator) WaitConvergence(_ context.Context, _ string, _ time.Duration) error {
 	return nil
+}
+
+func (*StubOrchestrator) ServiceLogs(_ context.Context, swarmServiceID string, _ ports.LogOptions) (io.ReadCloser, error) {
+	lines := "stub: log streaming is simulated; nothing is read from Docker\n" +
+		"stub: wire the Swarm orchestrator for real service logs\n"
+	return io.NopCloser(strings.NewReader(lines)), nil
 }
 
 func (*StubOrchestrator) CreateSecret(_ context.Context, name string, _ []byte) (string, error) {
