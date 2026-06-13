@@ -62,3 +62,27 @@ func TestDefaultUpdateConfig(t *testing.T) {
 	assert.Equal(t, "rollback", cfg.FailureAction)
 	assert.Equal(t, "start-first", cfg.Order)
 }
+
+func TestUpdateConfigOverlay_PreservesDefaults(t *testing.T) {
+	base := service.DefaultUpdateConfig()
+	// Only override parallelism — everything else must survive.
+	got := base.Overlay(service.UpdateConfig{Parallelism: 5})
+
+	assert.Equal(t, uint64(5), got.Parallelism)
+	assert.Equal(t, base.Delay, got.Delay)
+	assert.Equal(t, "rollback", got.FailureAction)
+	assert.Equal(t, base.Monitor, got.Monitor)
+	assert.Equal(t, "start-first", got.Order)
+}
+
+func TestUpdateConfigOverlay_ReplacesNonZero(t *testing.T) {
+	base := service.DefaultUpdateConfig()
+	got := base.Overlay(service.UpdateConfig{
+		FailureAction: "pause",
+		Order:         "stop-first",
+	})
+
+	assert.Equal(t, "pause", got.FailureAction)
+	assert.Equal(t, "stop-first", got.Order)
+	assert.Equal(t, uint64(1), got.Parallelism) // untouched
+}

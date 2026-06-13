@@ -26,6 +26,9 @@ func NewServiceRepository(db *gorm.DB, cipher Cipher) *ServiceRepository {
 
 func (r *ServiceRepository) Save(ctx context.Context, s *service.Service) error {
 	if err := r.db.WithContext(ctx).Create(serviceToModel(s)).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return fmt.Errorf("%w: service name %q already exists", domainerrors.ErrConflict, s.Name)
+		}
 		return fmt.Errorf("save service: %w", err)
 	}
 	return nil

@@ -1,0 +1,462 @@
+package handler
+
+import (
+	"errors"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/open226bf/hivemind/internal/adapters/api/dto"
+	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
+	"github.com/open226bf/hivemind/internal/application"
+	"github.com/open226bf/hivemind/internal/domain/service"
+	"github.com/open226bf/hivemind/internal/domain/user"
+	"github.com/open226bf/hivemind/internal/ports"
+	"github.com/open226bf/hivemind/pkg/domainerrors"
+)
+
+type ServiceHandler struct {
+	svc *application.ServiceService
+}
+
+func NewServiceHandler(svc *application.ServiceService) *ServiceHandler {
+	return &ServiceHandler{svc: svc}
+}
+
+// Register wires service routes onto a protected (authenticated) router group.
+func (h *ServiceHandler) Register(protected *gin.RouterGroup) {
+	g := protected.Group("/services")
+	g.GET("", middleware.RequireRole(user.RoleViewer), h.List)
+	g.POST("", middleware.RequireRole(user.RoleOperator), h.Create)
+	g.GET("/:id", middleware.RequireRole(user.RoleViewer), h.Get)
+	g.PUT("/:id", middleware.RequireRole(user.RoleOperator), h.Update)
+	g.PUT("/:id/resources", middleware.RequireRole(user.RoleOperator), h.SetResources)
+	g.GET("/:id/env", middleware.RequireRole(user.RoleViewer), h.GetEnvVars)
+	g.PUT("/:id/env", middleware.RequireRole(user.RoleOperator), h.SetEnvVars)
+	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
+}
+
+// List godoc
+//
+//	@Summary		List services
+//	@Description	Returns a paginated list of services. Filter by name (partial, case-insensitive) and/or status.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			name	query		string					false	"Filter by name (contains, case-insensitive)"
+//	@Param			status	query		string					false	"Filter by status (draft | deployed | removed)"
+//	@Param			page	query		int						false	"Page number (default 1)"
+//	@Param			size	query		int						false	"Page size (default 20, max 100)"
+//	@Success		200		{object}	dto.ServiceListResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Router			/services [get]
+func (h *ServiceHandler) List(c *gin.Context) {
+	page := parsePage(c)
+	if st := c.Query("status"); st != "" && !service.Status(st).IsValid() {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid status: must be draft, deployed or removed")
+		return
+	}
+	filter := ports.ServiceFilter{
+		Name:   c.Query("name"),
+		Status: c.Query("status"),
+	}
+
+	items, total, err := h.svc.List(c.Request.Context(), filter, page)
+	if err != nil {
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list services")
+		return
+	}
+
+	resp := dto.ServiceListResponse{
+		Items: make([]dto.ServiceResponse, len(items)),
+		Total: total,
+		Page:  page.Number,
+		Size:  page.Size,
+	}
+	for i, s := range items {
+		resp.Items[i] = toServiceResponse(s)
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// Create godoc
+//
+//	@Summary		Create a service
+//	@Description	Saves a new service in draft status. Does NOT deploy it — use POST /services/{id}/deploy for that.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		dto.CreateServiceRequest	true	"Service definition"
+//	@Success		201		{object}	dto.ServiceResponse
+//	@Failure		400		{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		409		{object}	dto.ErrorResponse	"name already taken"
+//	@Failure		422		{object}	dto.ErrorResponse	"invalid name format or resource constraint"
+//	@Router			/services [post]
+func (h *ServiceHandler) Create(c *gin.Context) {
+	var req dto.CreateServiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	in := application.CreateServiceInput{
+		Name:        req.Name,
+		Description: req.Description,
+		Image:       req.Image,
+		Tag:         req.Tag,
+		Replicas:    req.Replicas,
+		Command:     req.Command,
+		Entrypoint:  req.Entrypoint,
+	}
+	if req.Resources != nil {
+		in.Resources = fromResourcesDTO(*req.Resources)
+	}
+	if req.UpdateConfig != nil {
+		uc := fromUpdateConfigDTO(*req.UpdateConfig)
+		in.UpdateConfig = &uc
+	}
+
+	svc, err := h.svc.Create(c.Request.Context(), in)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, toServiceResponse(svc))
+}
+
+// Get godoc
+//
+//	@Summary		Get a service
+//	@Description	Returns the full service definition and its current status.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		string	true	"Service ID (UUID)"
+//	@Success		200	{object}	dto.ServiceResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/services/{id} [get]
+func (h *ServiceHandler) Get(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	svc, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toServiceResponse(svc))
+}
+
+// Update godoc
+//
+//	@Summary		Update a service
+//	@Description	Updates mutable service fields. The service name is immutable. Only non-null fields are changed.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string					true	"Service ID (UUID)"
+//	@Param			body	body		dto.UpdateServiceRequest	true	"Fields to update (null = unchanged)"
+//	@Success		200		{object}	dto.ServiceResponse
+//	@Failure		400		{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		422		{object}	dto.ErrorResponse	"invalid resource constraint"
+//	@Router			/services/{id} [put]
+func (h *ServiceHandler) Update(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.UpdateServiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	in := application.UpdateServiceInput{
+		Description: req.Description,
+		Image:       req.Image,
+		Tag:         req.Tag,
+		Replicas:    req.Replicas,
+		Command:     req.Command,
+		Entrypoint:  req.Entrypoint,
+	}
+	if req.Resources != nil {
+		r := fromResourcesDTO(*req.Resources)
+		in.Resources = &r
+	}
+	if req.UpdateConfig != nil {
+		uc := fromUpdateConfigDTO(*req.UpdateConfig)
+		in.UpdateConfig = &uc
+	}
+
+	svc, err := h.svc.Update(c.Request.Context(), id, in)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toServiceResponse(svc))
+}
+
+// SetResources godoc
+//
+//	@Summary		Set a service's CPU/memory constraints
+//	@Description	Updates only the resource reservations and limits (F-MVP-03). CPU is in decimal cores, memory in bytes. A limit of 0 means "unbounded"; a non-zero limit must be >= its reservation.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string				true	"Service ID (UUID)"
+//	@Param			body	body		dto.ResourcesDTO	true	"CPU/memory constraints"
+//	@Success		200		{object}	dto.ServiceResponse
+//	@Failure		400		{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		422		{object}	dto.ErrorResponse	"limit below reservation or negative value"
+//	@Router			/services/{id}/resources [put]
+func (h *ServiceHandler) SetResources(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.ResourcesDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	svc, err := h.svc.SetResources(c.Request.Context(), id, fromResourcesDTO(req))
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toServiceResponse(svc))
+}
+
+// GetEnvVars godoc
+//
+//	@Summary		List a service's environment variables
+//	@Description	Returns the env vars of a service. Secret values are masked (empty string) and never returned in clear text.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		string	true	"Service ID (UUID)"
+//	@Success		200	{object}	dto.EnvVarsResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/services/{id}/env [get]
+func (h *ServiceHandler) GetEnvVars(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	vars, err := h.svc.GetEnvVars(c.Request.Context(), id)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toEnvVarsResponse(vars))
+}
+
+// SetEnvVars godoc
+//
+//	@Summary		Replace a service's environment variables
+//	@Description	Atomically replaces the full set of env vars (F-MVP-04). The submitted list is authoritative — omitted keys are removed. Keys must match ^[A-Z_][A-Z0-9_]*$ and be unique. Secret values are encrypted at rest.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string					true	"Service ID (UUID)"
+//	@Param			body	body		dto.SetEnvVarsRequest	true	"Full env var set"
+//	@Success		200		{object}	dto.EnvVarsResponse
+//	@Failure		400		{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		422		{object}	dto.ErrorResponse	"invalid or duplicate key"
+//	@Router			/services/{id}/env [put]
+func (h *ServiceHandler) SetEnvVars(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.SetEnvVarsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	inputs := make([]application.EnvVarInput, len(req.Vars))
+	for i, v := range req.Vars {
+		inputs[i] = application.EnvVarInput{Key: v.Key, Value: v.Value, IsSecret: v.IsSecret}
+	}
+
+	vars, err := h.svc.SetEnvVars(c.Request.Context(), id, inputs)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toEnvVarsResponse(vars))
+}
+
+// Delete godoc
+//
+//	@Summary		Delete a service
+//	@Description	Deletes a draft or removed service. Deleting a deployed service requires the deployment engine (F-MVP-08) to be active; until then, undeploy the service first.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Param			id	path	string	true	"Service ID (UUID)"
+//	@Success		204
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		409	{object}	dto.ErrorResponse	"service is deployed"
+//	@Router			/services/{id} [delete]
+func (h *ServiceHandler) Delete(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ─── Error mapping ────────────────────────────────────────────────────────────
+
+func (h *ServiceHandler) writeServiceError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domainerrors.ErrNotFound):
+		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "service not found")
+	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, application.ErrServiceDeployed):
+		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
+	case isValidationError(err):
+		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
+	default:
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+	}
+}
+
+// isValidationError reports whether err is a domain invariant violation that
+// should surface as 422 Unprocessable Entity.
+func isValidationError(err error) bool {
+	switch {
+	case errors.Is(err, service.ErrInvalidName),
+		errors.Is(err, service.ErrInvalidImage),
+		errors.Is(err, service.ErrResourceConflict),
+		errors.Is(err, service.ErrNegativeResource),
+		errors.Is(err, service.ErrInvalidFailureAction),
+		errors.Is(err, service.ErrInvalidOrder),
+		errors.Is(err, service.ErrInvalidFailureRatio),
+		errors.Is(err, service.ErrInvalidEnvKey),
+		errors.Is(err, service.ErrDuplicateKey):
+		return true
+	default:
+		return false
+	}
+}
+
+// ─── DTO converters ───────────────────────────────────────────────────────────
+
+func toServiceResponse(s *service.Service) dto.ServiceResponse {
+	return dto.ServiceResponse{
+		ID:             s.ID.String(),
+		Name:           s.Name,
+		Description:    s.Description,
+		Image:          s.Image,
+		Tag:            s.Tag,
+		FullImage:      s.FullImage(),
+		Replicas:       s.Replicas,
+		Command:        nullSafeStrings(s.Command),
+		Entrypoint:     nullSafeStrings(s.Entrypoint),
+		Resources:      toResourcesDTO(s.Resources),
+		UpdateConfig:   toUpdateConfigDTO(s.UpdateConfig),
+		Status:         string(s.Status),
+		SwarmServiceID: s.SwarmServiceID,
+		CreatedAt:      s.CreatedAt,
+		UpdatedAt:      s.UpdatedAt,
+	}
+}
+
+func toResourcesDTO(r service.Resources) dto.ResourcesDTO {
+	return dto.ResourcesDTO{
+		CPUReservation: r.CPUReservation,
+		CPULimit:       r.CPULimit,
+		MemReservation: r.MemReservation,
+		MemLimit:       r.MemLimit,
+	}
+}
+
+func fromResourcesDTO(r dto.ResourcesDTO) service.Resources {
+	return service.Resources{
+		CPUReservation: r.CPUReservation,
+		CPULimit:       r.CPULimit,
+		MemReservation: r.MemReservation,
+		MemLimit:       r.MemLimit,
+	}
+}
+
+func toUpdateConfigDTO(uc service.UpdateConfig) dto.UpdateConfigDTO {
+	return dto.UpdateConfigDTO{
+		Parallelism:     uc.Parallelism,
+		DelaySeconds:    int64(uc.Delay / time.Second),
+		FailureAction:   uc.FailureAction,
+		MonitorSeconds:  int64(uc.Monitor / time.Second),
+		MaxFailureRatio: uc.MaxFailureRatio,
+		Order:           uc.Order,
+	}
+}
+
+func fromUpdateConfigDTO(uc dto.UpdateConfigDTO) service.UpdateConfig {
+	return service.UpdateConfig{
+		Parallelism:     uc.Parallelism,
+		Delay:           time.Duration(uc.DelaySeconds) * time.Second,
+		FailureAction:   uc.FailureAction,
+		Monitor:         time.Duration(uc.MonitorSeconds) * time.Second,
+		MaxFailureRatio: uc.MaxFailureRatio,
+		Order:           uc.Order,
+	}
+}
+
+// toEnvVarsResponse maps domain env vars to the API response, masking secret
+// values so they are never returned in clear text.
+func toEnvVarsResponse(vars []service.EnvVar) dto.EnvVarsResponse {
+	out := make([]dto.EnvVarDTO, len(vars))
+	for i, v := range vars {
+		value := v.Value
+		if v.IsSecret {
+			value = "" // masked — never echo secret values
+		}
+		out[i] = dto.EnvVarDTO{Key: v.Key, Value: value, IsSecret: v.IsSecret}
+	}
+	return dto.EnvVarsResponse{Vars: out, Count: len(out)}
+}
+
+// nullSafeStrings returns an empty (non-nil) slice when s is nil so that
+// the JSON response always emits [] rather than null for array fields.
+func nullSafeStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}

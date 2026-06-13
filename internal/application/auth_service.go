@@ -30,12 +30,10 @@ type AuthService struct {
 	users        ports.UserRepository
 	tokens       ports.TokenService
 	clock        ports.Clock
-	sentinelHash string // pre-computed bcrypt hash used to neutralise email-enumeration timing attacks
+	sentinelHash string
 }
 
 func NewAuthService(users ports.UserRepository, tokens ports.TokenService, clock ports.Clock) *AuthService {
-	// Compute once at startup so every "user not found" path takes the same
-	// time as a real bcrypt comparison, preventing timing-based enumeration.
 	sentinel, err := crypto.HashPassword("hivemind-sentinel-do-not-use")
 	if err != nil {
 		panic("auth: cannot compute sentinel hash: " + err.Error())
@@ -47,6 +45,7 @@ func NewAuthService(users ports.UserRepository, tokens ports.TokenService, clock
 func (s *AuthService) Login(ctx context.Context, email, password string) (*TokenPair, error) {
 	u, err := s.users.FindByEmail(ctx, email)
 	if errors.Is(err, domainerrors.ErrNotFound) {
+		_ = crypto.CheckPassword(s.sentinelHash, password)
 		return nil, ErrInvalidCredentials
 	}
 	if err != nil {

@@ -19,9 +19,10 @@ import (
 )
 
 type Dependencies struct {
-	DB     *gorm.DB
-	Tokens ports.TokenService
-	Auth   *application.AuthService
+	DB       *gorm.DB
+	Tokens   ports.TokenService
+	Auth     *application.AuthService
+	Services *application.ServiceService
 }
 
 // NewRouter builds the Gin engine with health endpoints and the /api/v1 group.
@@ -42,7 +43,6 @@ func NewRouter(deps Dependencies) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// ─── Swagger UI (disabled in production unless explicitly enabled) ───────
 	if os.Getenv("APP_ENV") != "production" || os.Getenv("SWAGGER_ENABLED") == "true" {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	}
@@ -55,6 +55,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	protected.Use(middleware.Auth(deps.Tokens))
 
 	handler.NewAuthHandler(deps.Auth).Register(public, protected)
+	handler.NewServiceHandler(deps.Services).Register(protected)
 
 	return r
 }

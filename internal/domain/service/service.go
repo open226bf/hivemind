@@ -3,15 +3,21 @@ package service
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 var (
-	ErrInvalidName      = errors.New("service name must match ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
-	ErrInvalidReplicas  = errors.New("replicas must be >= 0")
-	ErrResourceConflict = errors.New("resource limit must be >= reservation")
+	ErrInvalidName          = errors.New("service name must match ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
+	ErrInvalidImage         = errors.New("image is required")
+	ErrInvalidReplicas      = errors.New("replicas must be >= 0")
+	ErrResourceConflict     = errors.New("resource limit must be >= reservation")
+	ErrNegativeResource     = errors.New("resource values must be >= 0")
+	ErrInvalidFailureAction = errors.New("failure_action must be one of: pause, continue, rollback")
+	ErrInvalidOrder         = errors.New("order must be one of: start-first, stop-first")
+	ErrInvalidFailureRatio  = errors.New("max_failure_ratio must be between 0 and 1")
 )
 
 var nameRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
@@ -24,6 +30,16 @@ const (
 	StatusRemoved  Status = "removed"
 )
 
+// IsValid reports whether s is a recognised service status.
+func (s Status) IsValid() bool {
+	switch s {
+	case StatusDraft, StatusDeployed, StatusRemoved:
+		return true
+	default:
+		return false
+	}
+}
+
 type Resources struct {
 	CPUReservation float64 // cores
 	CPULimit       float64
@@ -32,6 +48,9 @@ type Resources struct {
 }
 
 func (r Resources) Validate() error {
+	if r.CPUReservation < 0 || r.CPULimit < 0 || r.MemReservation < 0 || r.MemLimit < 0 {
+		return ErrNegativeResource
+	}
 	if r.CPULimit > 0 && r.CPULimit < r.CPUReservation {
 		return ErrResourceConflict
 	}
@@ -61,6 +80,51 @@ func DefaultUpdateConfig() UpdateConfig {
 	}
 }
 
+var validFailureActions = map[string]bool{"pause": true, "continue": true, "rollback": true}
+var validOrders = map[string]bool{"start-first": true, "stop-first": true}
+
+// Validate checks that the rolling-update parameters are within Swarm's
+// accepted vocabulary and bounds.
+func (uc UpdateConfig) Validate() error {
+	if !validFailureActions[uc.FailureAction] {
+		return ErrInvalidFailureAction
+	}
+	if !validOrders[uc.Order] {
+		return ErrInvalidOrder
+	}
+	if uc.MaxFailureRatio < 0 || uc.MaxFailureRatio > 1 {
+		return ErrInvalidFailureRatio
+	}
+	return nil
+}
+
+// Overlay returns a copy of uc with the non-zero fields of override applied.
+// A zero-valued override field means "not provided" and keeps uc's value, so a
+// partial update_config payload can change individual settings without wiping
+// the sensible defaults of the others. MaxFailureRatio of 0 is already the
+// default, so it cannot be distinguished from "unset" — acceptable here.
+func (uc UpdateConfig) Overlay(override UpdateConfig) UpdateConfig {
+	if override.Parallelism != 0 {
+		uc.Parallelism = override.Parallelism
+	}
+	if override.Delay != 0 {
+		uc.Delay = override.Delay
+	}
+	if override.FailureAction != "" {
+		uc.FailureAction = override.FailureAction
+	}
+	if override.Monitor != 0 {
+		uc.Monitor = override.Monitor
+	}
+	if override.MaxFailureRatio != 0 {
+		uc.MaxFailureRatio = override.MaxFailureRatio
+	}
+	if override.Order != "" {
+		uc.Order = override.Order
+	}
+	return uc
+}
+
 type Service struct {
 	ID             uuid.UUID
 	Name           string
@@ -81,6 +145,9 @@ type Service struct {
 func New(name, image, tag string, replicas uint64) (*Service, error) {
 	if !nameRegex.MatchString(name) {
 		return nil, ErrInvalidName
+	}
+	if strings.TrimSpace(image) == "" {
+		return nil, ErrInvalidImage
 	}
 	return &Service{
 		ID:           uuid.New(),
