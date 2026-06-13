@@ -411,12 +411,47 @@ definitions:
       target_path:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ServiceStatusResponse:
+    properties:
+      desired:
+        type: integer
+      failed:
+        type: integer
+      pending:
+        type: integer
+      running:
+        type: integer
+      updating:
+        type: boolean
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ServiceTasksResponse:
+    properties:
+      tasks:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TaskStateResponse'
+        type: array
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.SetEnvVarsRequest:
     properties:
       vars:
         items:
           $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarInput'
         type: array
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.TaskStateResponse:
+    properties:
+      current_state:
+        type: string
+      desired_state:
+        type: string
+      error_message:
+        type: string
+      id:
+        type: string
+      node:
+        type: string
+      updated_at:
+        type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse:
     properties:
@@ -814,6 +849,60 @@ paths:
       summary: Add a config version
       tags:
       - configs
+  /deployments:
+    get:
+      description: Global deployment history, filterable by service, status and time
+        range (RFC3339), newest first.
+      parameters:
+      - description: Filter by service ID (UUID)
+        in: query
+        name: service_id
+        type: string
+      - description: Filter by status (pending | in_progress | succeeded | failed
+          | rolled_back)
+        in: query
+        name: status
+        type: string
+      - description: Started at >= (RFC3339)
+        in: query
+        name: from
+        type: string
+      - description: Started at <= (RFC3339)
+        in: query
+        name: to
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentListResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List deployments (history)
+      tags:
+      - deployments
   /deployments/{id}:
     get:
       parameters:
@@ -1925,6 +2014,85 @@ paths:
       summary: Detach a secret from a service
       tags:
       - secrets
+  /services/{id}/status:
+    get:
+      description: 'Returns the aggregated orchestrator view of a service: effective
+        vs. desired replicas (running x/y), plus pending/failed counts and whether
+        an update is in progress. Read in near real time from Swarm with a short cache
+        (TTL <= 5s).'
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceStatusResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "503":
+          description: deployment engine not configured
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Live status of a service (F-MVP-10)
+      tags:
+      - supervision
+  /services/{id}/tasks:
+    get:
+      description: 'Returns the per-task (container) detail of a service: executing
+        node, current and desired state, last update and any Swarm error message.
+        Read in near real time from Swarm with a short cache (TTL <= 5s).'
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceTasksResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "503":
+          description: deployment engine not configured
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Tasks of a service (F-MVP-10)
+      tags:
+      - supervision
 securityDefinitions:
   BearerAuth:
     description: 'Format: "Bearer <token>"'
