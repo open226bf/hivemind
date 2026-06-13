@@ -19,6 +19,10 @@ type DBConfig struct {
 func NewDB(cfg DBConfig) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(cfg.DSN), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
+		// Translate driver-specific errors (e.g. Postgres 23505) into GORM
+		// sentinels such as gorm.ErrDuplicatedKey, so repositories can map
+		// them to domain errors without coupling to the pgx driver.
+		TranslateError: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)

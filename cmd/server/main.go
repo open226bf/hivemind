@@ -92,9 +92,11 @@ func main() {
 
 	// ─── Repositories ───────────────────────────────────────────────────────
 	userRepo := persistence.NewUserRepository(db)
+	serviceRepo := persistence.NewServiceRepository(db, persistence.NopCipher{})
 
 	// ─── Use cases ──────────────────────────────────────────────────────────
 	authSvc := application.NewAuthService(userRepo, tokens, clock.System{})
+	serviceSvc := application.NewServiceService(serviceRepo, nil) // orchestrator wired in F-MVP-08
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
@@ -110,9 +112,10 @@ func main() {
 
 	// ─── HTTP server ────────────────────────────────────────────────────────
 	r := api.NewRouter(api.Dependencies{
-		DB:     db,
-		Tokens: tokens,
-		Auth:   authSvc,
+		DB:       db,
+		Tokens:   tokens,
+		Auth:     authSvc,
+		Services: serviceSvc,
 	})
 
 	port := os.Getenv("PORT")

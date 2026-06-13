@@ -1,5 +1,64 @@
 basePath: /api/v1
 definitions:
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateServiceRequest:
+    properties:
+      command:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      entrypoint:
+        items:
+          type: string
+        type: array
+      image:
+        type: string
+      name:
+        type: string
+      replicas:
+        type: integer
+      resources:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO'
+      tag:
+        type: string
+      update_config:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO'
+    required:
+    - image
+    - name
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.EnvVarDTO:
+    properties:
+      is_secret:
+        type: boolean
+      key:
+        type: string
+      value:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.EnvVarInput:
+    properties:
+      is_secret:
+        example: false
+        type: boolean
+      key:
+        example: DATABASE_URL
+        type: string
+      value:
+        type: string
+    required:
+    - key
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.EnvVarsResponse:
+    properties:
+      count:
+        type: integer
+      vars:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarDTO'
+        type: array
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse:
     properties:
       code:
@@ -34,6 +93,80 @@ definitions:
     required:
     - refresh_token
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO:
+    properties:
+      cpu_limit:
+        example: 0.5
+        type: number
+      cpu_reservation:
+        example: 0.25
+        type: number
+      mem_limit:
+        description: bytes
+        example: 134217728
+        type: integer
+      mem_reservation:
+        description: bytes
+        example: 67108864
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ServiceListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse:
+    properties:
+      command:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      description:
+        type: string
+      entrypoint:
+        items:
+          type: string
+        type: array
+      full_image:
+        type: string
+      id:
+        type: string
+      image:
+        type: string
+      name:
+        type: string
+      replicas:
+        type: integer
+      resources:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO'
+      status:
+        type: string
+      swarm_service_id:
+        type: string
+      tag:
+        type: string
+      update_config:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO'
+      updated_at:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SetEnvVarsRequest:
+    properties:
+      vars:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarInput'
+        type: array
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse:
     properties:
       access_expires_at:
@@ -44,6 +177,52 @@ definitions:
         type: string
       token_type:
         type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO:
+    properties:
+      delay_seconds:
+        example: 10
+        type: integer
+      failure_action:
+        description: pause | continue | rollback
+        example: rollback
+        type: string
+      max_failure_ratio:
+        example: 0
+        type: number
+      monitor_seconds:
+        example: 30
+        type: integer
+      order:
+        description: start-first | stop-first
+        example: start-first
+        type: string
+      parallelism:
+        example: 1
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.UpdateServiceRequest:
+    properties:
+      command:
+        items:
+          type: string
+        type: array
+      description:
+        type: string
+      entrypoint:
+        items:
+          type: string
+        type: array
+      image:
+        type: string
+      replicas:
+        type: integer
+      resources:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO'
+      tag:
+        type: string
+      update_config:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO'
     type: object
 host: localhost:8080
 info:
@@ -160,6 +339,342 @@ paths:
       summary: Exchange a refresh token for a new token pair
       tags:
       - auth
+  /services:
+    get:
+      description: Returns a paginated list of services. Filter by name (partial,
+        case-insensitive) and/or status.
+      parameters:
+      - description: Filter by name (contains, case-insensitive)
+        in: query
+        name: name
+        type: string
+      - description: Filter by status (draft | deployed | removed)
+        in: query
+        name: status
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List services
+      tags:
+      - services
+    post:
+      consumes:
+      - application/json
+      description: Saves a new service in draft status. Does NOT deploy it — use POST
+        /services/{id}/deploy for that.
+      parameters:
+      - description: Service definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateServiceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: name already taken
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid name format or resource constraint
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a service
+      tags:
+      - services
+  /services/{id}:
+    delete:
+      description: Deletes a draft or removed service. Deleting a deployed service
+        requires the deployment engine (F-MVP-08) to be active; until then, undeploy
+        the service first.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: service is deployed
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a service
+      tags:
+      - services
+    get:
+      description: Returns the full service definition and its current status.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a service
+      tags:
+      - services
+    put:
+      consumes:
+      - application/json
+      description: Updates mutable service fields. The service name is immutable.
+        Only non-null fields are changed.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update (null = unchanged)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateServiceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid resource constraint
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a service
+      tags:
+      - services
+  /services/{id}/env:
+    get:
+      description: Returns the env vars of a service. Secret values are masked (empty
+        string) and never returned in clear text.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List a service's environment variables
+      tags:
+      - services
+    put:
+      consumes:
+      - application/json
+      description: Atomically replaces the full set of env vars (F-MVP-04). The submitted
+        list is authoritative — omitted keys are removed. Keys must match ^[A-Z_][A-Z0-9_]*$
+        and be unique. Secret values are encrypted at rest.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Full env var set
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SetEnvVarsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarsResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid or duplicate key
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace a service's environment variables
+      tags:
+      - services
+  /services/{id}/resources:
+    put:
+      consumes:
+      - application/json
+      description: Updates only the resource reservations and limits (F-MVP-03). CPU
+        is in decimal cores, memory in bytes. A limit of 0 means "unbounded"; a non-zero
+        limit must be >= its reservation.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: CPU/memory constraints
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: limit below reservation or negative value
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a service's CPU/memory constraints
+      tags:
+      - services
 securityDefinitions:
   BearerAuth:
     description: 'Format: "Bearer <token>"'
