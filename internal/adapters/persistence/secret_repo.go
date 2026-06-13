@@ -13,16 +13,31 @@ import (
 	"github.com/open226bf/hivemind/pkg/pagination"
 )
 
-type SecretRepository struct{ db *gorm.DB }
+type SecretRepository struct {
+	db     *gorm.DB
+	cipher Cipher
+}
 
-func NewSecretRepository(db *gorm.DB) *SecretRepository { return &SecretRepository{db: db} }
+func NewSecretRepository(db *gorm.DB, cipher Cipher) *SecretRepository {
+	return &SecretRepository{db: db, cipher: cipher}
+}
 
-func (r *SecretRepository) Save(ctx context.Context, s *secret.Secret, v *secret.SecretVersion) error {
+func (r *SecretRepository) Save(ctx context.Context, s *secret.Secret, v *secret.SecretVersion, value []byte) error {
+	enc, err := r.cipher.Encrypt(string(value))
+	if err != nil {
+		return fmt.Errorf("encrypt secret value: %w", err)
+	}
+	vm := secretVersionToModel(v)
+	vm.EncryptedValue = enc
+
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(secretToModel(s)).Error; err != nil {
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				return fmt.Errorf("%w: secret name %q already exists", domainerrors.ErrConflict, s.Name)
+			}
 			return fmt.Errorf("save secret: %w", err)
 		}
-		if err := tx.Create(secretVersionToModel(v)).Error; err != nil {
+		if err := tx.Create(vm).Error; err != nil {
 			return fmt.Errorf("save secret version: %w", err)
 		}
 		return nil
@@ -61,12 +76,19 @@ func (r *SecretRepository) List(ctx context.Context, p pagination.Page) ([]*secr
 }
 
 // Update rotates a secret: updates the parent record and inserts the new version.
-func (r *SecretRepository) Update(ctx context.Context, s *secret.Secret, newVersion *secret.SecretVersion) error {
+func (r *SecretRepository) Update(ctx context.Context, s *secret.Secret, newVersion *secret.SecretVersion, value []byte) error {
+	enc, err := r.cipher.Encrypt(string(value))
+	if err != nil {
+		return fmt.Errorf("encrypt secret value: %w", err)
+	}
+	vm := secretVersionToModel(newVersion)
+	vm.EncryptedValue = enc
+
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(secretToModel(s)).Error; err != nil {
 			return fmt.Errorf("update secret: %w", err)
 		}
-		if err := tx.Create(secretVersionToModel(newVersion)).Error; err != nil {
+		if err := tx.Create(vm).Error; err != nil {
 			return fmt.Errorf("save secret version: %w", err)
 		}
 		return nil
@@ -88,6 +110,35 @@ func (r *SecretRepository) Delete(ctx context.Context, id uuid.UUID) error {
 		}
 		return nil
 	})
+}
+
+// GetValue returns the decrypted value of the secret's current version.
+func (r *SecretRepository) GetValue(ctx context.Context, id uuid.UUID) ([]byte, error) {
+	var sm secretModel
+	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&sm).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, domainerrors.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find secret: %w", err)
+	}
+
+	var vm secretVersionModel
+	err = r.db.WithContext(ctx).
+		Where("secret_id = ? AND version = ?", sm.ID, sm.CurrentVersion).
+		First(&vm).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, domainerrors.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find secret version: %w", err)
+	}
+
+	plain, err := r.cipher.Decrypt(vm.EncryptedValue)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt secret value: %w", err)
+	}
+	return []byte(plain), nil
 }
 
 func (r *SecretRepository) IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error) {

@@ -90,12 +90,20 @@ type DeploymentFilter struct {
 // ─── Secret ───────────────────────────────────────────────────────────────────
 
 type SecretRepository interface {
-	Save(ctx context.Context, s *secret.Secret, v *secret.SecretVersion) error
+	// Save persists a new secret and its first version. The plaintext value is
+	// encrypted at rest by the adapter and never returned by any read method.
+	Save(ctx context.Context, s *secret.Secret, v *secret.SecretVersion, value []byte) error
 	FindByID(ctx context.Context, id uuid.UUID) (*secret.Secret, error)
 	List(ctx context.Context, p pagination.Page) ([]*secret.Secret, int64, error)
-	Update(ctx context.Context, s *secret.Secret, newVersion *secret.SecretVersion) error
+	// Update rotates a secret: bumps the parent record and stores the new
+	// encrypted version value.
+	Update(ctx context.Context, s *secret.Secret, newVersion *secret.SecretVersion, value []byte) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
+	// GetValue returns the decrypted value of the secret's current version.
+	// Server-side only (used by the deployment engine to push the value to
+	// the orchestrator); never exposed through the API.
+	GetValue(ctx context.Context, id uuid.UUID) ([]byte, error)
 }
 
 // ─── Network ──────────────────────────────────────────────────────────────────

@@ -20,6 +20,9 @@ func NewConfigRepository(db *gorm.DB) *ConfigRepository { return &ConfigReposito
 func (r *ConfigRepository) Save(ctx context.Context, c *config.Config, v *config.ConfigVersion) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(configToModel(c)).Error; err != nil {
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				return fmt.Errorf("%w: config name %q already exists", domainerrors.ErrConflict, c.Name)
+			}
 			return fmt.Errorf("save config: %w", err)
 		}
 		if err := tx.Create(configVersionToModel(v)).Error; err != nil {

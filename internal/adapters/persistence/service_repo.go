@@ -94,7 +94,7 @@ func (r *ServiceRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		sid := id.String()
 		for _, table := range []string{"env_vars", "service_networks", "service_secrets", "service_configs"} {
-			if err := tx.Exec("DELETE FROM "+table+" WHERE service_id = ?", sid).Error; err != nil {
+			if err := tx.Exec(fmt.Sprintf("DELETE FROM %s WHERE service_id = ?", table), sid).Error; err != nil {
 				return fmt.Errorf("delete %s: %w", table, err)
 			}
 		}
@@ -178,6 +178,9 @@ func (r *ServiceRepository) GetEnvVars(ctx context.Context, serviceID uuid.UUID)
 func (r *ServiceRepository) AttachNetwork(ctx context.Context, serviceID, networkID uuid.UUID) error {
 	m := serviceNetworkModel{ServiceID: serviceID.String(), NetworkID: networkID.String()}
 	if err := r.db.WithContext(ctx).Create(&m).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return fmt.Errorf("%w: network already attached", domainerrors.ErrConflict)
+		}
 		return fmt.Errorf("attach network: %w", err)
 	}
 	return nil
@@ -220,6 +223,9 @@ func (r *ServiceRepository) AttachSecret(ctx context.Context, serviceID, secretI
 		TargetPath: targetPath,
 	}
 	if err := r.db.WithContext(ctx).Create(&m).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return fmt.Errorf("%w: secret already attached", domainerrors.ErrConflict)
+		}
 		return fmt.Errorf("attach secret: %w", err)
 	}
 	return nil
@@ -262,6 +268,9 @@ func (r *ServiceRepository) AttachConfig(ctx context.Context, serviceID, configI
 		TargetPath: targetPath,
 	}
 	if err := r.db.WithContext(ctx).Create(&m).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return fmt.Errorf("%w: config already attached", domainerrors.ErrConflict)
+		}
 		return fmt.Errorf("attach config: %w", err)
 	}
 	return nil

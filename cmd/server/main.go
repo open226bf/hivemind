@@ -22,7 +22,9 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -36,8 +38,10 @@ import (
 
 	"github.com/open226bf/hivemind/internal/adapters/api"
 	"github.com/open226bf/hivemind/internal/adapters/auth"
+	"github.com/open226bf/hivemind/internal/adapters/orchestrator"
 	"github.com/open226bf/hivemind/internal/adapters/persistence"
 	"github.com/open226bf/hivemind/internal/application"
+	"github.com/open226bf/hivemind/internal/ports"
 	"github.com/open226bf/hivemind/pkg/clock"
 	"github.com/open226bf/hivemind/pkg/logger"
 )
@@ -91,12 +95,32 @@ func main() {
 	tokens := auth.NewTokenService(auth.Config{PrivateKey: privKey, Issuer: "hivemind"})
 
 	// ─── Repositories ───────────────────────────────────────────────────────
+	cipher, err := buildCipher(os.Getenv("AES_KEY"))
+	if err != nil {
+		log.Error("init encryption cipher", "err", err)
+		os.Exit(1)
+	}
+	if _, isNop := cipher.(persistence.NopCipher); isNop {
+		log.Warn("AES_KEY not set — secret and env values are stored UNENCRYPTED; set a 32-byte base64 key in production")
+	}
+
 	userRepo := persistence.NewUserRepository(db)
-	serviceRepo := persistence.NewServiceRepository(db, persistence.NopCipher{})
+	serviceRepo := persistence.NewServiceRepository(db, cipher)
+	networkRepo := persistence.NewNetworkRepository(db)
+	secretRepo := persistence.NewSecretRepository(db, cipher)
+	configRepo := persistence.NewConfigRepository(db)
+	deploymentRepo := persistence.NewDeploymentRepository(db)
+
+	// ─── Orchestrator ────────────────────────────────────────────────────────
+	orch := buildOrchestrator(context.Background(), env, log)
 
 	// ─── Use cases ──────────────────────────────────────────────────────────
 	authSvc := application.NewAuthService(userRepo, tokens, clock.System{})
-	serviceSvc := application.NewServiceService(serviceRepo, nil) // orchestrator wired in F-MVP-08
+	serviceSvc := application.NewServiceService(serviceRepo, orch)
+	networkSvc := application.NewNetworkService(networkRepo, serviceRepo)
+	secretSvc := application.NewSecretService(secretRepo, serviceRepo)
+	configSvc := application.NewConfigService(configRepo, serviceRepo)
+	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, orch, nil)
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
@@ -112,10 +136,14 @@ func main() {
 
 	// ─── HTTP server ────────────────────────────────────────────────────────
 	r := api.NewRouter(api.Dependencies{
-		DB:       db,
-		Tokens:   tokens,
-		Auth:     authSvc,
-		Services: serviceSvc,
+		DB:          db,
+		Tokens:      tokens,
+		Auth:        authSvc,
+		Services:    serviceSvc,
+		Networks:    networkSvc,
+		Secrets:     secretSvc,
+		Configs:     configSvc,
+		Deployments: deploymentSvc,
 	})
 
 	port := os.Getenv("PORT")
@@ -150,6 +178,42 @@ func main() {
 		log.Error("graceful shutdown failed", "err", err)
 	}
 	log.Info("hivemind stopped")
+}
+
+// buildOrchestrator selects the deployment backend. ORCHESTRATOR=stub forces
+// the simulated orchestrator (useful for local dev without Docker). Otherwise
+// it connects to Docker Swarm; a connection failure is fatal in production but
+// falls back to the stub elsewhere.
+func buildOrchestrator(ctx context.Context, env string, log *slog.Logger) ports.Orchestrator {
+	if os.Getenv("ORCHESTRATOR") == "stub" {
+		return orchestrator.NewStubOrchestrator()
+	}
+	swarm, err := orchestrator.NewSwarmOrchestrator(ctx)
+	if err != nil {
+		if env == "production" {
+			log.Error("cannot connect to Docker Swarm", "err", err)
+			os.Exit(1)
+		}
+		log.Warn("Docker unavailable — falling back to STUB orchestrator (set ORCHESTRATOR=stub to silence)", "err", err)
+		return orchestrator.NewStubOrchestrator()
+	}
+	log.Info("connected to Docker Swarm orchestrator")
+	return swarm
+}
+
+// buildCipher selects the at-rest encryption strategy for sensitive values
+// (secret values, secret-flagged env vars). A base64-encoded 32-byte AES_KEY
+// enables AES-256-GCM; an empty key falls back to a no-op cipher for
+// development only.
+func buildCipher(b64Key string) (persistence.Cipher, error) {
+	if b64Key == "" {
+		return persistence.NopCipher{}, nil
+	}
+	key, err := base64.StdEncoding.DecodeString(b64Key)
+	if err != nil {
+		return nil, fmt.Errorf("AES_KEY must be base64-encoded: %w", err)
+	}
+	return persistence.NewAESCipher(key)
 }
 
 // shouldAutoMigrate decides whether to run migrations on boot.

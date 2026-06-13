@@ -19,10 +19,14 @@ import (
 )
 
 type Dependencies struct {
-	DB       *gorm.DB
-	Tokens   ports.TokenService
-	Auth     *application.AuthService
-	Services *application.ServiceService
+	DB          *gorm.DB
+	Tokens      ports.TokenService
+	Auth        *application.AuthService
+	Services    *application.ServiceService
+	Networks    *application.NetworkService
+	Secrets     *application.SecretService
+	Configs     *application.ConfigService
+	Deployments *application.DeploymentService
 }
 
 // NewRouter builds the Gin engine with health endpoints and the /api/v1 group.
@@ -56,6 +60,10 @@ func NewRouter(deps Dependencies) *gin.Engine {
 
 	handler.NewAuthHandler(deps.Auth).Register(public, protected)
 	handler.NewServiceHandler(deps.Services).Register(protected)
+	handler.NewNetworkHandler(deps.Networks).Register(protected)
+	handler.NewSecretHandler(deps.Secrets).Register(protected)
+	handler.NewConfigHandler(deps.Configs).Register(protected)
+	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
 
 	return r
 }

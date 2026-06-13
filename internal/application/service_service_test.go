@@ -18,16 +18,22 @@ import (
 // ─── Fake repo ────────────────────────────────────────────────────────────────
 
 type fakeServiceRepo struct {
-	byID    map[uuid.UUID]*service.Service
-	byName  map[string]*service.Service
-	envVars map[uuid.UUID][]service.EnvVar
+	byID     map[uuid.UUID]*service.Service
+	byName   map[string]*service.Service
+	envVars  map[uuid.UUID][]service.EnvVar
+	networks map[uuid.UUID][]uuid.UUID // serviceID -> networkIDs
+	secrets  map[uuid.UUID][]ports.ServiceSecretAttachment
+	configs  map[uuid.UUID][]ports.ServiceConfigAttachment
 }
 
 func newFakeServiceRepo() *fakeServiceRepo {
 	return &fakeServiceRepo{
-		byID:    map[uuid.UUID]*service.Service{},
-		byName:  map[string]*service.Service{},
-		envVars: map[uuid.UUID][]service.EnvVar{},
+		byID:     map[uuid.UUID]*service.Service{},
+		byName:   map[string]*service.Service{},
+		envVars:  map[uuid.UUID][]service.EnvVar{},
+		networks: map[uuid.UUID][]uuid.UUID{},
+		secrets:  map[uuid.UUID][]ports.ServiceSecretAttachment{},
+		configs:  map[uuid.UUID][]ports.ServiceConfigAttachment{},
 	}
 }
 
@@ -90,24 +96,71 @@ func (r *fakeServiceRepo) GetEnvVars(_ context.Context, id uuid.UUID) ([]service
 }
 
 // Attachment stubs — not exercised by service CRUD tests.
-func (r *fakeServiceRepo) AttachNetwork(context.Context, uuid.UUID, uuid.UUID) error { return nil }
-func (r *fakeServiceRepo) DetachNetwork(context.Context, uuid.UUID, uuid.UUID) error { return nil }
-func (r *fakeServiceRepo) GetNetworkIDs(_ context.Context, _ uuid.UUID) ([]uuid.UUID, error) {
-	return nil, nil
-}
-func (r *fakeServiceRepo) AttachSecret(context.Context, uuid.UUID, uuid.UUID, string) error {
+func (r *fakeServiceRepo) AttachNetwork(_ context.Context, serviceID, networkID uuid.UUID) error {
+	for _, id := range r.networks[serviceID] {
+		if id == networkID {
+			return domainerrors.ErrConflict
+		}
+	}
+	r.networks[serviceID] = append(r.networks[serviceID], networkID)
 	return nil
 }
-func (r *fakeServiceRepo) DetachSecret(context.Context, uuid.UUID, uuid.UUID) error { return nil }
-func (r *fakeServiceRepo) GetSecretAttachments(_ context.Context, _ uuid.UUID) ([]ports.ServiceSecretAttachment, error) {
-	return nil, nil
+func (r *fakeServiceRepo) DetachNetwork(_ context.Context, serviceID, networkID uuid.UUID) error {
+	ids := r.networks[serviceID]
+	for i, id := range ids {
+		if id == networkID {
+			r.networks[serviceID] = append(ids[:i], ids[i+1:]...)
+			return nil
+		}
+	}
+	return domainerrors.ErrNotFound
 }
-func (r *fakeServiceRepo) AttachConfig(context.Context, uuid.UUID, uuid.UUID, string) error {
+func (r *fakeServiceRepo) GetNetworkIDs(_ context.Context, serviceID uuid.UUID) ([]uuid.UUID, error) {
+	return r.networks[serviceID], nil
+}
+func (r *fakeServiceRepo) AttachSecret(_ context.Context, serviceID, secretID uuid.UUID, targetPath string) error {
+	for _, a := range r.secrets[serviceID] {
+		if a.SecretID == secretID {
+			return domainerrors.ErrConflict
+		}
+	}
+	r.secrets[serviceID] = append(r.secrets[serviceID], ports.ServiceSecretAttachment{SecretID: secretID, TargetPath: targetPath})
 	return nil
 }
-func (r *fakeServiceRepo) DetachConfig(context.Context, uuid.UUID, uuid.UUID) error { return nil }
-func (r *fakeServiceRepo) GetConfigAttachments(_ context.Context, _ uuid.UUID) ([]ports.ServiceConfigAttachment, error) {
-	return nil, nil
+func (r *fakeServiceRepo) DetachSecret(_ context.Context, serviceID, secretID uuid.UUID) error {
+	as := r.secrets[serviceID]
+	for i, a := range as {
+		if a.SecretID == secretID {
+			r.secrets[serviceID] = append(as[:i], as[i+1:]...)
+			return nil
+		}
+	}
+	return domainerrors.ErrNotFound
+}
+func (r *fakeServiceRepo) GetSecretAttachments(_ context.Context, serviceID uuid.UUID) ([]ports.ServiceSecretAttachment, error) {
+	return r.secrets[serviceID], nil
+}
+func (r *fakeServiceRepo) AttachConfig(_ context.Context, serviceID, configID uuid.UUID, targetPath string) error {
+	for _, a := range r.configs[serviceID] {
+		if a.ConfigID == configID {
+			return domainerrors.ErrConflict
+		}
+	}
+	r.configs[serviceID] = append(r.configs[serviceID], ports.ServiceConfigAttachment{ConfigID: configID, TargetPath: targetPath})
+	return nil
+}
+func (r *fakeServiceRepo) DetachConfig(_ context.Context, serviceID, configID uuid.UUID) error {
+	as := r.configs[serviceID]
+	for i, a := range as {
+		if a.ConfigID == configID {
+			r.configs[serviceID] = append(as[:i], as[i+1:]...)
+			return nil
+		}
+	}
+	return domainerrors.ErrNotFound
+}
+func (r *fakeServiceRepo) GetConfigAttachments(_ context.Context, serviceID uuid.UUID) ([]ports.ServiceConfigAttachment, error) {
+	return r.configs[serviceID], nil
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

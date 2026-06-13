@@ -19,6 +19,9 @@ func NewNetworkRepository(db *gorm.DB) *NetworkRepository { return &NetworkRepos
 
 func (r *NetworkRepository) Save(ctx context.Context, n *network.Network) error {
 	if err := r.db.WithContext(ctx).Create(networkToModel(n)).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return fmt.Errorf("%w: network name %q already exists", domainerrors.ErrConflict, n.Name)
+		}
 		return fmt.Errorf("save network: %w", err)
 	}
 	return nil

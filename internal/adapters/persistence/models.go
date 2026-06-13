@@ -137,12 +137,16 @@ func (secretModel) TableName() string { return "secrets" }
 // ─── SecretVersion ────────────────────────────────────────────────────────────
 
 type secretVersionModel struct {
-	ID            string    `gorm:"type:uuid;primaryKey;column:id"`
-	SecretID      string    `gorm:"type:uuid;not null;index;column:secret_id"`
-	Version       int       `gorm:"column:version"`
-	SwarmSecretID string    `gorm:"column:swarm_secret_id"`
-	Checksum      string    `gorm:"column:checksum"`
-	CreatedAt     time.Time `gorm:"column:created_at;autoCreateTime:false"`
+	ID            string `gorm:"type:uuid;primaryKey;column:id"`
+	SecretID      string `gorm:"type:uuid;not null;index;column:secret_id"`
+	Version       int    `gorm:"column:version"`
+	SwarmSecretID string `gorm:"column:swarm_secret_id"`
+	Checksum      string `gorm:"column:checksum"`
+	// EncryptedValue holds the AES-256-GCM ciphertext of the secret value.
+	// It is decrypted only at deploy time to create the Swarm secret and is
+	// never exposed through the API.
+	EncryptedValue string    `gorm:"column:encrypted_value"`
+	CreatedAt      time.Time `gorm:"column:created_at;autoCreateTime:false"`
 }
 
 func (secretVersionModel) TableName() string { return "secret_versions" }

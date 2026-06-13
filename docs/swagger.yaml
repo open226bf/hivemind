@@ -1,5 +1,131 @@
 basePath: /api/v1
 definitions:
+  github_com_orange_hivemind_internal_adapters_api_dto.AddConfigVersionRequest:
+    properties:
+      comment:
+        example: tune worker_processes
+        type: string
+      content:
+        type: string
+    required:
+    - content
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AttachConfigRequest:
+    properties:
+      config_id:
+        example: 3f2504e0-4f89-11d3-9a0c-0305e82c3301
+        type: string
+      target_path:
+        example: /etc/nginx/nginx.conf
+        type: string
+    required:
+    - config_id
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AttachNetworkRequest:
+    properties:
+      network_id:
+        example: 3f2504e0-4f89-11d3-9a0c-0305e82c3301
+        type: string
+    required:
+    - network_id
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AttachSecretRequest:
+    properties:
+      secret_id:
+        example: 3f2504e0-4f89-11d3-9a0c-0305e82c3301
+        type: string
+      target_path:
+        example: /run/secrets/db_password
+        type: string
+    required:
+    - secret_id
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ConfigListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse:
+    properties:
+      created_at:
+        type: string
+      current_version:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      target_path:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ConfigVersionResponse:
+    properties:
+      comment:
+        type: string
+      content:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      version:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateConfigRequest:
+    properties:
+      comment:
+        example: initial version
+        type: string
+      content:
+        type: string
+      name:
+        example: nginx.conf
+        type: string
+      target_path:
+        example: /etc/nginx/nginx.conf
+        type: string
+    required:
+    - content
+    - name
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateNetworkRequest:
+    properties:
+      attachable:
+        example: true
+        type: boolean
+      external:
+        example: false
+        type: boolean
+      name:
+        example: backend-net
+        type: string
+    required:
+    - name
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateSecretRequest:
+    properties:
+      name:
+        example: db_password
+        type: string
+      target_path:
+        example: /run/secrets/db_password
+        type: string
+      value:
+        type: string
+    required:
+    - name
+    - value
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateServiceRequest:
     properties:
       command:
@@ -27,6 +153,42 @@ definitions:
     required:
     - image
     - name
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.DeploymentListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse:
+    properties:
+      duration_ms:
+        type: integer
+      error_message:
+        type: string
+      finished_at:
+        type: string
+      id:
+        type: string
+      image_tag:
+        type: string
+      service_id:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: string
+      trigger:
+        type: string
+      user_id:
+        type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.EnvVarDTO:
     properties:
@@ -86,6 +248,38 @@ definitions:
       role:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.NetworkListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse:
+    properties:
+      attachable:
+        type: boolean
+      created_at:
+        type: string
+      driver:
+        type: string
+      external:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+      scope:
+        type: string
+      swarm_id:
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.RefreshRequest:
     properties:
       refresh_token:
@@ -109,6 +303,54 @@ definitions:
         description: bytes
         example: 67108864
         type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.RotateSecretRequest:
+    properties:
+      value:
+        type: string
+    required:
+    - value
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SecretListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse:
+    properties:
+      checksum:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      current_version:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      target_path:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ServiceConfigResponse:
+    properties:
+      config_id:
+        type: string
+      name:
+        type: string
+      target_path:
+        type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ServiceListResponse:
     properties:
@@ -158,6 +400,15 @@ definitions:
       update_config:
         $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO'
       updated_at:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ServiceSecretResponse:
+    properties:
+      name:
+        type: string
+      secret_id:
+        type: string
+      target_path:
         type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.SetEnvVarsRequest:
@@ -339,6 +590,592 @@ paths:
       summary: Exchange a refresh token for a new token pair
       tags:
       - auth
+  /configs:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List configs
+      tags:
+      - configs
+    post:
+      consumes:
+      - application/json
+      description: Stores a cleartext config file (UTF-8, max 500 KB) as version 1.
+      parameters:
+      - description: Config definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: name already taken
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid name, content too large or invalid UTF-8
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a config
+      tags:
+      - configs
+  /configs/{id}:
+    delete:
+      description: Fails if the config is still attached to any service.
+      parameters:
+      - description: Config ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: config in use
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a config
+      tags:
+      - configs
+    get:
+      description: Returns config metadata (no content — use the versions endpoint
+        to read content).
+      parameters:
+      - description: Config ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a config
+      tags:
+      - configs
+  /configs/{id}/versions:
+    get:
+      description: Returns the full version history with content, newest first.
+      parameters:
+      - description: Config ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigVersionResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List config versions
+      tags:
+      - configs
+    post:
+      consumes:
+      - application/json
+      description: Stores new content as the next version. Attached services pick
+        it up on their next deployment.
+      parameters:
+      - description: Config ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AddConfigVersionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: content too large or invalid UTF-8
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add a config version
+      tags:
+      - configs
+  /deployments/{id}:
+    get:
+      parameters:
+      - description: Deployment ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a deployment
+      tags:
+      - deployments
+  /networks:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List networks
+      tags:
+      - networks
+    post:
+      consumes:
+      - application/json
+      description: Registers an overlay network definition. It is materialised on
+        Swarm when a service using it is deployed.
+      parameters:
+      - description: Network definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateNetworkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: name already taken
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid name
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a network
+      tags:
+      - networks
+  /networks/{id}:
+    delete:
+      description: Fails if the network is still attached to any service.
+      parameters:
+      - description: Network ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: network in use
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a network
+      tags:
+      - networks
+    get:
+      parameters:
+      - description: Network ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a network
+      tags:
+      - networks
+  /secrets:
+    get:
+      description: Returns secret metadata only — values are never exposed.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List secrets
+      tags:
+      - secrets
+    post:
+      consumes:
+      - application/json
+      description: Stores a write-only secret. The value is encrypted at rest and
+        never returned by any endpoint.
+      parameters:
+      - description: Secret definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateSecretRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: name already taken
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid name or empty value
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a secret
+      tags:
+      - secrets
+  /secrets/{id}:
+    delete:
+      description: Fails if the secret is still attached to any service.
+      parameters:
+      - description: Secret ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: secret in use
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a secret
+      tags:
+      - secrets
+    get:
+      description: Returns secret metadata only.
+      parameters:
+      - description: Secret ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a secret
+      tags:
+      - secrets
+  /secrets/{id}/rotate:
+    post:
+      consumes:
+      - application/json
+      description: Stores a new encrypted version and increments the version counter.
+        Attached services pick up the new version on their next deployment.
+      parameters:
+      - description: Secret ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New value
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.RotateSecretRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: empty value
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rotate a secret
+      tags:
+      - secrets
   /services:
     get:
       description: Returns a paginated list of services. Filter by name (partial,
@@ -540,6 +1377,199 @@ paths:
       summary: Update a service
       tags:
       - services
+  /services/{id}/configs:
+    get:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceConfigResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List configs attached to a service
+      tags:
+      - configs
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Config to attach
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AttachConfigRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: service or config not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: already attached
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Attach a config to a service
+      tags:
+      - configs
+  /services/{id}/configs/{configId}:
+    delete:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Config ID (UUID)
+        in: path
+        name: configId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: attachment not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Detach a config from a service
+      tags:
+      - configs
+  /services/{id}/deploy:
+    post:
+      description: 'Triggers a deployment of the service to the orchestrator. Runs
+        asynchronously: responds 202 with a pending deployment; poll GET /deployments/{id}
+        for the outcome.'
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: a deployment is already in progress
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "503":
+          description: deployment engine not configured
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Deploy a service
+      tags:
+      - deployments
+  /services/{id}/deployments:
+    get:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List a service's deployments
+      tags:
+      - deployments
   /services/{id}/env:
     get:
       description: Returns the env vars of a service. Secret values are masked (empty
@@ -624,6 +1654,116 @@ paths:
       summary: Replace a service's environment variables
       tags:
       - services
+  /services/{id}/networks:
+    get:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List networks attached to a service
+      tags:
+      - networks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Network to attach
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AttachNetworkRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: service or network not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: already attached
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Attach a network to a service
+      tags:
+      - networks
+  /services/{id}/networks/{networkId}:
+    delete:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Network ID (UUID)
+        in: path
+        name: networkId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: attachment not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Detach a network from a service
+      tags:
+      - networks
   /services/{id}/resources:
     put:
       consumes:
@@ -675,6 +1815,116 @@ paths:
       summary: Set a service's CPU/memory constraints
       tags:
       - services
+  /services/{id}/secrets:
+    get:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceSecretResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List secrets attached to a service
+      tags:
+      - secrets
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Secret to attach
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AttachSecretRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: service or secret not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: already attached
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Attach a secret to a service
+      tags:
+      - secrets
+  /services/{id}/secrets/{secretId}:
+    delete:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Secret ID (UUID)
+        in: path
+        name: secretId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: attachment not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Detach a secret from a service
+      tags:
+      - secrets
 securityDefinitions:
   BearerAuth:
     description: 'Format: "Bearer <token>"'
