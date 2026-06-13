@@ -100,6 +100,9 @@ func (o *SwarmOrchestrator) GetServiceState(ctx context.Context, swarmServiceID 
 			ErrorMessage: t.Status.Err,
 			UpdatedAt:    t.UpdatedAt,
 		}
+		if t.Status.ContainerStatus != nil {
+			ts.ContainerID = t.Status.ContainerStatus.ContainerID
+		}
 		state.Tasks = append(state.Tasks, ts)
 		switch t.Status.State {
 		case swarm.TaskStateRunning:
@@ -141,6 +144,48 @@ func (o *SwarmOrchestrator) ServiceLogs(ctx context.Context, swarmServiceID stri
 		pw.CloseWithError(copyErr)
 	}()
 	return pr, nil
+}
+
+func (o *SwarmOrchestrator) ExecContainer(ctx context.Context, containerID string, opts ports.ExecOptions) (ports.ExecStream, error) {
+	cmd := opts.Cmd
+	if len(cmd) == 0 {
+		// Fall back to sh; most images ship it even when bash is absent.
+		cmd = []string{"/bin/sh"}
+	}
+	created, err := o.cli.ContainerExecCreate(ctx, containerID, container.ExecOptions{
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          opts.Tty,
+		Cmd:          cmd,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("exec create: %w", err)
+	}
+	resp, err := o.cli.ContainerExecAttach(ctx, created.ID, container.ExecStartOptions{Tty: opts.Tty})
+	if err != nil {
+		return nil, fmt.Errorf("exec attach: %w", err)
+	}
+	return &swarmExecStream{cli: o.cli, execID: created.ID, resp: resp}, nil
+}
+
+// swarmExecStream adapts a Docker hijacked exec connection to ports.ExecStream.
+type swarmExecStream struct {
+	cli    *client.Client
+	execID string
+	resp   types.HijackedResponse
+}
+
+func (s *swarmExecStream) Read(p []byte) (int, error)  { return s.resp.Reader.Read(p) }
+func (s *swarmExecStream) Write(p []byte) (int, error) { return s.resp.Conn.Write(p) }
+
+func (s *swarmExecStream) Close() error {
+	s.resp.Close()
+	return nil
+}
+
+func (s *swarmExecStream) Resize(ctx context.Context, height, width uint) error {
+	return s.cli.ContainerExecResize(ctx, s.execID, container.ResizeOptions{Height: height, Width: width})
 }
 
 func (o *SwarmOrchestrator) WaitConvergence(ctx context.Context, swarmServiceID string, timeout time.Duration) error {

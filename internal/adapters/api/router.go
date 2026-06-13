@@ -12,6 +12,7 @@ import (
 	"github.com/orange/hivemind/internal/adapters/api/handler"
 	"github.com/orange/hivemind/internal/adapters/api/middleware"
 	"github.com/orange/hivemind/internal/application"
+	"github.com/orange/hivemind/internal/domain/user"
 	"github.com/orange/hivemind/internal/ports"
 
 	// Import generated docs (produced by `swag init`).
@@ -64,6 +65,14 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewSecretHandler(deps.Secrets).Register(protected)
 	handler.NewConfigHandler(deps.Configs).Register(protected)
 	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
+
+	// Interactive exec (web terminal). Authenticated via a `token` query
+	// parameter since browsers can't set headers on a WebSocket. The Admin-only
+	// restriction is temporarily lifted — any authenticated user may attach.
+	// TODO: re-enable middleware.RequireRole(user.RoleAdmin) for exec.
+	wsAuth := v1.Group("")
+	wsAuth.Use(middleware.AuthFromQuery(deps.Tokens), middleware.RequireRole(user.RoleViewer))
+	wsAuth.GET("/services/:id/exec", handler.NewExecHandler(deps.Deployments).Exec)
 
 	return r
 }

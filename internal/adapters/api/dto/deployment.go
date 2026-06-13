@@ -39,6 +39,7 @@ type ServiceStatusResponse struct {
 // runs on, its current/desired state, last update and any Swarm error message.
 type TaskStateResponse struct {
 	ID           string    `json:"id"`
+	ContainerID  string    `json:"container_id,omitempty"`
 	Node         string    `json:"node"`
 	CurrentState string    `json:"current_state"`
 	DesiredState string    `json:"desired_state"`

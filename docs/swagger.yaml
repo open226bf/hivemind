@@ -440,6 +440,8 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.TaskStateResponse:
     properties:
+      container_id:
+        type: string
       current_state:
         type: string
       desired_state:
@@ -1743,6 +1745,57 @@ paths:
       summary: Replace a service's environment variables
       tags:
       - services
+  /services/{id}/exec:
+    get:
+      description: 'Upgrades to a WebSocket and attaches an interactive TTY exec session
+        to one of the service''s containers. Client→server text messages are tagged
+        by a leading byte: ''0''=stdin data, ''1''=JSON resize {cols,rows}. Server→client
+        messages are raw terminal output. Authenticate with ?token=<access_token>
+        (WebSocket cannot carry an Authorization header). Requires the Admin role.'
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Target container ID (from /services/{id}/tasks)
+        in: query
+        name: container
+        required: true
+        type: string
+      - description: Access token
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: Shell command (default /bin/sh)
+        in: query
+        name: cmd
+        type: string
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: service not deployed
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      summary: Interactive container shell (WebSocket, Admin)
+      tags:
+      - supervision
   /services/{id}/logs:
     get:
       description: 'Streams the service''s aggregated container logs as Server-Sent

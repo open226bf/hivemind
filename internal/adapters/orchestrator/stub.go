@@ -58,6 +58,19 @@ func (*StubOrchestrator) ServiceLogs(_ context.Context, swarmServiceID string, _
 	return io.NopCloser(strings.NewReader(lines)), nil
 }
 
+func (*StubOrchestrator) ExecContainer(_ context.Context, containerID string, _ ports.ExecOptions) (ports.ExecStream, error) {
+	return &stubExecStream{r: strings.NewReader(
+		"stub: interactive exec is not available without a real Swarm orchestrator\r\n")}, nil
+}
+
+// stubExecStream emits a notice then EOF; writes are discarded.
+type stubExecStream struct{ r *strings.Reader }
+
+func (s *stubExecStream) Read(p []byte) (int, error)             { return s.r.Read(p) }
+func (s *stubExecStream) Write(p []byte) (int, error)            { return len(p), nil }
+func (s *stubExecStream) Close() error                           { return nil }
+func (s *stubExecStream) Resize(context.Context, uint, uint) error { return nil }
+
 func (*StubOrchestrator) CreateSecret(_ context.Context, name string, _ []byte) (string, error) {
 	slog.Info("stub: create secret", "name", name)
 	return fakeID("secret"), nil

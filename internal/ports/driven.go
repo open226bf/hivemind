@@ -46,6 +46,10 @@ type Orchestrator interface {
 	// opts.Follow is set the stream stays open until the context is cancelled.
 	ServiceLogs(ctx context.Context, swarmServiceID string, opts LogOptions) (io.ReadCloser, error)
 
+	// ExecContainer opens an interactive exec session (TTY) in a container.
+	// The caller owns the returned stream and must Close it.
+	ExecContainer(ctx context.Context, containerID string, opts ExecOptions) (ExecStream, error)
+
 	CreateSecret(ctx context.Context, name string, value []byte) (swarmSecretID string, err error)
 	RemoveSecret(ctx context.Context, swarmSecretID string) error
 
@@ -111,6 +115,19 @@ type LogOptions struct {
 	Since      string // RFC3339 timestamp or Go duration (e.g. "10m")
 }
 
+// ExecOptions configures an interactive container exec session.
+type ExecOptions struct {
+	Cmd []string // command to run; empty means a sensible default shell
+	Tty bool
+}
+
+// ExecStream is a bidirectional, resizable exec session. Read returns process
+// output; Write feeds process stdin. With a TTY the bytes are unframed.
+type ExecStream interface {
+	io.ReadWriteCloser
+	Resize(ctx context.Context, height, width uint) error
+}
+
 type ServiceState struct {
 	Running  int
 	Desired  int
@@ -122,6 +139,7 @@ type ServiceState struct {
 
 type TaskState struct {
 	ID           string
+	ContainerID  string
 	Node         string
 	CurrentState string
 	DesiredState string
