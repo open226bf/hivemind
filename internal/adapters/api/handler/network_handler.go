@@ -1,0 +1,277 @@
+package handler
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/orange/hivemind/internal/adapters/api/dto"
+	"github.com/orange/hivemind/internal/adapters/api/middleware"
+	"github.com/orange/hivemind/internal/application"
+	"github.com/orange/hivemind/internal/domain/network"
+	"github.com/orange/hivemind/internal/domain/user"
+	"github.com/orange/hivemind/pkg/domainerrors"
+)
+
+type NetworkHandler struct {
+	svc *application.NetworkService
+}
+
+func NewNetworkHandler(svc *application.NetworkService) *NetworkHandler {
+	return &NetworkHandler{svc: svc}
+}
+
+// Register wires network CRUD and service-attachment routes.
+func (h *NetworkHandler) Register(protected *gin.RouterGroup) {
+	n := protected.Group("/networks")
+	n.GET("", middleware.RequireRole(user.RoleViewer), h.List)
+	n.POST("", middleware.RequireRole(user.RoleOperator), h.Create)
+	n.GET("/:id", middleware.RequireRole(user.RoleViewer), h.Get)
+	n.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
+
+	// Service ↔ network attachments.
+	s := protected.Group("/services/:id/networks")
+	s.GET("", middleware.RequireRole(user.RoleViewer), h.ListForService)
+	s.POST("", middleware.RequireRole(user.RoleOperator), h.AttachToService)
+	s.DELETE("/:networkId", middleware.RequireRole(user.RoleOperator), h.DetachFromService)
+}
+
+// List godoc
+//
+//	@Summary		List networks
+//	@Tags			networks
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			page	query		int	false	"Page number (default 1)"
+//	@Param			size	query		int	false	"Page size (default 20, max 100)"
+//	@Success		200		{object}	dto.NetworkListResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Router			/networks [get]
+func (h *NetworkHandler) List(c *gin.Context) {
+	page := parsePage(c)
+	items, total, err := h.svc.List(c.Request.Context(), page)
+	if err != nil {
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list networks")
+		return
+	}
+
+	resp := dto.NetworkListResponse{
+		Items: make([]dto.NetworkResponse, len(items)),
+		Total: total,
+		Page:  page.Number,
+		Size:  page.Size,
+	}
+	for i, n := range items {
+		resp.Items[i] = toNetworkResponse(n)
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// Create godoc
+//
+//	@Summary		Create a network
+//	@Description	Registers an overlay network definition. It is materialised on Swarm when a service using it is deployed.
+//	@Tags			networks
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		dto.CreateNetworkRequest	true	"Network definition"
+//	@Success		201		{object}	dto.NetworkResponse
+//	@Failure		400		{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		409		{object}	dto.ErrorResponse	"name already taken"
+//	@Failure		422		{object}	dto.ErrorResponse	"invalid name"
+//	@Router			/networks [post]
+func (h *NetworkHandler) Create(c *gin.Context) {
+	var req dto.CreateNetworkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	n, err := h.svc.Create(c.Request.Context(), application.CreateNetworkInput{
+		Name:       req.Name,
+		Attachable: req.Attachable,
+		External:   req.External,
+	})
+	if err != nil {
+		h.writeNetworkError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, toNetworkResponse(n))
+}
+
+// Get godoc
+//
+//	@Summary		Get a network
+//	@Tags			networks
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		string	true	"Network ID (UUID)"
+//	@Success		200	{object}	dto.NetworkResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/networks/{id} [get]
+func (h *NetworkHandler) Get(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	n, err := h.svc.Get(c.Request.Context(), id)
+	if err != nil {
+		h.writeNetworkError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toNetworkResponse(n))
+}
+
+// Delete godoc
+//
+//	@Summary		Delete a network
+//	@Description	Fails if the network is still attached to any service.
+//	@Tags			networks
+//	@Security		BearerAuth
+//	@Param			id	path	string	true	"Network ID (UUID)"
+//	@Success		204
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		409	{object}	dto.ErrorResponse	"network in use"
+//	@Router			/networks/{id} [delete]
+func (h *NetworkHandler) Delete(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.svc.Delete(c.Request.Context(), id); err != nil {
+		h.writeNetworkError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ListForService godoc
+//
+//	@Summary		List networks attached to a service
+//	@Tags			networks
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		string	true	"Service ID (UUID)"
+//	@Success		200	{array}		dto.NetworkResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/services/{id}/networks [get]
+func (h *NetworkHandler) ListForService(c *gin.Context) {
+	serviceID, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	nets, err := h.svc.ListServiceNetworks(c.Request.Context(), serviceID)
+	if err != nil {
+		h.writeNetworkError(c, err)
+		return
+	}
+	out := make([]dto.NetworkResponse, len(nets))
+	for i, n := range nets {
+		out[i] = toNetworkResponse(n)
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// AttachToService godoc
+//
+//	@Summary		Attach a network to a service
+//	@Tags			networks
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Param			id		path	string						true	"Service ID (UUID)"
+//	@Param			body	body	dto.AttachNetworkRequest	true	"Network to attach"
+//	@Success		204
+//	@Failure		400	{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse	"service or network not found"
+//	@Failure		409	{object}	dto.ErrorResponse	"already attached"
+//	@Router			/services/{id}/networks [post]
+func (h *NetworkHandler) AttachToService(c *gin.Context) {
+	serviceID, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	var req dto.AttachNetworkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+	networkID, ok := parseUUIDValue(c, req.NetworkID, "network_id")
+	if !ok {
+		return
+	}
+
+	if err := h.svc.AttachToService(c.Request.Context(), serviceID, networkID); err != nil {
+		h.writeNetworkError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// DetachFromService godoc
+//
+//	@Summary		Detach a network from a service
+//	@Tags			networks
+//	@Security		BearerAuth
+//	@Param			id			path	string	true	"Service ID (UUID)"
+//	@Param			networkId	path	string	true	"Network ID (UUID)"
+//	@Success		204
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse	"attachment not found"
+//	@Router			/services/{id}/networks/{networkId} [delete]
+func (h *NetworkHandler) DetachFromService(c *gin.Context) {
+	serviceID, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	networkID, ok := parseUUID(c, "networkId")
+	if !ok {
+		return
+	}
+	if err := h.svc.DetachFromService(c.Request.Context(), serviceID, networkID); err != nil {
+		h.writeNetworkError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+func (h *NetworkHandler) writeNetworkError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domainerrors.ErrNotFound):
+		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
+	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, network.ErrNetworkInUse):
+		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
+	case errors.Is(err, network.ErrInvalidName):
+		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
+	default:
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+	}
+}
+
+func toNetworkResponse(n *network.Network) dto.NetworkResponse {
+	return dto.NetworkResponse{
+		ID:         n.ID.String(),
+		Name:       n.Name,
+		Driver:     n.Driver,
+		Scope:      n.Scope,
+		Attachable: n.Attachable,
+		External:   n.External,
+		SwarmID:    n.SwarmID,
+		CreatedAt:  n.CreatedAt,
+	}
+}

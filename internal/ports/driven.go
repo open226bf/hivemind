@@ -86,13 +86,15 @@ type NetworkAttachment struct {
 }
 
 type SecretAttachment struct {
-	SwarmSecretID string
-	TargetPath    string
+	SwarmSecretID   string
+	SwarmSecretName string
+	TargetPath      string
 }
 
 type ConfigAttachment struct {
-	SwarmConfigID string
-	TargetPath    string
+	SwarmConfigID   string
+	SwarmConfigName string
+	TargetPath      string
 }
 
 type ServiceState struct {

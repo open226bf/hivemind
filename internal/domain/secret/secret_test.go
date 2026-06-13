@@ -10,7 +10,8 @@ import (
 )
 
 func TestNew_ChecksumNotEmpty(t *testing.T) {
-	s, v := secret.New("db_password", "/run/secrets/db_password", []byte("s3cr3t"), uuid.New())
+	s, v, err := secret.New("db_password", "/run/secrets/db_password", []byte("s3cr3t"), uuid.New())
+	require.NoError(t, err)
 	require.NotNil(t, s)
 	require.NotNil(t, v)
 	assert.NotEmpty(t, s.Checksum)
@@ -18,8 +19,19 @@ func TestNew_ChecksumNotEmpty(t *testing.T) {
 	assert.Equal(t, 1, s.CurrentVersion)
 }
 
+func TestNew_InvalidName(t *testing.T) {
+	_, _, err := secret.New("bad name!", "/run/secrets/x", []byte("v"), uuid.New())
+	assert.ErrorIs(t, err, secret.ErrInvalidName)
+}
+
+func TestNew_EmptyValue(t *testing.T) {
+	_, _, err := secret.New("db_password", "/run/secrets/x", nil, uuid.New())
+	assert.ErrorIs(t, err, secret.ErrEmptyValue)
+}
+
 func TestRotate_IncrementsVersion(t *testing.T) {
-	s, _ := secret.New("db_password", "/run/secrets/db_password", []byte("old"), uuid.New())
+	s, _, err := secret.New("db_password", "/run/secrets/db_password", []byte("old"), uuid.New())
+	require.NoError(t, err)
 	v2 := s.Rotate([]byte("new"))
 	assert.Equal(t, 2, s.CurrentVersion)
 	assert.Equal(t, 2, v2.Version)
@@ -27,7 +39,8 @@ func TestRotate_IncrementsVersion(t *testing.T) {
 }
 
 func TestSwarmSecretName(t *testing.T) {
-	s, _ := secret.New("db_password", "/run/secrets/db_password", []byte("x"), uuid.New())
+	s, _, err := secret.New("db_password", "/run/secrets/db_password", []byte("x"), uuid.New())
+	require.NoError(t, err)
 	assert.Equal(t, "db_password_v1", s.SwarmSecretName())
 	s.Rotate([]byte("y"))
 	assert.Equal(t, "db_password_v2", s.SwarmSecretName())

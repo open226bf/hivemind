@@ -2,12 +2,18 @@ package network
 
 import (
 	"errors"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-var ErrNetworkInUse = errors.New("network is attached to one or more services")
+var (
+	ErrNetworkInUse = errors.New("network is attached to one or more services")
+	ErrInvalidName  = errors.New("network name must match ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$")
+)
+
+var nameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$`)
 
 type Network struct {
 	ID         uuid.UUID
@@ -20,7 +26,10 @@ type Network struct {
 	CreatedAt  time.Time
 }
 
-func New(name string) *Network {
+func New(name string) (*Network, error) {
+	if !nameRegex.MatchString(name) {
+		return nil, ErrInvalidName
+	}
 	return &Network{
 		ID:         uuid.New(),
 		Name:       name,
@@ -29,5 +38,5 @@ func New(name string) *Network {
 		Attachable: true,
 		External:   false,
 		CreatedAt:  time.Now().UTC(),
-	}
+	}, nil
 }

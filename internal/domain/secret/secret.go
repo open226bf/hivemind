@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,7 +13,11 @@ import (
 var (
 	ErrSecretInUse      = errors.New("secret is attached to one or more services")
 	ErrValueNotReadable = errors.New("secret value is write-only")
+	ErrInvalidName      = errors.New("secret name must match ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$")
+	ErrEmptyValue       = errors.New("secret value must not be empty")
 )
+
+var nameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$`)
 
 type Secret struct {
 	ID             uuid.UUID
@@ -34,7 +39,13 @@ type SecretVersion struct {
 	CreatedAt     time.Time
 }
 
-func New(name, targetPath string, value []byte, createdBy uuid.UUID) (*Secret, *SecretVersion) {
+func New(name, targetPath string, value []byte, createdBy uuid.UUID) (*Secret, *SecretVersion, error) {
+	if !nameRegex.MatchString(name) {
+		return nil, nil, ErrInvalidName
+	}
+	if len(value) == 0 {
+		return nil, nil, ErrEmptyValue
+	}
 	id := uuid.New()
 	checksum := computeChecksum(value)
 	s := &Secret{
@@ -54,7 +65,7 @@ func New(name, targetPath string, value []byte, createdBy uuid.UUID) (*Secret, *
 		Checksum:  checksum,
 		CreatedAt: time.Now().UTC(),
 	}
-	return s, v
+	return s, v, nil
 }
 
 func (s *Secret) Rotate(newValue []byte) *SecretVersion {

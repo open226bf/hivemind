@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"regexp"
 	"time"
 	"unicode/utf8"
 
@@ -14,7 +15,10 @@ var (
 	ErrConfigInUse     = errors.New("config is attached to one or more services")
 	ErrContentTooLarge = errors.New("config content exceeds 500 KB")
 	ErrInvalidUTF8     = errors.New("config content must be valid UTF-8")
+	ErrInvalidName     = errors.New("config name must match ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$")
 )
+
+var nameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$`)
 
 type Config struct {
 	ID             uuid.UUID
@@ -37,6 +41,9 @@ type ConfigVersion struct {
 }
 
 func New(name, targetPath string, content []byte, comment string, createdBy uuid.UUID) (*Config, *ConfigVersion, error) {
+	if !nameRegex.MatchString(name) {
+		return nil, nil, ErrInvalidName
+	}
 	if err := validateContent(content); err != nil {
 		return nil, nil, err
 	}
