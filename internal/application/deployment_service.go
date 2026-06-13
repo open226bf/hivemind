@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"time"
 
@@ -17,7 +18,10 @@ import (
 	"github.com/open226bf/hivemind/pkg/pagination"
 )
 
-var ErrOrchestratorUnavailable = errors.New("deployment engine is not configured")
+var (
+	ErrOrchestratorUnavailable = errors.New("deployment engine is not configured")
+	ErrServiceNotDeployed      = errors.New("service is not deployed")
+)
 
 const defaultConvergenceTimeout = 2 * time.Minute
 
@@ -192,6 +196,23 @@ func (s *DeploymentService) ServiceState(ctx context.Context, serviceID uuid.UUI
 	}
 	s.stateCache.put(svc.SwarmServiceID, state)
 	return state, nil
+}
+
+// ServiceLogs returns a live stream of a service's aggregated container logs
+// (F-V2-01). The caller owns the returned reader and must Close it. A service
+// that was never deployed yields ErrServiceNotDeployed.
+func (s *DeploymentService) ServiceLogs(ctx context.Context, serviceID uuid.UUID, opts ports.LogOptions) (io.ReadCloser, error) {
+	if s.orchestrator == nil {
+		return nil, ErrOrchestratorUnavailable
+	}
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	if svc.SwarmServiceID == "" {
+		return nil, ErrServiceNotDeployed
+	}
+	return s.orchestrator.ServiceLogs(ctx, svc.SwarmServiceID, opts)
 }
 
 // ─── Engine internals ─────────────────────────────────────────────────────────

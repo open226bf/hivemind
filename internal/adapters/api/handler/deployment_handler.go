@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"bufio"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -31,6 +33,7 @@ func (h *DeploymentHandler) Register(protected *gin.RouterGroup) {
 	protected.GET("/services/:id/deployments", middleware.RequireRole(user.RoleViewer), h.ListForService)
 	protected.GET("/services/:id/status", middleware.RequireRole(user.RoleViewer), h.Status)
 	protected.GET("/services/:id/tasks", middleware.RequireRole(user.RoleViewer), h.Tasks)
+	protected.GET("/services/:id/logs", middleware.RequireRole(user.RoleViewer), h.Logs)
 	protected.GET("/deployments", middleware.RequireRole(user.RoleViewer), h.List)
 	protected.GET("/deployments/:id", middleware.RequireRole(user.RoleViewer), h.Get)
 }
@@ -236,6 +239,76 @@ func (h *DeploymentHandler) Tasks(c *gin.Context) {
 	c.JSON(http.StatusOK, toServiceTasksResponse(state))
 }
 
+// Logs godoc
+//
+//	@Summary		Stream a service's logs (SSE, F-V2-01)
+//	@Description	Streams the service's aggregated container logs as Server-Sent Events. Each log line is delivered as a `data:` event; an `event: end` frame closes a non-follow stream. With follow=true the stream stays open until the client disconnects. Authenticate with a Bearer token (use fetch/ReadableStream, not EventSource).
+//	@Tags			supervision
+//	@Security		BearerAuth
+//	@Produce		text/event-stream
+//	@Param			id			path	string	true	"Service ID (UUID)"
+//	@Param			follow		query	bool	false	"Keep the stream open (default true)"
+//	@Param			tail		query	string	false	"Number of trailing lines, or 'all' (default 200)"
+//	@Param			timestamps	query	bool	false	"Prefix each line with an RFC3339 timestamp"
+//	@Param			since		query	string	false	"Only logs since this time (RFC3339 or duration like 10m)"
+//	@Success		200	{string}	string	"text/event-stream of log lines"
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		409	{object}	dto.ErrorResponse	"service not deployed"
+//	@Failure		503	{object}	dto.ErrorResponse	"deployment engine not configured"
+//	@Router			/services/{id}/logs [get]
+func (h *DeploymentHandler) Logs(c *gin.Context) {
+	serviceID, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	opts := ports.LogOptions{
+		Follow:     c.DefaultQuery("follow", "true") == "true",
+		Tail:       c.DefaultQuery("tail", "200"),
+		Timestamps: c.Query("timestamps") == "true",
+		Since:      c.Query("since"),
+	}
+
+	stream, err := h.svc.ServiceLogs(c.Request.Context(), serviceID, opts)
+	if err != nil {
+		h.writeDeploymentError(c, err)
+		return
+	}
+	defer stream.Close()
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "streaming unsupported")
+		return
+	}
+
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no") // disable proxy buffering (nginx)
+
+	// Close the stream when the client disconnects so the scanner unblocks.
+	ctx := c.Request.Context()
+	go func() {
+		<-ctx.Done()
+		stream.Close()
+	}()
+
+	scanner := bufio.NewScanner(stream)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", scanner.Text()); err != nil {
+			return // client gone
+		}
+		flusher.Flush()
+	}
+	// Signal completion for non-follow streams.
+	fmt.Fprint(c.Writer, "event: end\ndata: \n\n")
+	flusher.Flush()
+}
+
 // Get godoc
 //
 //	@Summary		Get a deployment
@@ -267,7 +340,8 @@ func (h *DeploymentHandler) writeDeploymentError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, domainerrors.ErrNotFound):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, deployment.ErrAlreadyInProgress):
+	case errors.Is(err, deployment.ErrAlreadyInProgress),
+		errors.Is(err, application.ErrServiceNotDeployed):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, application.ErrOrchestratorUnavailable):
 		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, err.Error())

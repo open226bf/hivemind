@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,6 +40,11 @@ type Orchestrator interface {
 	RemoveService(ctx context.Context, swarmServiceID string) error
 	GetServiceState(ctx context.Context, swarmServiceID string) (*ServiceState, error)
 	WaitConvergence(ctx context.Context, swarmServiceID string, timeout time.Duration) error
+
+	// ServiceLogs returns a stream of the service's aggregated container logs
+	// (stdout+stderr, demultiplexed). The caller must Close the reader. When
+	// opts.Follow is set the stream stays open until the context is cancelled.
+	ServiceLogs(ctx context.Context, swarmServiceID string, opts LogOptions) (io.ReadCloser, error)
 
 	CreateSecret(ctx context.Context, name string, value []byte) (swarmSecretID string, err error)
 	RemoveSecret(ctx context.Context, swarmSecretID string) error
@@ -95,6 +101,14 @@ type ConfigAttachment struct {
 	SwarmConfigID   string
 	SwarmConfigName string
 	TargetPath      string
+}
+
+// LogOptions controls a service log stream (F-V2-01).
+type LogOptions struct {
+	Follow     bool
+	Tail       string // number of lines, or "all"; empty means a sensible default
+	Timestamps bool
+	Since      string // RFC3339 timestamp or Go duration (e.g. "10m")
 }
 
 type ServiceState struct {

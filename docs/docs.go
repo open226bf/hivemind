@@ -1907,6 +1907,94 @@ const docTemplate = `{
                 }
             }
         },
+        "/services/{id}/logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Streams the service's aggregated container logs as Server-Sent Events. Each log line is delivered as a ` + "`" + `data:` + "`" + ` event; an ` + "`" + `event: end` + "`" + ` frame closes a non-follow stream. With follow=true the stream stays open until the client disconnects. Authenticate with a Bearer token (use fetch/ReadableStream, not EventSource).",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "supervision"
+                ],
+                "summary": "Stream a service's logs (SSE, F-V2-01)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Keep the stream open (default true)",
+                        "name": "follow",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Number of trailing lines, or 'all' (default 200)",
+                        "name": "tail",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Prefix each line with an RFC3339 timestamp",
+                        "name": "timestamps",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Only logs since this time (RFC3339 or duration like 10m)",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "text/event-stream of log lines",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "service not deployed",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "deployment engine not configured",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/services/{id}/networks": {
             "get": {
                 "security": [

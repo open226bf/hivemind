@@ -3,6 +3,8 @@ package application_test
 import (
 	"context"
 	"errors"
+	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -127,6 +129,9 @@ func (o *fakeOrchestrator) GetServiceState(context.Context, string) (*ports.Serv
 }
 func (o *fakeOrchestrator) WaitConvergence(context.Context, string, time.Duration) error {
 	return o.convergeErr
+}
+func (o *fakeOrchestrator) ServiceLogs(context.Context, string, ports.LogOptions) (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader("line one\nline two\n")), nil
 }
 func (o *fakeOrchestrator) CreateSecret(_ context.Context, name string, _ []byte) (string, error) {
 	o.createdSecrets = append(o.createdSecrets, name)
