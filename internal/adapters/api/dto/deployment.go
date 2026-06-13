@@ -23,3 +23,31 @@ type DeploymentListResponse struct {
 	Page  int                  `json:"page"`
 	Size  int                  `json:"size"`
 }
+
+// ServiceStatusResponse is the aggregated live health of a service (F-MVP-10):
+// desired vs. effective replicas and the high-level phase. Served by
+// GET /services/{id}/status.
+type ServiceStatusResponse struct {
+	Running  int  `json:"running"`
+	Desired  int  `json:"desired"`
+	Pending  int  `json:"pending"`
+	Failed   int  `json:"failed"`
+	Updating bool `json:"updating"`
+}
+
+// TaskStateResponse is a single task (container) of a service, with the node it
+// runs on, its current/desired state, last update and any Swarm error message.
+type TaskStateResponse struct {
+	ID           string    `json:"id"`
+	Node         string    `json:"node"`
+	CurrentState string    `json:"current_state"`
+	DesiredState string    `json:"desired_state"`
+	ErrorMessage string    `json:"error_message,omitempty"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// ServiceTasksResponse is the per-task detail of a service (F-MVP-10). Served by
+// GET /services/{id}/tasks.
+type ServiceTasksResponse struct {
+	Tasks []TaskStateResponse `json:"tasks"`
+}

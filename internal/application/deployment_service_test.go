@@ -64,9 +64,15 @@ func (r *fakeDeploymentRepo) ListByServiceID(_ context.Context, serviceID uuid.U
 	return out, int64(len(out)), nil
 }
 
-func (r *fakeDeploymentRepo) List(_ context.Context, _ ports.DeploymentFilter, _ pagination.Page) ([]*deployment.Deployment, int64, error) {
+func (r *fakeDeploymentRepo) List(_ context.Context, filter ports.DeploymentFilter, _ pagination.Page) ([]*deployment.Deployment, int64, error) {
 	out := make([]*deployment.Deployment, 0, len(r.byID))
 	for _, d := range r.byID {
+		if filter.ServiceID != nil && d.ServiceID != *filter.ServiceID {
+			continue
+		}
+		if filter.Status != "" && string(d.Status) != filter.Status {
+			continue
+		}
 		out = append(out, d)
 	}
 	return out, int64(len(out)), nil
@@ -87,6 +93,7 @@ type fakeOrchestrator struct {
 	convergeErr    error
 	deployCalls    int
 	updateCalls    int
+	stateCalls     int
 	lastSpec       ports.ServiceSpec
 	createdSecrets []string
 }
@@ -106,7 +113,17 @@ func (o *fakeOrchestrator) UpdateService(_ context.Context, _ string, spec ports
 }
 func (o *fakeOrchestrator) RemoveService(context.Context, string) error { return nil }
 func (o *fakeOrchestrator) GetServiceState(context.Context, string) (*ports.ServiceState, error) {
-	return &ports.ServiceState{Running: 1, Desired: 1}, nil
+	o.stateCalls++
+	return &ports.ServiceState{
+		Running: 2,
+		Desired: 3,
+		Pending: 1,
+		Tasks: []ports.TaskState{
+			{ID: "t1", Node: "node-a", CurrentState: "running", DesiredState: "running"},
+			{ID: "t2", Node: "node-b", CurrentState: "running", DesiredState: "running"},
+			{ID: "t3", Node: "node-c", CurrentState: "pending", DesiredState: "running"},
+		},
+	}, nil
 }
 func (o *fakeOrchestrator) WaitConvergence(context.Context, string, time.Duration) error {
 	return o.convergeErr
@@ -188,6 +205,80 @@ func TestDeploymentBegin_OrchestratorUnavailable(t *testing.T) {
 
 	_, err := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
 	assert.ErrorIs(t, err, application.ErrOrchestratorUnavailable)
+}
+
+// ─── List (history) ─────────────────────────────────────────────────────────────
+
+func TestDeploymentList_FilterByServiceAndStatus(t *testing.T) {
+	svc, svcRepo, _, _, _ := newDeploymentSvc(t)
+	a := mkService(t, "api")
+	b := mkService(t, "web")
+	svcRepo.add(a)
+	svcRepo.add(b)
+
+	// Two succeeded deploys on a, one on b.
+	for _, s := range []*service.Service{a, a, b} {
+		dep, err := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
+		require.NoError(t, err)
+		require.NoError(t, svc.Execute(context.Background(), dep.ID))
+	}
+
+	// All deployments.
+	all, total, err := svc.List(context.Background(), ports.DeploymentFilter{}, pagination.New(1, 20))
+	require.NoError(t, err)
+	assert.EqualValues(t, 3, total)
+	assert.Len(t, all, 3)
+
+	// Filter by service a.
+	onlyA, totalA, err := svc.List(context.Background(), ports.DeploymentFilter{ServiceID: &a.ID}, pagination.New(1, 20))
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, totalA)
+	assert.Len(t, onlyA, 2)
+
+	// Filter by status succeeded matches all three.
+	succeeded, totalS, err := svc.List(context.Background(), ports.DeploymentFilter{Status: "succeeded"}, pagination.New(1, 20))
+	require.NoError(t, err)
+	assert.EqualValues(t, 3, totalS)
+	assert.Len(t, succeeded, 3)
+}
+
+// ─── ServiceState (supervision, F-MVP-10) ──────────────────────────────────────
+
+func TestServiceState_AggregatesAndCaches(t *testing.T) {
+	svc, svcRepo, _, orch, _ := newDeploymentSvc(t)
+	s := mkService(t, "api")
+	s.SwarmServiceID = "swarm-svc-1"
+	svcRepo.add(s)
+
+	state, err := svc.ServiceState(context.Background(), s.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 2, state.Running)
+	assert.Equal(t, 3, state.Desired)
+	assert.Equal(t, 1, state.Pending)
+	assert.Len(t, state.Tasks, 3)
+	assert.Equal(t, 1, orch.stateCalls)
+
+	// A second read within the TTL is served from cache: no extra Swarm call.
+	_, err = svc.ServiceState(context.Background(), s.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, orch.stateCalls, "second read should hit the cache")
+}
+
+func TestServiceState_NeverDeployed_ReturnsZeroWithoutOrchestrator(t *testing.T) {
+	svc, svcRepo, _, orch, _ := newDeploymentSvc(t)
+	s := mkService(t, "api") // no SwarmServiceID -> never deployed
+	svcRepo.add(s)
+
+	state, err := svc.ServiceState(context.Background(), s.ID)
+	require.NoError(t, err)
+	assert.Equal(t, &ports.ServiceState{}, state)
+	assert.Equal(t, 0, orch.stateCalls, "must not query the orchestrator for an undeployed service")
+}
+
+func TestServiceState_UnknownService(t *testing.T) {
+	svc, _, _, _, _ := newDeploymentSvc(t)
+	_, err := svc.ServiceState(context.Background(), uuid.New())
+	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
 }
 
 // ─── Execute ──────────────────────────────────────────────────────────────────

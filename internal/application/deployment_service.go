@@ -35,6 +35,7 @@ type DeploymentService struct {
 	orchestrator ports.Orchestrator
 	notifier     ports.Notifier // optional
 	timeout      time.Duration
+	stateCache   *stateCache // short-lived cache of live orchestrator state (F-MVP-10)
 }
 
 func NewDeploymentService(
@@ -55,6 +56,7 @@ func NewDeploymentService(
 		orchestrator: orchestrator,
 		notifier:     notifier,
 		timeout:      defaultConvergenceTimeout,
+		stateCache:   newStateCache(serviceStateTTL),
 	}
 }
 
@@ -151,11 +153,45 @@ func (s *DeploymentService) Get(ctx context.Context, id uuid.UUID) (*deployment.
 	return s.deployments.FindByID(ctx, id)
 }
 
+// List returns the global deployment history, filtered by service, status and
+// time range (F-MVP-09).
+func (s *DeploymentService) List(ctx context.Context, filter ports.DeploymentFilter, page pagination.Page) ([]*deployment.Deployment, int64, error) {
+	return s.deployments.List(ctx, filter, page)
+}
+
 func (s *DeploymentService) ListForService(ctx context.Context, serviceID uuid.UUID, page pagination.Page) ([]*deployment.Deployment, int64, error) {
 	if _, err := s.services.FindByID(ctx, serviceID); err != nil {
 		return nil, 0, err
 	}
 	return s.deployments.ListByServiceID(ctx, serviceID, page)
+}
+
+// ServiceState returns the live orchestrator state of a service (F-MVP-10):
+// running/desired/failed task counts and the per-task (container) details used
+// to surface launch failures. A service that was never deployed reports a zero
+// state rather than an error. Results are cached for a short TTL (<= 5s) so
+// that supervising many services — and hitting both /status and /tasks back to
+// back — does not overload the Swarm API.
+func (s *DeploymentService) ServiceState(ctx context.Context, serviceID uuid.UUID) (*ports.ServiceState, error) {
+	if s.orchestrator == nil {
+		return nil, ErrOrchestratorUnavailable
+	}
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	if svc.SwarmServiceID == "" {
+		return &ports.ServiceState{}, nil
+	}
+	if cached, ok := s.stateCache.get(svc.SwarmServiceID); ok {
+		return cached, nil
+	}
+	state, err := s.orchestrator.GetServiceState(ctx, svc.SwarmServiceID)
+	if err != nil {
+		return nil, err
+	}
+	s.stateCache.put(svc.SwarmServiceID, state)
+	return state, nil
 }
 
 // ─── Engine internals ─────────────────────────────────────────────────────────

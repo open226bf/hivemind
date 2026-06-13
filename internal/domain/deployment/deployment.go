@@ -20,6 +20,16 @@ const (
 	StatusRolledBack Status = "rolled_back"
 )
 
+// IsValid reports whether s is a recognised deployment status.
+func (s Status) IsValid() bool {
+	switch s {
+	case StatusPending, StatusInProgress, StatusSucceeded, StatusFailed, StatusRolledBack:
+		return true
+	default:
+		return false
+	}
+}
+
 type Trigger string
 
 const (
