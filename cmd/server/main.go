@@ -110,12 +110,21 @@ func main() {
 	secretRepo := persistence.NewSecretRepository(db, cipher)
 	configRepo := persistence.NewConfigRepository(db)
 	deploymentRepo := persistence.NewDeploymentRepository(db)
+	auditRepo := persistence.NewAuditLogRepository(db)
+
+	// ─── Cleanup orphaned deployments ────────────────────────────────────────
+	if n, err := deploymentRepo.FailOrphaned(context.Background()); err != nil {
+		log.Error("fail orphaned deployments", "err", err)
+	} else if n > 0 {
+		log.Warn("marked orphaned deployments as failed", "count", n)
+	}
 
 	// ─── Orchestrator ────────────────────────────────────────────────────────
 	orch := buildOrchestrator(context.Background(), env, log)
 
 	// ─── Use cases ──────────────────────────────────────────────────────────
 	authSvc := application.NewAuthService(userRepo, tokens, clock.System{})
+	userSvc := application.NewUserService(userRepo)
 	serviceSvc := application.NewServiceService(serviceRepo, orch)
 	networkSvc := application.NewNetworkService(networkRepo, serviceRepo)
 	secretSvc := application.NewSecretService(secretRepo, serviceRepo)
@@ -136,14 +145,17 @@ func main() {
 
 	// ─── HTTP server ────────────────────────────────────────────────────────
 	r := api.NewRouter(api.Dependencies{
-		DB:          db,
-		Tokens:      tokens,
-		Auth:        authSvc,
-		Services:    serviceSvc,
-		Networks:    networkSvc,
-		Secrets:     secretSvc,
-		Configs:     configSvc,
-		Deployments: deploymentSvc,
+		DB:           db,
+		Tokens:       tokens,
+		Auth:         authSvc,
+		Users:        userSvc,
+		Services:     serviceSvc,
+		Networks:     networkSvc,
+		Secrets:      secretSvc,
+		Configs:      configSvc,
+		Deployments:  deploymentSvc,
+		Orchestrator: orch,
+		AuditLog:     auditRepo,
 	})
 
 	port := os.Getenv("PORT")

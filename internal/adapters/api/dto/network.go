@@ -5,6 +5,7 @@ import "time"
 // CreateNetworkRequest is the body for POST /networks.
 type CreateNetworkRequest struct {
 	Name       string `json:"name"       binding:"required" example:"backend-net"`
+	Subnet     string `json:"subnet"     example:"10.0.9.0/24"`
 	Attachable bool   `json:"attachable" example:"true"`
 	External   bool   `json:"external"   example:"false"`
 }
@@ -20,10 +21,21 @@ type NetworkResponse struct {
 	Name       string    `json:"name"`
 	Driver     string    `json:"driver"`
 	Scope      string    `json:"scope"`
+	Subnet     string    `json:"subnet,omitempty"`
 	Attachable bool      `json:"attachable"`
 	External   bool      `json:"external"`
 	SwarmID    string    `json:"swarm_id,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+// SwarmNetworkInfo is a lightweight view of a Docker Swarm overlay network,
+// returned by the "discover" endpoint.
+type SwarmNetworkInfo struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Scope  string `json:"scope"`
+	Driver string `json:"driver"`
+	Subnet string `json:"subnet,omitempty"`
 }
 
 // NetworkListResponse wraps a paginated list of networks.

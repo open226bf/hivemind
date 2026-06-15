@@ -6,6 +6,7 @@ import (
 	"io"
 	"path"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -90,18 +91,74 @@ func (o *SwarmOrchestrator) GetServiceState(ctx context.Context, swarmServiceID 
 		return nil, err
 	}
 
-	state := &ports.ServiceState{Desired: desiredReplicas(svc)}
+	// Keep only the most recent task per slot to avoid counting historical
+	// shutdown/rejected tasks. Tasks without slots (slot=0) are kept as-is.
+	latestBySlot := make(map[int]swarm.Task)
 	for _, t := range tasks {
+		if prev, ok := latestBySlot[t.Slot]; !ok || t.UpdatedAt.After(prev.UpdatedAt) {
+			latestBySlot[t.Slot] = t
+		}
+	}
+
+	// TaskList does not populate NetworksAttachments.Addresses; call TaskInspect
+	// concurrently for each running task to retrieve per-task IPs.
+	type inspectResult struct {
+		slot int
+		nets []swarm.NetworkAttachment
+	}
+	inspectCh := make(chan inspectResult, len(latestBySlot))
+	var wg sync.WaitGroup
+	for slot, t := range latestBySlot {
+		if t.Status.State != swarm.TaskStateRunning {
+			inspectCh <- inspectResult{slot: slot}
+			continue
+		}
+		wg.Add(1)
+		go func(slot int, taskID string) {
+			defer wg.Done()
+			full, _, err := o.cli.TaskInspectWithRaw(ctx, taskID)
+			if err != nil {
+				inspectCh <- inspectResult{slot: slot}
+				return
+			}
+			inspectCh <- inspectResult{slot: slot, nets: full.NetworksAttachments}
+		}(slot, t.ID)
+	}
+	wg.Wait()
+	close(inspectCh)
+
+	networksBySlot := make(map[int][]swarm.NetworkAttachment, len(latestBySlot))
+	for r := range inspectCh {
+		networksBySlot[r.slot] = r.nets
+	}
+
+	state := &ports.ServiceState{Desired: desiredReplicas(svc)}
+	for _, t := range latestBySlot {
 		ts := ports.TaskState{
 			ID:           t.ID,
 			Node:         t.NodeID,
+			Image:        t.Spec.ContainerSpec.Image,
+			Slot:         t.Slot,
 			CurrentState: string(t.Status.State),
 			DesiredState: string(t.DesiredState),
+			Message:      t.Status.Message,
 			ErrorMessage: t.Status.Err,
+			CreatedAt:    t.CreatedAt,
 			UpdatedAt:    t.UpdatedAt,
 		}
 		if t.Status.ContainerStatus != nil {
 			ts.ContainerID = t.Status.ContainerStatus.ContainerID
+			ts.PID = t.Status.ContainerStatus.PID
+			ec := t.Status.ContainerStatus.ExitCode
+			ts.ExitCode = &ec
+		}
+		for _, na := range networksBySlot[t.Slot] {
+			for _, addr := range na.Addresses {
+				ts.Networks = append(ts.Networks, ports.TaskNetwork{
+					Name:    na.Network.Spec.Name,
+					Address: addr,
+				})
+			}
 		}
 		state.Tasks = append(state.Tasks, ts)
 		switch t.Status.State {
@@ -201,6 +258,9 @@ func (o *SwarmOrchestrator) WaitConvergence(ctx context.Context, swarmServiceID 
 		if st.Running >= st.Desired && !st.Updating {
 			return nil
 		}
+		if st.Failed > 0 && st.Running == 0 && !st.Updating {
+			return fmt.Errorf("all tasks failed or rejected: %d/%d desired, %d failed", st.Running, st.Desired, st.Failed)
+		}
 
 		if time.Now().After(deadline) {
 			return fmt.Errorf("timed out after %s: %d/%d tasks running", timeout, st.Running, st.Desired)
@@ -287,12 +347,18 @@ func (o *SwarmOrchestrator) configIDByName(ctx context.Context, name string) (st
 
 // ─── Networks ─────────────────────────────────────────────────────────────────
 
-func (o *SwarmOrchestrator) CreateNetwork(ctx context.Context, name string, attachable bool) (string, error) {
-	resp, err := o.cli.NetworkCreate(ctx, name, network.CreateOptions{
+func (o *SwarmOrchestrator) CreateNetwork(ctx context.Context, name string, opts ports.CreateNetworkOptions) (string, error) {
+	createOpts := network.CreateOptions{
 		Driver:     "overlay",
 		Scope:      "swarm",
-		Attachable: attachable,
-	})
+		Attachable: opts.Attachable,
+	}
+	if opts.Subnet != "" {
+		createOpts.IPAM = &network.IPAM{
+			Config: []network.IPAMConfig{{Subnet: opts.Subnet}},
+		}
+	}
+	resp, err := o.cli.NetworkCreate(ctx, name, createOpts)
 	if err != nil {
 		if errdefs.IsConflict(err) {
 			return o.networkIDByName(ctx, name)
@@ -309,6 +375,30 @@ func (o *SwarmOrchestrator) RemoveNetwork(ctx context.Context, swarmNetworkID st
 	return nil
 }
 
+func (o *SwarmOrchestrator) ListNetworks(ctx context.Context) ([]ports.SwarmNetworkInfo, error) {
+	list, err := o.cli.NetworkList(ctx, network.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("network list: %w", err)
+	}
+	var out []ports.SwarmNetworkInfo
+	for _, n := range list {
+		if n.Driver != "overlay" {
+			continue
+		}
+		info := ports.SwarmNetworkInfo{
+			ID:     n.ID,
+			Name:   n.Name,
+			Scope:  n.Scope,
+			Driver: n.Driver,
+		}
+		if n.IPAM.Config != nil && len(n.IPAM.Config) > 0 {
+			info.Subnet = n.IPAM.Config[0].Subnet
+		}
+		out = append(out, info)
+	}
+	return out, nil
+}
+
 func (o *SwarmOrchestrator) networkIDByName(ctx context.Context, name string) (string, error) {
 	list, err := o.cli.NetworkList(ctx, network.ListOptions{Filters: nameFilter(name)})
 	if err != nil {
@@ -322,10 +412,39 @@ func (o *SwarmOrchestrator) networkIDByName(ctx context.Context, name string) (s
 	return "", fmt.Errorf("network %q reported as existing but not found", name)
 }
 
+// ─── Cluster ──────────────────────────────────────────────────────────────────
+
+func (o *SwarmOrchestrator) ClusterInfo(ctx context.Context) (*ports.ClusterInfo, error) {
+	nodes, err := o.cli.NodeList(ctx, types.NodeListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("node list: %w", err)
+	}
+	out := make([]ports.NodeInfo, 0, len(nodes))
+	for _, n := range nodes {
+		info := ports.NodeInfo{
+			ID:            n.ID,
+			Hostname:      n.Description.Hostname,
+			Role:          string(n.Spec.Role),
+			Leader:        n.ManagerStatus != nil && n.ManagerStatus.Leader,
+			Availability:  string(n.Spec.Availability),
+			State:         string(n.Status.State),
+			Addr:          n.Status.Addr,
+			EngineVersion: n.Description.Engine.EngineVersion,
+			CPUs:          float64(n.Description.Resources.NanoCPUs) / 1e9,
+			MemoryBytes:   n.Description.Resources.MemoryBytes,
+		}
+		if os := n.Description.Platform.OS; os != "" {
+			info.Platform = os + "/" + n.Description.Platform.Architecture
+		}
+		out = append(out, info)
+	}
+	return &ports.ClusterInfo{Nodes: out}, nil
+}
+
 // ─── Spec translation ─────────────────────────────────────────────────────────
 
 func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpec {
-	container := &swarm.ContainerSpec{
+	taskContainer := &swarm.ContainerSpec{
 		Image:   spec.Image,
 		Command: spec.Entrypoint, // Swarm Command is the entrypoint override
 		Args:    spec.Command,    // Swarm Args are the command arguments
@@ -333,7 +452,7 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 	}
 
 	for _, s := range spec.Secrets {
-		container.Secrets = append(container.Secrets, &swarm.SecretReference{
+		taskContainer.Secrets = append(taskContainer.Secrets, &swarm.SecretReference{
 			SecretID:   s.SwarmSecretID,
 			SecretName: s.SwarmSecretName,
 			File: &swarm.SecretReferenceFileTarget{
@@ -343,7 +462,7 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 		})
 	}
 	for _, c := range spec.Configs {
-		container.Configs = append(container.Configs, &swarm.ConfigReference{
+		taskContainer.Configs = append(taskContainer.Configs, &swarm.ConfigReference{
 			ConfigID:   c.SwarmConfigID,
 			ConfigName: c.SwarmConfigName,
 			File: &swarm.ConfigReferenceFileTarget{
@@ -354,7 +473,7 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 	}
 
 	task := swarm.TaskSpec{
-		ContainerSpec: container,
+		ContainerSpec: taskContainer,
 		Resources:     toResources(spec.Resources),
 	}
 	for _, n := range spec.Networks {
@@ -406,7 +525,6 @@ func toUpdateConfig(uc ports.UpdateConfigSpec) *swarm.UpdateConfig {
 func (o *SwarmOrchestrator) serviceTasks(ctx context.Context, swarmServiceID string) ([]swarm.Task, error) {
 	f := filters.NewArgs()
 	f.Add("service", swarmServiceID)
-	f.Add("desired-state", "running")
 	tasks, err := o.cli.TaskList(ctx, types.TaskListOptions{Filters: f})
 	if err != nil {
 		return nil, fmt.Errorf("task list: %w", err)

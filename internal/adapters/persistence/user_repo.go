@@ -89,6 +89,17 @@ func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (r *UserRepository) CountActiveAdmins(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&userModel{}).
+		Where("role = ? AND active = ?", string(user.RoleAdmin), true).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("count active admins: %w", err)
+	}
+	return count, nil
+}
+
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 func userToModel(u *user.User) *userModel {

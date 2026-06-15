@@ -25,7 +25,7 @@ func TestRouteRegistration_NoWildcardConflict(t *testing.T) {
 	}()
 
 	handler.NewServiceHandler(application.NewServiceService(nil, nil)).Register(g)
-	handler.NewNetworkHandler(application.NewNetworkService(nil, nil)).Register(g)
+	handler.NewNetworkHandler(application.NewNetworkService(nil, nil), nil).Register(g)
 	handler.NewSecretHandler(application.NewSecretService(nil, nil)).Register(g)
 	handler.NewConfigHandler(application.NewConfigService(nil, nil)).Register(g)
 	handler.NewDeploymentHandler(application.NewDeploymentService(nil, nil, nil, nil, nil, nil, nil)).Register(g)

@@ -102,6 +102,7 @@ type networkModel struct {
 	Name       string    `gorm:"uniqueIndex;not null;column:name"`
 	Driver     string    `gorm:"column:driver"`
 	Scope      string    `gorm:"column:scope"`
+	Subnet     string    `gorm:"column:subnet"`
 	Attachable bool      `gorm:"column:attachable"`
 	External   bool      `gorm:"column:external"`
 	SwarmID    string    `gorm:"column:swarm_id"`

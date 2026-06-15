@@ -11,26 +11,31 @@ import (
 	"github.com/orange/hivemind/internal/application"
 	"github.com/orange/hivemind/internal/domain/network"
 	"github.com/orange/hivemind/internal/domain/user"
+	"github.com/orange/hivemind/internal/ports"
 	"github.com/orange/hivemind/pkg/domainerrors"
 )
 
 type NetworkHandler struct {
-	svc *application.NetworkService
+	svc          *application.NetworkService
+	orchestrator ports.Orchestrator
 }
 
-func NewNetworkHandler(svc *application.NetworkService) *NetworkHandler {
-	return &NetworkHandler{svc: svc}
+func NewNetworkHandler(svc *application.NetworkService, orch ports.Orchestrator) *NetworkHandler {
+	return &NetworkHandler{svc: svc, orchestrator: orch}
 }
 
 // Register wires network CRUD and service-attachment routes.
 func (h *NetworkHandler) Register(protected *gin.RouterGroup) {
+	// Network catalog management is Admin-only (F-V1-01); attaching an existing
+	// network to a service stays with Operators as part of service management.
 	n := protected.Group("/networks")
 	n.GET("", middleware.RequireRole(user.RoleViewer), h.List)
-	n.POST("", middleware.RequireRole(user.RoleOperator), h.Create)
+	n.POST("", middleware.RequireRole(user.RoleAdmin), h.Create)
+	n.GET("/swarm", middleware.RequireRole(user.RoleViewer), h.DiscoverSwarm)
 	n.GET("/:id", middleware.RequireRole(user.RoleViewer), h.Get)
-	n.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
+	n.DELETE("/:id", middleware.RequireRole(user.RoleAdmin), h.Delete)
 
-	// Service ↔ network attachments.
+	// Service ↔ network attachments (Operator: part of service management).
 	s := protected.Group("/services/:id/networks")
 	s.GET("", middleware.RequireRole(user.RoleViewer), h.ListForService)
 	s.POST("", middleware.RequireRole(user.RoleOperator), h.AttachToService)
@@ -94,6 +99,7 @@ func (h *NetworkHandler) Create(c *gin.Context) {
 
 	n, err := h.svc.Create(c.Request.Context(), application.CreateNetworkInput{
 		Name:       req.Name,
+		Subnet:     req.Subnet,
 		Attachable: req.Attachable,
 		External:   req.External,
 	})
@@ -248,6 +254,41 @@ func (h *NetworkHandler) DetachFromService(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// DiscoverSwarm godoc
+//
+//	@Summary		List overlay networks on the Swarm cluster
+//	@Description	Returns lightweight info about every overlay network visible on the Docker Swarm cluster. Useful for discovering existing networks before creating or attaching.
+//	@Tags			networks
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{array}		dto.SwarmNetworkInfo
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		503	{object}	dto.ErrorResponse	"orchestrator unavailable"
+//	@Router			/networks/swarm [get]
+func (h *NetworkHandler) DiscoverSwarm(c *gin.Context) {
+	if h.orchestrator == nil {
+		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, "orchestrator not configured")
+		return
+	}
+	nets, err := h.orchestrator.ListNetworks(c.Request.Context())
+	if err != nil {
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list swarm networks")
+		return
+	}
+	out := make([]dto.SwarmNetworkInfo, len(nets))
+	for i, n := range nets {
+		out[i] = dto.SwarmNetworkInfo{
+			ID:     n.ID,
+			Name:   n.Name,
+			Scope:  n.Scope,
+			Driver: n.Driver,
+			Subnet: n.Subnet,
+		}
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func (h *NetworkHandler) writeNetworkError(c *gin.Context, err error) {
@@ -269,6 +310,7 @@ func toNetworkResponse(n *network.Network) dto.NetworkResponse {
 		Name:       n.Name,
 		Driver:     n.Driver,
 		Scope:      n.Scope,
+		Subnet:     n.Subnet,
 		Attachable: n.Attachable,
 		External:   n.External,
 		SwarmID:    n.SwarmID,

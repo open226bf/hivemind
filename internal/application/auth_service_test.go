@@ -62,6 +62,16 @@ func (r *fakeUserRepo) List(context.Context, pagination.Page) ([]*user.User, int
 }
 func (r *fakeUserRepo) Delete(context.Context, uuid.UUID) error { return nil }
 
+func (r *fakeUserRepo) CountActiveAdmins(context.Context) (int64, error) {
+	var n int64
+	for _, u := range r.byID {
+		if u.Role == user.RoleAdmin && u.Active {
+			n++
+		}
+	}
+	return n, nil
+}
+
 // fakeTokens returns deterministic tokens encoding the user id + type.
 type fakeTokens struct{}
 
