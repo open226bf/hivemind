@@ -130,6 +130,7 @@ func main() {
 	secretSvc := application.NewSecretService(secretRepo, serviceRepo)
 	configSvc := application.NewConfigService(configRepo, serviceRepo)
 	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, orch, nil)
+	clusterSvc := application.NewClusterService(orch, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
@@ -154,6 +155,7 @@ func main() {
 		Secrets:      secretSvc,
 		Configs:      configSvc,
 		Deployments:  deploymentSvc,
+		Cluster:      clusterSvc,
 		Orchestrator: orch,
 		AuditLog:     auditRepo,
 	})

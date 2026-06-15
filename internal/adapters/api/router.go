@@ -29,6 +29,7 @@ type Dependencies struct {
 	Secrets      *application.SecretService
 	Configs      *application.ConfigService
 	Deployments  *application.DeploymentService
+	Cluster      *application.ClusterService
 	Orchestrator ports.Orchestrator
 	AuditLog     ports.AuditLogRepository
 }
@@ -74,6 +75,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewSecretHandler(deps.Secrets).Register(protected)
 	handler.NewConfigHandler(deps.Configs).Register(protected)
 	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
+	handler.NewClusterHandler(deps.Cluster).Register(protected)
 
 	// Interactive exec (web terminal). Authenticated via a `token` query
 	// parameter since browsers can't set headers on a WebSocket. The Admin-only
