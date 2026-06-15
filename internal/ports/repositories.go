@@ -23,6 +23,9 @@ type UserRepository interface {
 	List(ctx context.Context, p pagination.Page) ([]*user.User, int64, error)
 	Update(ctx context.Context, u *user.User) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	// CountActiveAdmins returns the number of active users with the admin role.
+	// Used to enforce the "last admin" invariant (F-V1-01).
+	CountActiveAdmins(ctx context.Context) (int64, error)
 }
 
 // ─── Service ─────────────────────────────────────────────────────────────────
@@ -79,6 +82,7 @@ type DeploymentRepository interface {
 	ListByServiceID(ctx context.Context, serviceID uuid.UUID, p pagination.Page) ([]*deployment.Deployment, int64, error)
 	List(ctx context.Context, filter DeploymentFilter, p pagination.Page) ([]*deployment.Deployment, int64, error)
 	Update(ctx context.Context, d *deployment.Deployment) error
+	FailOrphaned(ctx context.Context) (int64, error)
 }
 
 type DeploymentFilter struct {

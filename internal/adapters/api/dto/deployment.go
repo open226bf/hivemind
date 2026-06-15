@@ -38,13 +38,25 @@ type ServiceStatusResponse struct {
 // TaskStateResponse is a single task (container) of a service, with the node it
 // runs on, its current/desired state, last update and any Swarm error message.
 type TaskStateResponse struct {
-	ID           string    `json:"id"`
-	ContainerID  string    `json:"container_id,omitempty"`
-	Node         string    `json:"node"`
-	CurrentState string    `json:"current_state"`
-	DesiredState string    `json:"desired_state"`
-	ErrorMessage string    `json:"error_message,omitempty"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           string              `json:"id"`
+	ContainerID  string              `json:"container_id,omitempty"`
+	Node         string              `json:"node"`
+	Image        string              `json:"image,omitempty"`
+	Slot         int                 `json:"slot"`
+	CurrentState string              `json:"current_state"`
+	DesiredState string              `json:"desired_state"`
+	Message      string              `json:"message,omitempty"`
+	ErrorMessage string              `json:"error_message,omitempty"`
+	ExitCode     *int                `json:"exit_code,omitempty"`
+	PID          int                 `json:"pid,omitempty"`
+	Networks     []TaskNetworkDetail `json:"networks,omitempty"`
+	CreatedAt    time.Time           `json:"created_at"`
+	UpdatedAt    time.Time           `json:"updated_at"`
+}
+
+type TaskNetworkDetail struct {
+	Name    string `json:"name"`
+	Address string `json:"address"`
 }
 
 // ServiceTasksResponse is the per-task detail of a service (F-MVP-10). Served by

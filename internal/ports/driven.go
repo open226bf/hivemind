@@ -56,8 +56,48 @@ type Orchestrator interface {
 	CreateConfig(ctx context.Context, name string, content []byte) (swarmConfigID string, err error)
 	RemoveConfig(ctx context.Context, swarmConfigID string) error
 
-	CreateNetwork(ctx context.Context, name string, attachable bool) (swarmNetworkID string, err error)
+	CreateNetwork(ctx context.Context, name string, opts CreateNetworkOptions) (swarmNetworkID string, err error)
 	RemoveNetwork(ctx context.Context, swarmNetworkID string) error
+	ListNetworks(ctx context.Context) ([]SwarmNetworkInfo, error)
+
+	// ClusterInfo returns the nodes composing the orchestration cluster together
+	// with their reported capacity and health. Powers the cluster dashboard.
+	ClusterInfo(ctx context.Context) (*ClusterInfo, error)
+}
+
+// ClusterInfo is a snapshot of the orchestration cluster's nodes.
+type ClusterInfo struct {
+	Nodes []NodeInfo
+}
+
+// NodeInfo describes a single cluster node and its reported capacity.
+type NodeInfo struct {
+	ID            string
+	Hostname      string
+	Role          string  // "manager" | "worker"
+	Leader        bool    // true for the manager currently holding leadership
+	Availability  string  // "active" | "pause" | "drain"
+	State         string  // "ready" | "down" | "unknown" | …
+	Addr          string  // node IP as seen by the manager
+	EngineVersion string  // Docker engine version
+	CPUs          float64 // logical cores (NanoCPUs / 1e9)
+	MemoryBytes   int64   // total memory reported by the node
+	Platform      string  // "os/arch", e.g. "linux/x86_64"
+}
+
+// CreateNetworkOptions controls overlay network creation on Swarm.
+type CreateNetworkOptions struct {
+	Attachable bool
+	Subnet     string // IPAM subnet; empty = Docker default
+}
+
+// SwarmNetworkInfo is a lightweight snapshot of an overlay network on Swarm.
+type SwarmNetworkInfo struct {
+	ID     string
+	Name   string
+	Scope  string
+	Driver string
+	Subnet string
 }
 
 type ServiceSpec struct {
@@ -141,10 +181,22 @@ type TaskState struct {
 	ID           string
 	ContainerID  string
 	Node         string
+	Image        string
+	Slot         int
 	CurrentState string
 	DesiredState string
+	Message      string
 	ErrorMessage string
+	ExitCode     *int
+	PID          int
+	Networks     []TaskNetwork
+	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+type TaskNetwork struct {
+	Name    string
+	Address string // CIDR, e.g. "10.0.1.5/24"
 }
 
 // Clock abstracts time (useful for testing).

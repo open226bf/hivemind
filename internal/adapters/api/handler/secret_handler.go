@@ -24,12 +24,14 @@ func NewSecretHandler(svc *application.SecretService) *SecretHandler {
 
 // Register wires secret CRUD and service-attachment routes.
 func (h *SecretHandler) Register(protected *gin.RouterGroup) {
+	// Secret catalog management is Admin-only (F-V1-01); attaching an existing
+	// secret to a service stays with Operators as part of service management.
 	g := protected.Group("/secrets")
 	g.GET("", middleware.RequireRole(user.RoleViewer), h.List)
-	g.POST("", middleware.RequireRole(user.RoleOperator), h.Create)
+	g.POST("", middleware.RequireRole(user.RoleAdmin), h.Create)
 	g.GET("/:id", middleware.RequireRole(user.RoleViewer), h.Get)
-	g.POST("/:id/rotate", middleware.RequireRole(user.RoleOperator), h.Rotate)
-	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
+	g.POST("/:id/rotate", middleware.RequireRole(user.RoleAdmin), h.Rotate)
+	g.DELETE("/:id", middleware.RequireRole(user.RoleAdmin), h.Delete)
 
 	s := protected.Group("/services/:id/secrets")
 	s.GET("", middleware.RequireRole(user.RoleViewer), h.ListForService)

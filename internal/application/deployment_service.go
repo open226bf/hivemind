@@ -322,7 +322,10 @@ func (s *DeploymentService) buildSpec(ctx context.Context, svc *service.Service)
 		if err != nil {
 			return spec, err
 		}
-		swarmID, err := s.orchestrator.CreateNetwork(ctx, n.Name, n.Attachable)
+		swarmID, err := s.orchestrator.CreateNetwork(ctx, n.Name, ports.CreateNetworkOptions{
+			Attachable: n.Attachable,
+			Subnet:     n.Subnet,
+		})
 		if err != nil {
 			return spec, fmt.Errorf("ensure network %q: %w", n.Name, err)
 		}

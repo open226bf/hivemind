@@ -26,6 +26,7 @@ func NewNetworkService(networks ports.NetworkRepository, services ports.ServiceR
 
 type CreateNetworkInput struct {
 	Name       string
+	Subnet     string
 	Attachable bool
 	External   bool
 }
@@ -37,6 +38,7 @@ func (s *NetworkService) Create(ctx context.Context, in CreateNetworkInput) (*ne
 	if err != nil {
 		return nil, err
 	}
+	n.Subnet = in.Subnet
 	n.Attachable = in.Attachable
 	n.External = in.External
 

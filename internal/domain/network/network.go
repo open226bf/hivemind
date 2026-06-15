@@ -20,6 +20,7 @@ type Network struct {
 	Name       string
 	Driver     string // overlay
 	Scope      string
+	Subnet     string // IPAM subnet, e.g. "10.0.9.0/24"; empty = Docker default
 	Attachable bool
 	External   bool   // created outside the platform
 	SwarmID    string // Swarm network ID

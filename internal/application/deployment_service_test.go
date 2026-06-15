@@ -88,6 +88,18 @@ func (r *fakeDeploymentRepo) Update(_ context.Context, d *deployment.Deployment)
 	return nil
 }
 
+func (r *fakeDeploymentRepo) FailOrphaned(_ context.Context) (int64, error) {
+	var n int64
+	for _, d := range r.byID {
+		if d.Status == deployment.StatusPending || d.Status == deployment.StatusInProgress {
+			d.Fail("server restarted while deployment was in progress")
+			delete(r.active, d.ServiceID)
+			n++
+		}
+	}
+	return n, nil
+}
+
 // ─── Fake orchestrator ────────────────────────────────────────────────────────
 
 type fakeOrchestrator struct {
@@ -145,10 +157,13 @@ func (o *fakeOrchestrator) CreateConfig(_ context.Context, name string, _ []byte
 	return "swarm-config-" + name, nil
 }
 func (o *fakeOrchestrator) RemoveConfig(context.Context, string) error { return nil }
-func (o *fakeOrchestrator) CreateNetwork(_ context.Context, name string, _ bool) (string, error) {
+func (o *fakeOrchestrator) CreateNetwork(_ context.Context, name string, _ ports.CreateNetworkOptions) (string, error) {
 	return "swarm-net-" + name, nil
 }
 func (o *fakeOrchestrator) RemoveNetwork(context.Context, string) error { return nil }
+func (o *fakeOrchestrator) ListNetworks(context.Context) ([]ports.SwarmNetworkInfo, error) {
+	return nil, nil
+}
 
 // ─── Fake notifier ────────────────────────────────────────────────────────────
 

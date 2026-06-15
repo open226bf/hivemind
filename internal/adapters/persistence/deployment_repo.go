@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -100,6 +101,24 @@ func (r *DeploymentRepository) Update(ctx context.Context, d *deployment.Deploym
 		return fmt.Errorf("update deployment: %w", err)
 	}
 	return nil
+}
+
+// FailOrphaned marks all pending/in_progress deployments as failed. This is
+// called at server startup to clean up deployments whose convergence goroutine
+// was killed by a previous shutdown.
+func (r *DeploymentRepository) FailOrphaned(ctx context.Context) (int64, error) {
+	result := r.db.WithContext(ctx).
+		Model(&deploymentModel{}).
+		Where("status IN ?", []string{string(deployment.StatusPending), string(deployment.StatusInProgress)}).
+		Updates(map[string]any{
+			"status":        string(deployment.StatusFailed),
+			"error_message": "server restarted while deployment was in progress",
+			"finished_at":   time.Now().UTC(),
+		})
+	if result.Error != nil {
+		return 0, fmt.Errorf("fail orphaned deployments: %w", result.Error)
+	}
+	return result.RowsAffected, nil
 }
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────

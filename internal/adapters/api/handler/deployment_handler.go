@@ -365,13 +365,24 @@ func toServiceTasksResponse(s *ports.ServiceState) dto.ServiceTasksResponse {
 		Tasks: make([]dto.TaskStateResponse, len(s.Tasks)),
 	}
 	for i, t := range s.Tasks {
+		var nets []dto.TaskNetworkDetail
+		for _, n := range t.Networks {
+			nets = append(nets, dto.TaskNetworkDetail{Name: n.Name, Address: n.Address})
+		}
 		resp.Tasks[i] = dto.TaskStateResponse{
 			ID:           t.ID,
 			ContainerID:  t.ContainerID,
 			Node:         t.Node,
+			Image:        t.Image,
+			Slot:         t.Slot,
 			CurrentState: t.CurrentState,
 			DesiredState: t.DesiredState,
+			Message:      t.Message,
 			ErrorMessage: t.ErrorMessage,
+			ExitCode:     t.ExitCode,
+			PID:          t.PID,
+			Networks:     nets,
+			CreatedAt:    t.CreatedAt,
 			UpdatedAt:    t.UpdatedAt,
 		}
 	}

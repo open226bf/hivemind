@@ -20,14 +20,17 @@ import (
 )
 
 type Dependencies struct {
-	DB          *gorm.DB
-	Tokens      ports.TokenService
-	Auth        *application.AuthService
-	Services    *application.ServiceService
-	Networks    *application.NetworkService
-	Secrets     *application.SecretService
-	Configs     *application.ConfigService
-	Deployments *application.DeploymentService
+	DB           *gorm.DB
+	Tokens       ports.TokenService
+	Auth         *application.AuthService
+	Users        *application.UserService
+	Services     *application.ServiceService
+	Networks     *application.NetworkService
+	Secrets      *application.SecretService
+	Configs      *application.ConfigService
+	Deployments  *application.DeploymentService
+	Orchestrator ports.Orchestrator
+	AuditLog     ports.AuditLogRepository
 }
 
 // NewRouter builds the Gin engine with health endpoints and the /api/v1 group.
@@ -57,11 +60,17 @@ func NewRouter(deps Dependencies) *gin.Engine {
 
 	public := v1.Group("")
 	protected := v1.Group("")
+	// AuditForbidden runs first so it can observe the final status and journal
+	// every 403 (F-V1-01). Auth then populates the claims it reads.
+	if deps.AuditLog != nil {
+		protected.Use(middleware.AuditForbidden(deps.AuditLog))
+	}
 	protected.Use(middleware.Auth(deps.Tokens))
 
 	handler.NewAuthHandler(deps.Auth).Register(public, protected)
+	handler.NewUserHandler(deps.Users).Register(protected)
 	handler.NewServiceHandler(deps.Services).Register(protected)
-	handler.NewNetworkHandler(deps.Networks).Register(protected)
+	handler.NewNetworkHandler(deps.Networks, deps.Orchestrator).Register(protected)
 	handler.NewSecretHandler(deps.Secrets).Register(protected)
 	handler.NewConfigHandler(deps.Configs).Register(protected)
 	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
