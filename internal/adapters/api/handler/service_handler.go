@@ -117,6 +117,16 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 		return
 	}
 
+	hiveID := uuid.Nil
+	if req.Hive != "" {
+		id, err := uuid.Parse(req.Hive)
+		if err != nil {
+			dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid hive_id")
+			return
+		}
+		hiveID = id
+	}
+
 	in := application.CreateServiceInput{
 		Name:        req.Name,
 		Description: req.Description,
@@ -135,6 +145,10 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 	if req.UpdateConfig != nil {
 		uc := fromUpdateConfigDTO(*req.UpdateConfig)
 		in.UpdateConfig = &uc
+	}
+
+	if hiveID != uuid.Nil {
+		in.Hive = hiveID
 	}
 
 	svc, err := h.svc.Create(c.Request.Context(), in)

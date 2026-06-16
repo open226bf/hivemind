@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -9,6 +10,11 @@ import (
 	"github.com/open226bf/hivemind/internal/domain/deployment"
 	"github.com/open226bf/hivemind/internal/domain/user"
 )
+
+// ErrSwarmServiceNotFound is returned by the orchestrator when a previously
+// deployed swarm service no longer exists (typically because someone removed
+// it directly via `docker service rm`). Used to detect external drift.
+var ErrSwarmServiceNotFound = errors.New("swarm service not found")
 
 // TokenService issues and validates authentication tokens (JWT in the
 // reference implementation). Kept behind a port so the auth use case stays
@@ -33,10 +39,20 @@ type TokenClaims struct {
 	TokenType TokenType
 }
 
+// UpdateServiceOptions tweaks how UpdateService applies the spec on Swarm.
+// Force triggers task recreation even when the spec is unchanged (Swarm's
+// ForceUpdate counter). QueryRegistry asks Swarm to re-resolve the image
+// against the registry, which is the only way to pick up a moved tag like
+// "mariadb:latest" without changing the spec.
+type UpdateServiceOptions struct {
+	Force         bool
+	QueryRegistry bool
+}
+
 // Orchestrator abstracts Docker Swarm (and future Kubernetes).
 type Orchestrator interface {
 	DeployService(ctx context.Context, spec ServiceSpec) (swarmServiceID string, err error)
-	UpdateService(ctx context.Context, swarmServiceID string, spec ServiceSpec) error
+	UpdateService(ctx context.Context, swarmServiceID string, spec ServiceSpec, opts UpdateServiceOptions) error
 	RemoveService(ctx context.Context, swarmServiceID string) error
 	GetServiceState(ctx context.Context, swarmServiceID string) (*ServiceState, error)
 	WaitConvergence(ctx context.Context, swarmServiceID string, timeout time.Duration) error
@@ -204,7 +220,11 @@ type ServiceState struct {
 	Pending  int
 	Failed   int
 	Updating bool
-	Tasks    []TaskState
+	// ExternallyRemoved is true when the swarm service was deleted out-of-band
+	// (e.g. `docker service rm`). Set by the application layer after it detects
+	// the drift and reconciles the persisted status to "removed".
+	ExternallyRemoved bool
+	Tasks             []TaskState
 }
 
 type TaskState struct {

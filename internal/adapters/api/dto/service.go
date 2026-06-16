@@ -1,6 +1,8 @@
 package dto
 
-import "time"
+import (
+	"time"
+)
 
 // ─── Requests ─────────────────────────────────────────────────────────────────
 
@@ -16,6 +18,7 @@ type CreateServiceRequest struct {
 	Resources    *ResourcesDTO    `json:"resources"`
 	Placement    *PlacementDTO    `json:"placement"`
 	UpdateConfig *UpdateConfigDTO `json:"update_config"`
+	Hive         string           `json:"hive"`
 }
 
 // UpdateServiceRequest is the body for PUT /services/:id.

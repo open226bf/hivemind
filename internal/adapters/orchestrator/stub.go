@@ -35,8 +35,8 @@ func (*StubOrchestrator) DeployService(_ context.Context, spec ports.ServiceSpec
 	return fakeID("svc"), nil
 }
 
-func (*StubOrchestrator) UpdateService(_ context.Context, swarmServiceID string, spec ports.ServiceSpec) error {
-	slog.Info("stub: update service", "swarm_id", swarmServiceID, "image", spec.Image, "replicas", spec.Replicas)
+func (*StubOrchestrator) UpdateService(_ context.Context, swarmServiceID string, spec ports.ServiceSpec, opts ports.UpdateServiceOptions) error {
+	slog.Info("stub: update service", "swarm_id", swarmServiceID, "image", spec.Image, "replicas", spec.Replicas, "force", opts.Force, "repull", opts.QueryRegistry)
 	return nil
 }
 
