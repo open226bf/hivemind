@@ -11,7 +11,7 @@ import (
 func TestNew_ValidName(t *testing.T) {
 	cases := []string{"my-api", "wallet-api", "a", "ab", "a1b2c3"}
 	for _, name := range cases {
-		s, err := service.New(name, "nginx", "latest", 1)
+		s, err := service.New(name, "nginx", "latest", 1, nil)
 		require.NoError(t, err, "name=%s", name)
 		assert.Equal(t, name, s.Name)
 		assert.Equal(t, service.StatusDraft, s.Status)
@@ -21,23 +21,23 @@ func TestNew_ValidName(t *testing.T) {
 func TestNew_InvalidName(t *testing.T) {
 	cases := []string{"", "My-API", "my_api", "-api", "api-", "a" + string(make([]byte, 63))}
 	for _, name := range cases {
-		_, err := service.New(name, "nginx", "latest", 1)
+		_, err := service.New(name, "nginx", "latest", 1, nil)
 		assert.ErrorIs(t, err, service.ErrInvalidName, "expected error for name=%q", name)
 	}
 }
 
 func TestFullImage(t *testing.T) {
-	s, _ := service.New("my-api", "registry.example.com/my-api", "v1.0.0", 2)
+	s, _ := service.New("my-api", "registry.example.com/my-api", "v1.0.0", 2, nil)
 	assert.Equal(t, "registry.example.com/my-api:v1.0.0", s.FullImage())
 }
 
 func TestFullImage_NoTag(t *testing.T) {
-	s, _ := service.New("my-api", "nginx", "", 1)
+	s, _ := service.New("my-api", "nginx", "", 1, nil)
 	assert.Equal(t, "nginx", s.FullImage())
 }
 
 func TestSetResources_Valid(t *testing.T) {
-	s, _ := service.New("api", "nginx", "latest", 1)
+	s, _ := service.New("api", "nginx", "latest", 1, nil)
 	err := s.SetResources(service.Resources{
 		CPUReservation: 0.25,
 		CPULimit:       0.5,
@@ -48,7 +48,7 @@ func TestSetResources_Valid(t *testing.T) {
 }
 
 func TestSetResources_LimitBelowReservation(t *testing.T) {
-	s, _ := service.New("api", "nginx", "latest", 1)
+	s, _ := service.New("api", "nginx", "latest", 1, nil)
 	err := s.SetResources(service.Resources{
 		CPUReservation: 1.0,
 		CPULimit:       0.5,
@@ -57,7 +57,7 @@ func TestSetResources_LimitBelowReservation(t *testing.T) {
 }
 
 func TestSetPlacement_Valid(t *testing.T) {
-	s, _ := service.New("api", "nginx", "latest", 1)
+	s, _ := service.New("api", "nginx", "latest", 1, nil)
 	err := s.SetPlacement(service.Placement{
 		Constraints: []string{"node.role==worker", "node.labels.zone!=dmz"},
 		Preferences: []string{"node.labels.zone"},
@@ -68,21 +68,21 @@ func TestSetPlacement_Valid(t *testing.T) {
 }
 
 func TestSetPlacement_Empty(t *testing.T) {
-	s, _ := service.New("api", "nginx", "latest", 1)
+	s, _ := service.New("api", "nginx", "latest", 1, nil)
 	require.NoError(t, s.SetPlacement(service.Placement{}))
 }
 
 func TestSetPlacement_InvalidConstraint(t *testing.T) {
 	cases := []string{"node.role", "==worker", "node.role=worker", "  "}
 	for _, c := range cases {
-		s, _ := service.New("api", "nginx", "latest", 1)
+		s, _ := service.New("api", "nginx", "latest", 1, nil)
 		err := s.SetPlacement(service.Placement{Constraints: []string{c}})
 		assert.ErrorIs(t, err, service.ErrInvalidConstraint, "constraint=%q", c)
 	}
 }
 
 func TestSetPlacement_EmptyPreference(t *testing.T) {
-	s, _ := service.New("api", "nginx", "latest", 1)
+	s, _ := service.New("api", "nginx", "latest", 1, nil)
 	err := s.SetPlacement(service.Placement{Preferences: []string{"  "}})
 	assert.ErrorIs(t, err, service.ErrInvalidPreference)
 }

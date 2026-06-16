@@ -109,7 +109,7 @@ func TestSetServiceMounts_MultiReplicaWarning(t *testing.T) {
 	vsvc := application.NewVolumeService(volRepo, svcRepo)
 	_, _ = vsvc.Create(context.Background(), application.CreateVolumeInput{Name: "app-data"})
 
-	s, err := service.New("api", "nginx", "latest", 3) // 3 replicas
+	s, err := service.New("api", "nginx", "latest", 3, nil) // 3 replicas
 	require.NoError(t, err)
 	svcRepo.add(s)
 
