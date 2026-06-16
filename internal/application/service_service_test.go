@@ -215,7 +215,7 @@ func (r *fakeServiceRepo) CountServicesByHive(_ context.Context, hiveID uuid.UUI
 
 func mkService(t *testing.T, name string) *service.Service {
 	t.Helper()
-	s, err := service.New(name, "nginx", "latest", 1)
+	s, err := service.New(name, "nginx", "latest", 1, nil)
 	require.NoError(t, err)
 	return s
 }
