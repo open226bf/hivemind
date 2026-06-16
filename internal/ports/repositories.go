@@ -11,6 +11,7 @@ import (
 	"github.com/open226bf/hivemind/internal/domain/network"
 	"github.com/open226bf/hivemind/internal/domain/secret"
 	"github.com/open226bf/hivemind/internal/domain/service"
+	"github.com/open226bf/hivemind/internal/domain/snapshot"
 	"github.com/open226bf/hivemind/internal/domain/template"
 	"github.com/open226bf/hivemind/internal/domain/user"
 	"github.com/open226bf/hivemind/internal/domain/volume"
@@ -181,6 +182,15 @@ type ConfigRepository interface {
 	Update(ctx context.Context, c *config.Config, newVersion *config.ConfigVersion) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
+}
+
+// ─── ServiceSnapshot ──────────────────────────────────────────────────────────
+
+type SnapshotRepository interface {
+	Save(ctx context.Context, s *snapshot.ServiceSnapshot) error
+	FindByID(ctx context.Context, id uuid.UUID) (*snapshot.ServiceSnapshot, error)
+	ListByServiceID(ctx context.Context, serviceID uuid.UUID, p pagination.Page) ([]*snapshot.ServiceSnapshot, int64, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // ─── AuditLog ─────────────────────────────────────────────────────────────────

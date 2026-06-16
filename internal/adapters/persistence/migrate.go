@@ -26,6 +26,7 @@ func Migrate(db *gorm.DB) error {
 		&configVersionModel{},
 		&serviceConfigModel{},
 		&deploymentModel{},
+		&serviceSnapshotModel{},
 		&auditLogModel{},
 	); err != nil {
 		return fmt.Errorf("auto migrate: %w", err)

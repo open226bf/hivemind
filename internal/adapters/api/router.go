@@ -32,6 +32,7 @@ type Dependencies struct {
 	Configs      *application.ConfigService
 	Templates    *application.TemplateService
 	Deployments  *application.DeploymentService
+	Snapshots    *application.SnapshotService
 	Cluster      *application.ClusterService
 	Orchestrator ports.Orchestrator
 	AuditLog     ports.AuditLogRepository
@@ -81,6 +82,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewConfigHandler(deps.Configs).Register(protected)
 	handler.NewTemplateHandler(deps.Templates).Register(protected)
 	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
+	handler.NewSnapshotHandler(deps.Snapshots).Register(protected)
 	handler.NewClusterHandler(deps.Cluster).Register(protected)
 
 	// Interactive exec (web terminal). Authenticated via a `token` query

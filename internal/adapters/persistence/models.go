@@ -279,6 +279,24 @@ type deploymentModel struct {
 
 func (deploymentModel) TableName() string { return "deployments" }
 
+// ─── ServiceSnapshot ──────────────────────────────────────────────────────────
+
+// serviceSnapshotModel stores a complete point-in-time capture of a service.
+// EncryptedPayload holds the AES-256-GCM ciphertext of the JSON payload (which
+// embeds secret values and config contents), so nothing sensitive is ever at
+// rest in plaintext. Metadata columns stay clear for listing/filtering.
+type serviceSnapshotModel struct {
+	ID               string    `gorm:"type:uuid;primaryKey;column:id"`
+	ServiceID        string    `gorm:"type:uuid;not null;index;column:service_id"`
+	Label            string    `gorm:"column:label"`
+	CreatedBy        *string   `gorm:"type:uuid;column:created_by"`
+	SchemaVersion    int       `gorm:"column:schema_version"`
+	EncryptedPayload string    `gorm:"type:text;column:encrypted_payload"`
+	CreatedAt        time.Time `gorm:"column:created_at;autoCreateTime:false;index"`
+}
+
+func (serviceSnapshotModel) TableName() string { return "service_snapshots" }
+
 // ─── AuditLog ─────────────────────────────────────────────────────────────────
 
 type auditLogModel struct {

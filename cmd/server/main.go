@@ -113,6 +113,7 @@ func main() {
 	configRepo := persistence.NewConfigRepository(db)
 	templateRepo := persistence.NewTemplateRepository(db)
 	deploymentRepo := persistence.NewDeploymentRepository(db)
+	snapshotRepo := persistence.NewSnapshotRepository(db, cipher)
 	auditRepo := persistence.NewAuditLogRepository(db)
 
 	// ─── Cleanup orphaned deployments ────────────────────────────────────────
@@ -136,6 +137,7 @@ func main() {
 	configSvc := application.NewConfigService(configRepo, serviceRepo)
 	templateSvc := application.NewTemplateService(templateRepo, serviceSvc, networkSvc)
 	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, orch, nil)
+	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)
 	clusterSvc := application.NewClusterService(orch, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
@@ -164,6 +166,7 @@ func main() {
 		Configs:      configSvc,
 		Templates:    templateSvc,
 		Deployments:  deploymentSvc,
+		Snapshots:    snapshotSvc,
 		Cluster:      clusterSvc,
 		Orchestrator: orch,
 		AuditLog:     auditRepo,
