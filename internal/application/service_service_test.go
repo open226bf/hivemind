@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/open226bf/hivemind/internal/adapters/orchestrator"
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/ports"
@@ -383,6 +384,49 @@ func TestServiceSetResources_LimitBelowReservation(t *testing.T) {
 		CPULimit:       0.5,
 	})
 	assert.ErrorIs(t, err, service.ErrResourceConflict)
+}
+
+func TestServiceSetResources_ExceedsClusterCapacity(t *testing.T) {
+	repo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	repo.add(s)
+	// Stub cluster's largest node has 8 cores / 16 GiB.
+	svc := application.NewServiceService(repo, orchestrator.NewStubOrchestrator())
+
+	_, err := svc.SetResources(context.Background(), s.ID, service.Resources{
+		CPUReservation: 10000, // no node can satisfy this
+	})
+	assert.ErrorIs(t, err, application.ErrResourceExceedsCluster)
+
+	_, err = svc.SetResources(context.Background(), s.ID, service.Resources{
+		MemReservation: 300000 << 20, // ~293 GiB — exceeds every node
+	})
+	assert.ErrorIs(t, err, application.ErrResourceExceedsCluster)
+}
+
+func TestServiceSetResources_WithinClusterCapacity(t *testing.T) {
+	repo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	repo.add(s)
+	svc := application.NewServiceService(repo, orchestrator.NewStubOrchestrator())
+
+	_, err := svc.SetResources(context.Background(), s.ID, service.Resources{
+		CPUReservation: 4,
+		CPULimit:       8, // fits the largest node exactly
+		MemReservation: 8 << 30,
+		MemLimit:       16 << 30,
+	})
+	require.NoError(t, err)
+}
+
+func TestServiceSetResources_NoOrchestratorSkipsCapacityCheck(t *testing.T) {
+	repo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	repo.add(s)
+	svc := newServiceSvc(repo) // orchestrator = nil → capacity unknown, not enforced
+
+	_, err := svc.SetResources(context.Background(), s.ID, service.Resources{CPUReservation: 10000})
+	require.NoError(t, err)
 }
 
 func TestServiceSetResources_NotFound(t *testing.T) {

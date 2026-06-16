@@ -17,6 +17,12 @@ import (
 
 var ErrServiceDeployed = errors.New("service is currently deployed — undeploy it before deleting")
 
+// ErrResourceExceedsCluster is returned when a CPU/memory reservation or limit
+// is larger than the biggest single node in the cluster. A task that no node
+// can satisfy would stay pending forever, so we reject it up front rather than
+// letting it silently never schedule.
+var ErrResourceExceedsCluster = errors.New("resource request exceeds the largest node's capacity")
+
 type ServiceService struct {
 	services     ports.ServiceRepository
 	orchestrator ports.Orchestrator // nil until F-MVP-08 is wired
@@ -37,6 +43,7 @@ type CreateServiceInput struct {
 	Command      []string
 	Entrypoint   []string
 	Resources    service.Resources
+	Placement    service.Placement
 	UpdateConfig *service.UpdateConfig
 }
 
@@ -50,6 +57,7 @@ type UpdateServiceInput struct {
 	Command      *[]string
 	Entrypoint   *[]string
 	Resources    *service.Resources
+	Placement    *service.Placement
 	UpdateConfig *service.UpdateConfig
 }
 
@@ -84,6 +92,13 @@ func (s *ServiceService) Create(ctx context.Context, in CreateServiceInput) (*se
 	if err := svc.SetResources(in.Resources); err != nil {
 		return nil, err
 	}
+	if err := s.validateResourceCapacity(ctx, in.Resources); err != nil {
+		return nil, err
+	}
+
+	if err := svc.SetPlacement(in.Placement); err != nil {
+		return nil, err
+	}
 
 	if in.UpdateConfig != nil {
 		// Overlay onto the defaults so a partial payload keeps sensible values.
@@ -97,6 +112,40 @@ func (s *ServiceService) Create(ctx context.Context, in CreateServiceInput) (*se
 		return nil, err
 	}
 	return svc, nil
+}
+
+// validateResourceCapacity rejects reservations/limits that exceed the largest
+// single node in the cluster — such a task could never be scheduled. It is
+// best-effort: when the orchestrator is absent, unreachable, or reports no
+// capacity, the check is skipped (we cannot enforce a bound we cannot measure;
+// the domain still guarantees non-negative values and limit ≥ reservation).
+func (s *ServiceService) validateResourceCapacity(ctx context.Context, r service.Resources) error {
+	if s.orchestrator == nil {
+		return nil
+	}
+	info, err := s.orchestrator.ClusterInfo(ctx)
+	if err != nil || info == nil || len(info.Nodes) == 0 {
+		return nil
+	}
+
+	var maxCPU float64
+	var maxMem int64
+	for _, n := range info.Nodes {
+		if n.CPUs > maxCPU {
+			maxCPU = n.CPUs
+		}
+		if n.MemoryBytes > maxMem {
+			maxMem = n.MemoryBytes
+		}
+	}
+
+	if maxCPU > 0 && (r.CPUReservation > maxCPU || r.CPULimit > maxCPU) {
+		return fmt.Errorf("%w: CPU must be ≤ %.2f cores (largest node)", ErrResourceExceedsCluster, maxCPU)
+	}
+	if maxMem > 0 && (r.MemReservation > maxMem || r.MemLimit > maxMem) {
+		return fmt.Errorf("%w: memory must be ≤ %d bytes (largest node)", ErrResourceExceedsCluster, maxMem)
+	}
+	return nil
 }
 
 // Get returns a service by its ID.
@@ -155,6 +204,15 @@ func (s *ServiceService) Update(ctx context.Context, id uuid.UUID, in UpdateServ
 		if err := svc.SetResources(*in.Resources); err != nil {
 			return nil, err
 		}
+		if err := s.validateResourceCapacity(ctx, *in.Resources); err != nil {
+			return nil, err
+		}
+		touched = true
+	}
+	if in.Placement != nil {
+		if err := svc.SetPlacement(*in.Placement); err != nil {
+			return nil, err
+		}
 		touched = true
 	}
 	if in.UpdateConfig != nil {
@@ -187,6 +245,27 @@ func (s *ServiceService) SetResources(ctx context.Context, id uuid.UUID, r servi
 		return nil, err
 	}
 	if err := svc.SetResources(r); err != nil {
+		return nil, err
+	}
+	if err := s.validateResourceCapacity(ctx, r); err != nil {
+		return nil, err
+	}
+	if err := s.services.Update(ctx, svc); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+
+// SetPlacement updates only the scheduling placement of a service (constraints,
+// spread preferences and max replicas per node), leaving every other field
+// untouched. Validation (well-formed constraints, non-empty preferences) lives
+// in the domain via Service.SetPlacement.
+func (s *ServiceService) SetPlacement(ctx context.Context, id uuid.UUID, p service.Placement) (*service.Service, error) {
+	svc, err := s.services.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := svc.SetPlacement(p); err != nil {
 		return nil, err
 	}
 	if err := s.services.Update(ctx, svc); err != nil {

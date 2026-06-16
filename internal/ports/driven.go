@@ -108,6 +108,7 @@ type ServiceSpec struct {
 	Entrypoint   []string
 	Env          map[string]string
 	Resources    ResourceSpec
+	Placement    PlacementSpec
 	UpdateConfig UpdateConfigSpec
 	Networks     []NetworkAttachment
 	Secrets      []SecretAttachment
@@ -120,6 +121,12 @@ type ResourceSpec struct {
 	CPULimit       float64
 	MemReservation int64
 	MemLimit       int64
+}
+
+type PlacementSpec struct {
+	Constraints []string
+	Preferences []string // spread descriptors
+	MaxReplicas uint64
 }
 
 type UpdateConfigSpec struct {

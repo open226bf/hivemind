@@ -68,6 +68,10 @@ type serviceModel struct {
 	MemReservation int64   `gorm:"column:mem_reservation"`
 	MemLimit       int64   `gorm:"column:mem_limit"`
 
+	PlacementConstraints stringSlice `gorm:"type:text;column:placement_constraints"`
+	PlacementPreferences stringSlice `gorm:"type:text;column:placement_preferences"`
+	PlacementMaxReplicas uint64      `gorm:"column:placement_max_replicas"`
+
 	UpdateParallelism     uint64  `gorm:"column:update_parallelism"`
 	UpdateDelay           int64   `gorm:"column:update_delay"` // nanoseconds
 	UpdateFailureAction   string  `gorm:"column:update_failure_action"`

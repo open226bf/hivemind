@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,7 @@ func (h *ServiceHandler) Register(protected *gin.RouterGroup) {
 	g.GET("/:id", middleware.RequireRole(user.RoleViewer), h.Get)
 	g.PUT("/:id", middleware.RequireRole(user.RoleOperator), h.Update)
 	g.PUT("/:id/resources", middleware.RequireRole(user.RoleOperator), h.SetResources)
+	g.PUT("/:id/placement", middleware.RequireRole(user.RoleOperator), h.SetPlacement)
 	g.GET("/:id/env", middleware.RequireRole(user.RoleViewer), h.GetEnvVars)
 	g.PUT("/:id/env", middleware.RequireRole(user.RoleOperator), h.SetEnvVars)
 	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
@@ -116,6 +118,9 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 	if req.Resources != nil {
 		in.Resources = fromResourcesDTO(*req.Resources)
 	}
+	if req.Placement != nil {
+		in.Placement = fromPlacementDTO(*req.Placement)
+	}
 	if req.UpdateConfig != nil {
 		uc := fromUpdateConfigDTO(*req.UpdateConfig)
 		in.UpdateConfig = &uc
@@ -197,6 +202,10 @@ func (h *ServiceHandler) Update(c *gin.Context) {
 		r := fromResourcesDTO(*req.Resources)
 		in.Resources = &r
 	}
+	if req.Placement != nil {
+		p := fromPlacementDTO(*req.Placement)
+		in.Placement = &p
+	}
 	if req.UpdateConfig != nil {
 		uc := fromUpdateConfigDTO(*req.UpdateConfig)
 		in.UpdateConfig = &uc
@@ -240,6 +249,43 @@ func (h *ServiceHandler) SetResources(c *gin.Context) {
 	}
 
 	svc, err := h.svc.SetResources(c.Request.Context(), id, fromResourcesDTO(req))
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toServiceResponse(svc))
+}
+
+// SetPlacement godoc
+//
+//	@Summary		Set a service's placement
+//	@Description	Updates only the scheduling placement: hard constraints (e.g. "node.role==worker"), spread preferences (e.g. "node.labels.zone") and the max replicas per node (0 = unlimited). Leaves every other field unchanged.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string				true	"Service ID (UUID)"
+//	@Param			body	body		dto.PlacementDTO	true	"Placement rules"
+//	@Success		200		{object}	dto.ServiceResponse
+//	@Failure		400		{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		422		{object}	dto.ErrorResponse	"malformed constraint or empty preference"
+//	@Router			/services/{id}/placement [put]
+func (h *ServiceHandler) SetPlacement(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.PlacementDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	svc, err := h.svc.SetPlacement(c.Request.Context(), id, fromPlacementDTO(req))
 	if err != nil {
 		h.writeServiceError(c, err)
 		return
@@ -365,9 +411,12 @@ func isValidationError(err error) bool {
 		errors.Is(err, service.ErrInvalidImage),
 		errors.Is(err, service.ErrResourceConflict),
 		errors.Is(err, service.ErrNegativeResource),
+		errors.Is(err, application.ErrResourceExceedsCluster),
 		errors.Is(err, service.ErrInvalidFailureAction),
 		errors.Is(err, service.ErrInvalidOrder),
 		errors.Is(err, service.ErrInvalidFailureRatio),
+		errors.Is(err, service.ErrInvalidConstraint),
+		errors.Is(err, service.ErrInvalidPreference),
 		errors.Is(err, service.ErrInvalidEnvKey),
 		errors.Is(err, service.ErrDuplicateKey):
 		return true
@@ -390,6 +439,7 @@ func toServiceResponse(s *service.Service) dto.ServiceResponse {
 		Command:        nullSafeStrings(s.Command),
 		Entrypoint:     nullSafeStrings(s.Entrypoint),
 		Resources:      toResourcesDTO(s.Resources),
+		Placement:      toPlacementDTO(s.Placement),
 		UpdateConfig:   toUpdateConfigDTO(s.UpdateConfig),
 		Status:         string(s.Status),
 		SwarmServiceID: s.SwarmServiceID,
@@ -413,6 +463,22 @@ func fromResourcesDTO(r dto.ResourcesDTO) service.Resources {
 		CPULimit:       r.CPULimit,
 		MemReservation: r.MemReservation,
 		MemLimit:       r.MemLimit,
+	}
+}
+
+func toPlacementDTO(p service.Placement) dto.PlacementDTO {
+	return dto.PlacementDTO{
+		Constraints:        nullSafeStrings(p.Constraints),
+		Preferences:        nullSafeStrings(p.Preferences),
+		MaxReplicasPerNode: p.MaxReplicas,
+	}
+}
+
+func fromPlacementDTO(p dto.PlacementDTO) service.Placement {
+	return service.Placement{
+		Constraints: trimmedNonEmpty(p.Constraints),
+		Preferences: trimmedNonEmpty(p.Preferences),
+		MaxReplicas: p.MaxReplicasPerNode,
 	}
 }
 
@@ -459,4 +525,16 @@ func nullSafeStrings(s []string) []string {
 		return []string{}
 	}
 	return s
+}
+
+// trimmedNonEmpty trims each entry and drops blank ones, so stray empty rows
+// from the UI never reach domain validation as malformed rules.
+func trimmedNonEmpty(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if t := strings.TrimSpace(s); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }

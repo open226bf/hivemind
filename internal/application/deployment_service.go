@@ -291,6 +291,11 @@ func (s *DeploymentService) buildSpec(ctx context.Context, svc *service.Service)
 			MemReservation: svc.Resources.MemReservation,
 			MemLimit:       svc.Resources.MemLimit,
 		},
+		Placement: ports.PlacementSpec{
+			Constraints: svc.Placement.Constraints,
+			Preferences: svc.Placement.Preferences,
+			MaxReplicas: svc.Placement.MaxReplicas,
+		},
 		UpdateConfig: ports.UpdateConfigSpec{
 			Parallelism:     svc.UpdateConfig.Parallelism,
 			Delay:           svc.UpdateConfig.Delay,
@@ -437,6 +442,7 @@ type deploymentSnapshot struct {
 	Command      []string             `json:"command,omitempty"`
 	Entrypoint   []string             `json:"entrypoint,omitempty"`
 	Resources    service.Resources    `json:"resources"`
+	Placement    service.Placement    `json:"placement"`
 	UpdateConfig service.UpdateConfig `json:"update_config"`
 }
 
@@ -447,6 +453,7 @@ func buildSnapshot(svc *service.Service) json.RawMessage {
 		Command:      svc.Command,
 		Entrypoint:   svc.Entrypoint,
 		Resources:    svc.Resources,
+		Placement:    svc.Placement,
 		UpdateConfig: svc.UpdateConfig,
 	}
 	b, err := json.Marshal(snap)

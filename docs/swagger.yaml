@@ -1,5 +1,16 @@
 basePath: /api/v1
 definitions:
+  github_com_orange_hivemind_internal_adapters_api_dto.ActivitySummaryDTO:
+    properties:
+      failed:
+        type: integer
+      in_progress:
+        type: integer
+      succeeded:
+        type: integer
+      total_deployments:
+        type: integer
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.AddConfigVersionRequest:
     properties:
       comment:
@@ -39,6 +50,51 @@ definitions:
         type: string
     required:
     - secret_id
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CatalogSummaryDTO:
+    properties:
+      configs:
+        type: integer
+      networks:
+        type: integer
+      secrets:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse:
+    properties:
+      activity:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ActivitySummaryDTO'
+      catalog:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CatalogSummaryDTO'
+      cluster:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterSummaryDTO'
+      nodes:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeDTO'
+        type: array
+      services:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceSummaryDTO'
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ClusterSummaryDTO:
+    properties:
+      engine_version:
+        type: string
+      leader_host:
+        type: string
+      managers:
+        type: integer
+      node_total:
+        type: integer
+      reachable:
+        type: boolean
+      ready_nodes:
+        type: integer
+      total_cpus:
+        type: number
+      total_memory_bytes:
+        type: integer
+      workers:
+        type: integer
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ConfigListResponse:
     properties:
@@ -109,6 +165,9 @@ definitions:
       name:
         example: backend-net
         type: string
+      subnet:
+        example: 10.0.9.0/24
+        type: string
     required:
     - name
     type: object
@@ -142,6 +201,8 @@ definitions:
         type: string
       name:
         type: string
+      placement:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO'
       replicas:
         type: integer
       resources:
@@ -153,6 +214,21 @@ definitions:
     required:
     - image
     - name
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      role:
+        description: admin | operator | viewer
+        example: operator
+        type: string
+    required:
+    - email
+    - password
+    - role
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.DeploymentListResponse:
     properties:
@@ -277,8 +353,53 @@ definitions:
         type: string
       scope:
         type: string
+      subnet:
+        type: string
       swarm_id:
         type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.NodeDTO:
+    properties:
+      addr:
+        type: string
+      availability:
+        type: string
+      cpus:
+        type: number
+      engine_version:
+        type: string
+      hostname:
+        type: string
+      id:
+        type: string
+      leader:
+        type: boolean
+      memory_bytes:
+        type: integer
+      platform:
+        type: string
+      role:
+        type: string
+      state:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO:
+    properties:
+      constraints:
+        example:
+        - node.role==worker
+        items:
+          type: string
+        type: array
+      max_replicas_per_node:
+        example: 0
+        type: integer
+      preferences:
+        example:
+        - node.labels.zone
+        items:
+          type: string
+        type: array
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.RefreshRequest:
     properties:
@@ -387,6 +508,8 @@ definitions:
         type: string
       name:
         type: string
+      placement:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO'
       replicas:
         type: integer
       resources:
@@ -424,6 +547,17 @@ definitions:
       updating:
         type: boolean
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ServiceSummaryDTO:
+    properties:
+      deployed:
+        type: integer
+      draft:
+        type: integer
+      removed:
+        type: integer
+      total:
+        type: integer
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ServiceTasksResponse:
     properties:
       tasks:
@@ -438,9 +572,31 @@ definitions:
           $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarInput'
         type: array
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SwarmNetworkInfo:
+    properties:
+      driver:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      scope:
+        type: string
+      subnet:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.TaskNetworkDetail:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.TaskStateResponse:
     properties:
       container_id:
+        type: string
+      created_at:
         type: string
       current_state:
         type: string
@@ -448,10 +604,24 @@ definitions:
         type: string
       error_message:
         type: string
+      exit_code:
+        type: integer
       id:
         type: string
+      image:
+        type: string
+      message:
+        type: string
+      networks:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TaskNetworkDetail'
+        type: array
       node:
         type: string
+      pid:
+        type: integer
+      slot:
+        type: integer
       updated_at:
         type: string
     type: object
@@ -503,6 +673,8 @@ definitions:
         type: array
       image:
         type: string
+      placement:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO'
       replicas:
         type: integer
       resources:
@@ -511,6 +683,43 @@ definitions:
         type: string
       update_config:
         $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO'
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.UpdateUserRequest:
+    properties:
+      active:
+        type: boolean
+      password:
+        type: string
+      role:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.UserListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.UserResponse:
+    properties:
+      active:
+        type: boolean
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      role:
+        type: string
+      updated_at:
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -627,6 +836,36 @@ paths:
       summary: Exchange a refresh token for a new token pair
       tags:
       - auth
+  /cluster/overview:
+    get:
+      description: 'Aggregated health and capacity of the orchestration cluster (nodes,
+        CPU/memory) combined with catalog and deployment-activity counts. Cluster
+        health is best-effort: when the orchestrator is unreachable the counts are
+        still returned with cluster.reachable=false.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cluster dashboard overview
+      tags:
+      - cluster
   /configs:
     get:
       parameters:
@@ -1074,6 +1313,37 @@ paths:
       security:
       - BearerAuth: []
       summary: Get a network
+      tags:
+      - networks
+  /networks/swarm:
+    get:
+      description: Returns lightweight info about every overlay network visible on
+        the Docker Swarm cluster. Useful for discovering existing networks before
+        creating or attaching.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SwarmNetworkInfo'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "503":
+          description: orchestrator unavailable
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List overlay networks on the Swarm cluster
       tags:
       - networks
   /secrets:
@@ -1967,6 +2237,57 @@ paths:
       summary: Detach a network from a service
       tags:
       - networks
+  /services/{id}/placement:
+    put:
+      consumes:
+      - application/json
+      description: 'Updates only the scheduling placement: hard constraints (e.g.
+        "node.role==worker"), spread preferences (e.g. "node.labels.zone") and the
+        max replicas per node (0 = unlimited). Leaves every other field unchanged.'
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Placement rules
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: malformed constraint or empty preference
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a service's placement
+      tags:
+      - services
   /services/{id}/resources:
     put:
       consumes:
@@ -2207,6 +2528,138 @@ paths:
       summary: Tasks of a service (F-MVP-10)
       tags:
       - supervision
+  /users:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List users (Admin only)
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: email already in use
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a user (Admin only)
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: deleted
+        "403":
+          description: last admin / self-delete
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a user (Admin only)
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse'
+        "403":
+          description: last admin / self-demote
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a user (Admin only)
+      tags:
+      - users
 securityDefinitions:
   BearerAuth:
     description: 'Format: "Bearer <token>"'
