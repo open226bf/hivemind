@@ -19,7 +19,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/stdcopy"
-
 	"github.com/orange/hivemind/internal/ports"
 )
 
@@ -61,12 +60,19 @@ func (o *SwarmOrchestrator) DeployService(ctx context.Context, spec ports.Servic
 	return resp.ID, nil
 }
 
-func (o *SwarmOrchestrator) UpdateService(ctx context.Context, swarmServiceID string, spec ports.ServiceSpec) error {
+func (o *SwarmOrchestrator) UpdateService(ctx context.Context, swarmServiceID string, spec ports.ServiceSpec, opts ports.UpdateServiceOptions) error {
 	current, _, err := o.cli.ServiceInspectWithRaw(ctx, swarmServiceID, types.ServiceInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("service inspect: %w", err)
 	}
-	if _, err := o.cli.ServiceUpdate(ctx, swarmServiceID, current.Version, o.toSwarmSpec(spec), types.ServiceUpdateOptions{}); err != nil {
+	swarmSpec := o.toSwarmSpec(spec)
+	if opts.Force {
+		// Incrementing ForceUpdate is Swarm's documented way to recreate every
+		// task even when nothing else in the spec has changed.
+		swarmSpec.TaskTemplate.ForceUpdate = current.Spec.TaskTemplate.ForceUpdate + 1
+	}
+	updateOpts := types.ServiceUpdateOptions{QueryRegistry: opts.QueryRegistry}
+	if _, err := o.cli.ServiceUpdate(ctx, swarmServiceID, current.Version, swarmSpec, updateOpts); err != nil {
 		return fmt.Errorf("service update: %w", err)
 	}
 	return nil
@@ -85,6 +91,9 @@ func (o *SwarmOrchestrator) RemoveService(ctx context.Context, swarmServiceID st
 func (o *SwarmOrchestrator) GetServiceState(ctx context.Context, swarmServiceID string) (*ports.ServiceState, error) {
 	svc, _, err := o.cli.ServiceInspectWithRaw(ctx, swarmServiceID, types.ServiceInspectOptions{})
 	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil, ports.ErrSwarmServiceNotFound
+		}
 		return nil, fmt.Errorf("service inspect: %w", err)
 	}
 
@@ -95,9 +104,13 @@ func (o *SwarmOrchestrator) GetServiceState(ctx context.Context, swarmServiceID 
 
 	// Keep only the most recent task per slot to avoid counting historical
 	// shutdown/rejected tasks. Tasks without slots (slot=0) are kept as-is.
+	// Use CreatedAt (not UpdatedAt) because a rolling update marks the old task
+	// as shutdown AFTER the new task is already running, which would make the
+	// old task appear more recent by UpdatedAt and cause the running task to be
+	// ignored.
 	latestBySlot := make(map[int]swarm.Task)
 	for _, t := range tasks {
-		if prev, ok := latestBySlot[t.Slot]; !ok || t.UpdatedAt.After(prev.UpdatedAt) {
+		if prev, ok := latestBySlot[t.Slot]; !ok || t.CreatedAt.After(prev.CreatedAt) {
 			latestBySlot[t.Slot] = t
 		}
 	}
@@ -168,6 +181,7 @@ func (o *SwarmOrchestrator) GetServiceState(ctx context.Context, swarmServiceID 
 			state.Running++
 		case swarm.TaskStateFailed, swarm.TaskStateRejected:
 			state.Failed++
+		case swarm.TaskStateComplete:
 		default:
 			state.Pending++
 		}

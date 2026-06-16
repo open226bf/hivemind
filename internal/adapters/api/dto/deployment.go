@@ -2,6 +2,16 @@ package dto
 
 import "time"
 
+// DeployRequest is the optional body of POST /services/{id}/deploy. Both
+// flags default to false so the existing empty-body call keeps working.
+// Force triggers task recreation even when the spec is unchanged (Swarm's
+// ForceUpdate counter). Repull asks Swarm to re-resolve the image from the
+// registry so a moved tag (e.g. mariadb:latest) is picked up.
+type DeployRequest struct {
+	Force  bool `json:"force"`
+	Repull bool `json:"repull"`
+}
+
 // DeploymentResponse is the canonical deployment representation.
 type DeploymentResponse struct {
 	ID           string     `json:"id"`
@@ -33,6 +43,10 @@ type ServiceStatusResponse struct {
 	Pending  int  `json:"pending"`
 	Failed   int  `json:"failed"`
 	Updating bool `json:"updating"`
+	// ExternallyRemoved is true when the swarm service was deleted out-of-band
+	// (e.g. `docker service rm`). Hivemind reconciles the persisted status to
+	// "removed" automatically; the UI can use this flag to display a drift alert.
+	ExternallyRemoved bool `json:"externally_removed,omitempty"`
 }
 
 // TaskStateResponse is a single task (container) of a service, with the node it

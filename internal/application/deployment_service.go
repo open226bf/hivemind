@@ -24,6 +24,10 @@ var (
 	ErrContainerNotInService   = errors.New("container does not belong to this service")
 )
 
+// ErrDeploymentInProgress is returned when an undeploy is requested while a
+// deployment is still pending. Undeploying mid-deploy would race the engine.
+var ErrDeploymentInProgress = errors.New("a deployment is still in progress — wait for it to finish before undeploying")
+
 const defaultConvergenceTimeout = 2 * time.Minute
 
 // DeploymentService is the deployment engine (F-MVP-08). It assembles a service
@@ -40,7 +44,7 @@ type DeploymentService struct {
 	orchestrator ports.Orchestrator
 	notifier     ports.Notifier // optional
 	timeout      time.Duration
-	stateCache   *stateCache // short-lived cache of live orchestrator state (F-MVP-10)
+	stateCache   *stateCache
 }
 
 func NewDeploymentService(
@@ -69,6 +73,17 @@ type BeginDeploymentInput struct {
 	ServiceID uuid.UUID
 	UserID    *uuid.UUID // nil for webhook-triggered deployments
 	Trigger   deployment.Trigger
+	Options   DeployOptions
+}
+
+// DeployOptions controls how an in-place redeploy is applied. On the very first
+// deploy (no SwarmServiceID yet) these are ignored — the service is created
+// fresh. On subsequent deploys, Force recreates all tasks even when the spec
+// is unchanged, and Repull asks Swarm to re-resolve the image from the
+// registry so a moved tag (e.g. mariadb:latest) is picked up.
+type DeployOptions struct {
+	Force  bool
+	Repull bool
 }
 
 // Begin validates and records a new pending deployment. It rejects a service
@@ -110,8 +125,9 @@ func (s *DeploymentService) DeployAsync(ctx context.Context, in BeginDeploymentI
 	if err != nil {
 		return nil, err
 	}
+	opts := in.Options
 	go func() {
-		if err := s.Execute(context.Background(), dep.ID); err != nil {
+		if err := s.Execute(context.Background(), dep.ID, opts); err != nil {
 			slog.Error("deployment failed", "deployment_id", dep.ID, "service_id", dep.ServiceID, "err", err)
 		}
 	}()
@@ -122,7 +138,7 @@ func (s *DeploymentService) DeployAsync(ctx context.Context, in BeginDeploymentI
 // provisions Swarm objects, deploys or updates the service, waits for
 // convergence and records success/failure. It is synchronous and returns the
 // terminal error (if any) so it can be unit-tested directly.
-func (s *DeploymentService) Execute(ctx context.Context, deploymentID uuid.UUID) error {
+func (s *DeploymentService) Execute(ctx context.Context, deploymentID uuid.UUID, opts DeployOptions) error {
 	dep, err := s.deployments.FindByID(ctx, deploymentID)
 	if err != nil {
 		return err
@@ -137,7 +153,7 @@ func (s *DeploymentService) Execute(ctx context.Context, deploymentID uuid.UUID)
 		return err
 	}
 
-	if err := s.reconcile(ctx, svc); err != nil {
+	if err := s.reconcile(ctx, svc, opts); err != nil {
 		return s.fail(ctx, dep, svc, err)
 	}
 
@@ -177,6 +193,10 @@ func (s *DeploymentService) ListForService(ctx context.Context, serviceID uuid.U
 // state rather than an error. Results are cached for a short TTL (<= 5s) so
 // that supervising many services — and hitting both /status and /tasks back to
 // back — does not overload the Swarm API.
+//
+// External drift: if the swarm service has been removed out-of-band (someone
+// ran `docker service rm`), the persisted status is reconciled to "removed"
+// and the response is flagged ExternallyRemoved so the UI can surface it.
 func (s *DeploymentService) ServiceState(ctx context.Context, serviceID uuid.UUID) (*ports.ServiceState, error) {
 	if s.orchestrator == nil {
 		return nil, ErrOrchestratorUnavailable
@@ -191,12 +211,72 @@ func (s *DeploymentService) ServiceState(ctx context.Context, serviceID uuid.UUI
 	if cached, ok := s.stateCache.get(svc.SwarmServiceID); ok {
 		return cached, nil
 	}
+
 	state, err := s.orchestrator.GetServiceState(ctx, svc.SwarmServiceID)
 	if err != nil {
+		if errors.Is(err, ports.ErrSwarmServiceNotFound) {
+			drift := s.reconcileExternalRemoval(ctx, svc)
+			return drift, nil
+		}
 		return nil, err
 	}
 	s.stateCache.put(svc.SwarmServiceID, state)
 	return state, nil
+}
+
+// reconcileExternalRemoval handles the case where the swarm service was deleted
+// outside of Hivemind. It transitions the persisted status to "removed", clears
+// the dangling SwarmServiceID, and returns a synthetic state flagged so callers
+// can surface the drift. Persistence errors are logged but do not prevent
+// returning the drift state — the next call will simply retry.
+func (s *DeploymentService) reconcileExternalRemoval(ctx context.Context, svc *service.Service) *ports.ServiceState {
+	if svc.Status == service.StatusDeployed {
+		svc.Status = service.StatusRemoved
+		svc.SwarmServiceID = ""
+		svc.UpdatedAt = time.Now().UTC()
+		if err := s.services.Update(ctx, svc); err != nil {
+			slog.Warn("reconcile external removal: persist failed", "service_id", svc.ID, "err", err)
+		}
+	}
+	return &ports.ServiceState{ExternallyRemoved: true}
+}
+
+// Undeploy removes the swarm service for a deployed service and transitions
+// its status to "removed". The service definition stays in Hivemind (history,
+// env vars, attachments preserved) and can be redeployed later. Idempotent:
+// a service that is already removed/draft is a no-op success. A service with
+// a deployment in progress is rejected so we do not race the engine.
+func (s *DeploymentService) Undeploy(ctx context.Context, serviceID uuid.UUID) (*service.Service, error) {
+	if s.orchestrator == nil {
+		return nil, ErrOrchestratorUnavailable
+	}
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	if svc.Status != service.StatusDeployed {
+		return svc, nil
+	}
+	if _, err := s.deployments.FindActiveByServiceID(ctx, serviceID); err == nil {
+		return nil, ErrDeploymentInProgress
+	} else if !errors.Is(err, domainerrors.ErrNotFound) {
+		return nil, err
+	}
+
+	if svc.SwarmServiceID != "" {
+		if err := s.orchestrator.RemoveService(ctx, svc.SwarmServiceID); err != nil {
+			return nil, fmt.Errorf("remove swarm service: %w", err)
+		}
+		s.stateCache.invalidate(svc.SwarmServiceID)
+	}
+
+	svc.Status = service.StatusRemoved
+	svc.SwarmServiceID = ""
+	svc.UpdatedAt = time.Now().UTC()
+	if err := s.services.Update(ctx, svc); err != nil {
+		return nil, err
+	}
+	return svc, nil
 }
 
 // ServiceLogs returns a live stream of a service's aggregated container logs
@@ -251,7 +331,7 @@ func (s *DeploymentService) ExecContainer(ctx context.Context, serviceID uuid.UU
 
 // ─── Engine internals ─────────────────────────────────────────────────────────
 
-func (s *DeploymentService) reconcile(ctx context.Context, svc *service.Service) error {
+func (s *DeploymentService) reconcile(ctx context.Context, svc *service.Service, opts DeployOptions) error {
 	spec, err := s.buildSpec(ctx, svc)
 	if err != nil {
 		return err
@@ -268,8 +348,14 @@ func (s *DeploymentService) reconcile(ctx context.Context, svc *service.Service)
 		if err := s.services.Update(ctx, svc); err != nil {
 			return err
 		}
-	} else if err := s.orchestrator.UpdateService(ctx, svc.SwarmServiceID, spec); err != nil {
-		return fmt.Errorf("update service: %w", err)
+	} else {
+		updateOpts := ports.UpdateServiceOptions{
+			Force:         opts.Force,
+			QueryRegistry: opts.Repull,
+		}
+		if err := s.orchestrator.UpdateService(ctx, svc.SwarmServiceID, spec, updateOpts); err != nil {
+			return fmt.Errorf("update service: %w", err)
+		}
 	}
 
 	if err := s.orchestrator.WaitConvergence(ctx, svc.SwarmServiceID, s.timeout); err != nil {

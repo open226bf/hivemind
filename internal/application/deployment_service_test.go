@@ -120,7 +120,7 @@ func (o *fakeOrchestrator) DeployService(_ context.Context, spec ports.ServiceSp
 	}
 	return "swarm-svc-1", nil
 }
-func (o *fakeOrchestrator) UpdateService(_ context.Context, _ string, spec ports.ServiceSpec) error {
+func (o *fakeOrchestrator) UpdateService(_ context.Context, _ string, spec ports.ServiceSpec, _ ports.UpdateServiceOptions) error {
 	o.updateCalls++
 	o.lastSpec = spec
 	return nil
@@ -251,7 +251,7 @@ func TestDeploymentList_FilterByServiceAndStatus(t *testing.T) {
 	for _, s := range []*service.Service{a, a, b} {
 		dep, err := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
 		require.NoError(t, err)
-		require.NoError(t, svc.Execute(context.Background(), dep.ID))
+		require.NoError(t, svc.Execute(context.Background(), dep.ID, application.DeployOptions{}))
 	}
 
 	// All deployments.
@@ -322,7 +322,7 @@ func TestDeploymentExecute_Success(t *testing.T) {
 	dep, err := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
 	require.NoError(t, err)
 
-	require.NoError(t, svc.Execute(context.Background(), dep.ID))
+	require.NoError(t, svc.Execute(context.Background(), dep.ID, application.DeployOptions{}))
 
 	got, _ := depRepo.FindByID(context.Background(), dep.ID)
 	assert.Equal(t, deployment.StatusSucceeded, got.Status)
@@ -345,10 +345,10 @@ func TestDeploymentExecute_SecondDeployUpdatesInPlace(t *testing.T) {
 	svcRepo.add(s)
 
 	d1, _ := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
-	require.NoError(t, svc.Execute(context.Background(), d1.ID))
+	require.NoError(t, svc.Execute(context.Background(), d1.ID, application.DeployOptions{}))
 
 	d2, _ := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
-	require.NoError(t, svc.Execute(context.Background(), d2.ID))
+	require.NoError(t, svc.Execute(context.Background(), d2.ID, application.DeployOptions{}))
 
 	assert.Equal(t, 1, orch.deployCalls)
 	assert.Equal(t, 1, orch.updateCalls)
@@ -362,7 +362,7 @@ func TestDeploymentExecute_BuildsEnvAndSecrets(t *testing.T) {
 	_ = svcRepo.SetEnvVars(context.Background(), s.ID, mustEnvVars(t, s.ID))
 
 	dep, _ := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
-	require.NoError(t, svc.Execute(context.Background(), dep.ID))
+	require.NoError(t, svc.Execute(context.Background(), dep.ID, application.DeployOptions{}))
 
 	assert.Equal(t, "info", orch.lastSpec.Env["LOG_LEVEL"])
 }
@@ -374,7 +374,7 @@ func TestDeploymentExecute_ConvergenceFailure(t *testing.T) {
 	svcRepo.add(s)
 	dep, _ := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
 
-	err := svc.Execute(context.Background(), dep.ID)
+	err := svc.Execute(context.Background(), dep.ID, application.DeployOptions{})
 	require.Error(t, err)
 
 	got, _ := depRepo.FindByID(context.Background(), dep.ID)
@@ -391,7 +391,7 @@ func TestDeploymentExecute_DeployErrorMarksFailed(t *testing.T) {
 	svcRepo.add(s)
 	dep, _ := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
 
-	err := svc.Execute(context.Background(), dep.ID)
+	err := svc.Execute(context.Background(), dep.ID, application.DeployOptions{})
 	require.Error(t, err)
 
 	got, _ := depRepo.FindByID(context.Background(), dep.ID)

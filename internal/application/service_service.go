@@ -45,6 +45,7 @@ type CreateServiceInput struct {
 	Resources    service.Resources
 	Placement    service.Placement
 	UpdateConfig *service.UpdateConfig
+	Hive         uuid.UUID
 }
 
 // UpdateServiceInput uses pointer fields so callers can omit unchanged fields.
@@ -80,7 +81,7 @@ func (s *ServiceService) Create(ctx context.Context, in CreateServiceInput) (*se
 		return nil, err
 	}
 
-	svc, err := service.New(in.Name, in.Image, in.Tag, in.Replicas)
+	svc, err := service.New(in.Name, in.Image, in.Tag, in.Replicas, &in.Hive)
 	if err != nil {
 		return nil, err
 	}

@@ -178,7 +178,7 @@ type Service struct {
 	UpdatedAt      time.Time
 }
 
-func New(name, image, tag string, replicas uint64) (*Service, error) {
+func New(name, image, tag string, replicas uint64, hiveId *uuid.UUID) (*Service, error) {
 	if !nameRegex.MatchString(name) {
 		return nil, ErrInvalidName
 	}
@@ -195,6 +195,7 @@ func New(name, image, tag string, replicas uint64) (*Service, error) {
 		Status:       StatusDraft,
 		CreatedAt:    time.Now().UTC(),
 		UpdatedAt:    time.Now().UTC(),
+		HiveID:       hiveId,
 	}, nil
 }
 

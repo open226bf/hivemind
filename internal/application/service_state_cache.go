@@ -52,3 +52,12 @@ func (c *stateCache) put(key string, state *ports.ServiceState) {
 	defer c.mu.Unlock()
 	c.entries[key] = stateCacheEntry{state: state, expiresAt: c.now().Add(c.ttl)}
 }
+
+// invalidate drops the cached state for key, if any. Used after operations
+// that change the orchestrator state (undeploy) so a follow-up read does not
+// return a stale snapshot.
+func (c *stateCache) invalidate(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.entries, key)
+}

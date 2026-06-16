@@ -30,6 +30,7 @@ func NewDeploymentHandler(svc *application.DeploymentService) *DeploymentHandler
 // Register wires deployment routes.
 func (h *DeploymentHandler) Register(protected *gin.RouterGroup) {
 	protected.POST("/services/:id/deploy", middleware.RequireRole(user.RoleOperator), h.Deploy)
+	protected.POST("/services/:id/undeploy", middleware.RequireRole(user.RoleOperator), h.Undeploy)
 	protected.GET("/services/:id/deployments", middleware.RequireRole(user.RoleViewer), h.ListForService)
 	protected.GET("/services/:id/status", middleware.RequireRole(user.RoleViewer), h.Status)
 	protected.GET("/services/:id/tasks", middleware.RequireRole(user.RoleViewer), h.Tasks)
@@ -59,9 +60,22 @@ func (h *DeploymentHandler) Deploy(c *gin.Context) {
 		return
 	}
 
+	// Body is optional: an empty/missing body keeps the previous behaviour.
+	var body dto.DeployRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&body); err != nil {
+			dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+			return
+		}
+	}
+
 	in := application.BeginDeploymentInput{
 		ServiceID: serviceID,
 		Trigger:   deployment.TriggerManual,
+		Options: application.DeployOptions{
+			Force:  body.Force,
+			Repull: body.Repull,
+		},
 	}
 	if claims, ok := middleware.ClaimsFrom(c); ok {
 		uid := claims.UserID
@@ -74,6 +88,34 @@ func (h *DeploymentHandler) Deploy(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusAccepted, toDeploymentResponse(dep))
+}
+
+// Undeploy godoc
+//
+//	@Summary		Undeploy a service
+//	@Description	Removes the service from the orchestrator (Swarm) but keeps its Hivemind definition. Status transitions deployed → removed. Idempotent: a service that is not deployed returns its current state. Use POST /services/{id}/deploy to redeploy it later.
+//	@Tags			deployments
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		string	true	"Service ID (UUID)"
+//	@Success		200	{object}	dto.ServiceResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		409	{object}	dto.ErrorResponse	"a deployment is still in progress"
+//	@Failure		503	{object}	dto.ErrorResponse	"deployment engine not configured"
+//	@Router			/services/{id}/undeploy [post]
+func (h *DeploymentHandler) Undeploy(c *gin.Context) {
+	serviceID, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	svc, err := h.svc.Undeploy(c.Request.Context(), serviceID)
+	if err != nil {
+		h.writeDeploymentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toServiceResponse(svc))
 }
 
 // ListForService godoc
@@ -341,7 +383,8 @@ func (h *DeploymentHandler) writeDeploymentError(c *gin.Context, err error) {
 	case errors.Is(err, domainerrors.ErrNotFound):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
 	case errors.Is(err, deployment.ErrAlreadyInProgress),
-		errors.Is(err, application.ErrServiceNotDeployed):
+		errors.Is(err, application.ErrServiceNotDeployed),
+		errors.Is(err, application.ErrDeploymentInProgress):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, application.ErrOrchestratorUnavailable):
 		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, err.Error())
@@ -352,11 +395,12 @@ func (h *DeploymentHandler) writeDeploymentError(c *gin.Context, err error) {
 
 func toServiceStatusResponse(s *ports.ServiceState) dto.ServiceStatusResponse {
 	return dto.ServiceStatusResponse{
-		Running:  s.Running,
-		Desired:  s.Desired,
-		Pending:  s.Pending,
-		Failed:   s.Failed,
-		Updating: s.Updating,
+		Running:           s.Running,
+		Desired:           s.Desired,
+		Pending:           s.Pending,
+		Failed:            s.Failed,
+		Updating:          s.Updating,
+		ExternallyRemoved: s.ExternallyRemoved,
 	}
 }
 
