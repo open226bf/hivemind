@@ -1,0 +1,125 @@
+name: Code Quality & Coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Minimum total statement coverage (%) required for the coverage job to pass.
+  # Tune as the suite grows.
+  COVERAGE_THRESHOLD: "60"
+
+jobs:
+  quality:
+    name: Lint & static checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify dependencies are tidy
+        run: |
+          go mod download
+          go mod verify
+
+      - name: gofmt (formatting)
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::The following files are not gofmt-formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+  coverage:
+    name: Tests & coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests with coverage
+        run: |
+          go test -race -covermode=atomic -coverprofile=coverage.out -coverpkg=./... ./...
+
+      - name: Coverage report
+        id: cov
+        run: |
+          go tool cover -func=coverage.out | tee coverage.txt
+          total=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
+          echo "total=$total" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Coverage: ${total}%"
+            echo ""
+            echo "Threshold: ${COVERAGE_THRESHOLD}%"
+            echo ""
+            echo '<details><summary>Per-function coverage</summary>'
+            echo ""
+            echo '```'
+            cat coverage.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce coverage threshold
+        run: |
+          total="${{ steps.cov.outputs.total }}"
+          awk -v t="$total" -v min="$COVERAGE_THRESHOLD" 'BEGIN {
+            if (t+0 < min+0) {
+              printf "::error::Coverage %.1f%% is below the required %s%%\n", t, min;
+              exit 1
+            }
+            printf "Coverage %.1f%% meets the required %s%%\n", t, min
+          }'
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage.out
+            coverage.txt
+          retention-days: 14
+
+      # Optional: publish to Codecov. No-op unless CODECOV_TOKEN is set as a
+      # repository secret; never fails the build.
+      - name: Upload to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: coverage.out
+          fail_ci_if_error: false
