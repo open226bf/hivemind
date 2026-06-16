@@ -105,10 +105,13 @@ func main() {
 	}
 
 	userRepo := persistence.NewUserRepository(db)
+	hiveRepo := persistence.NewHiveRepository(db)
 	serviceRepo := persistence.NewServiceRepository(db, cipher)
 	networkRepo := persistence.NewNetworkRepository(db)
+	volumeRepo := persistence.NewVolumeRepository(db)
 	secretRepo := persistence.NewSecretRepository(db, cipher)
 	configRepo := persistence.NewConfigRepository(db)
+	templateRepo := persistence.NewTemplateRepository(db)
 	deploymentRepo := persistence.NewDeploymentRepository(db)
 	auditRepo := persistence.NewAuditLogRepository(db)
 
@@ -126,9 +129,12 @@ func main() {
 	authSvc := application.NewAuthService(userRepo, tokens, clock.System{})
 	userSvc := application.NewUserService(userRepo)
 	serviceSvc := application.NewServiceService(serviceRepo, orch)
+	hiveSvc := application.NewHiveService(hiveRepo, serviceRepo)
 	networkSvc := application.NewNetworkService(networkRepo, serviceRepo)
+	volumeSvc := application.NewVolumeService(volumeRepo, serviceRepo)
 	secretSvc := application.NewSecretService(secretRepo, serviceRepo)
 	configSvc := application.NewConfigService(configRepo, serviceRepo)
+	templateSvc := application.NewTemplateService(templateRepo, serviceSvc, networkSvc)
 	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, orch, nil)
 	clusterSvc := application.NewClusterService(orch, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
 
@@ -151,9 +157,12 @@ func main() {
 		Auth:         authSvc,
 		Users:        userSvc,
 		Services:     serviceSvc,
+		Hives:        hiveSvc,
 		Networks:     networkSvc,
+		Volumes:      volumeSvc,
 		Secrets:      secretSvc,
 		Configs:      configSvc,
+		Templates:    templateSvc,
 		Deployments:  deploymentSvc,
 		Cluster:      clusterSvc,
 		Orchestrator: orch,

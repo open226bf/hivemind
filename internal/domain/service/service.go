@@ -161,6 +161,7 @@ func (uc UpdateConfig) Overlay(override UpdateConfig) UpdateConfig {
 
 type Service struct {
 	ID             uuid.UUID
+	HiveID         *uuid.UUID // project the service belongs to (nil = unassigned)
 	Name           string
 	Description    string
 	Image          string

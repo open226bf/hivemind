@@ -55,6 +55,7 @@ func (userModel) TableName() string { return "users" }
 
 type serviceModel struct {
 	ID          string      `gorm:"type:uuid;primaryKey;column:id"`
+	HiveID      *string     `gorm:"type:uuid;index;column:hive_id"`
 	Name        string      `gorm:"uniqueIndex;not null;column:name"`
 	Description string      `gorm:"column:description"`
 	Image       string      `gorm:"not null;column:image"`
@@ -98,6 +99,44 @@ type envVarModel struct {
 }
 
 func (envVarModel) TableName() string { return "env_vars" }
+
+// ─── Hive (project) ───────────────────────────────────────────────────────────
+
+type hiveModel struct {
+	ID          string    `gorm:"type:uuid;primaryKey;column:id"`
+	Name        string    `gorm:"uniqueIndex;not null;column:name"`
+	Description string    `gorm:"column:description"`
+	Color       string    `gorm:"column:color"`
+	CreatedAt   time.Time `gorm:"column:created_at;autoCreateTime:false"`
+	UpdatedAt   time.Time `gorm:"column:updated_at;autoUpdateTime:false"`
+}
+
+func (hiveModel) TableName() string { return "hives" }
+
+// ─── Volume ───────────────────────────────────────────────────────────────────
+
+type volumeModel struct {
+	ID        string    `gorm:"type:uuid;primaryKey;column:id"`
+	Name      string    `gorm:"uniqueIndex;not null;column:name"`
+	Driver    string    `gorm:"column:driver"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime:false"`
+}
+
+func (volumeModel) TableName() string { return "volumes" }
+
+// ─── ServiceMount ─────────────────────────────────────────────────────────────
+
+type serviceMountModel struct {
+	ID        string `gorm:"type:uuid;primaryKey;column:id"`
+	ServiceID string `gorm:"type:uuid;not null;index;column:service_id"`
+	Type      string `gorm:"column:type"` // volume | bind | tmpfs
+	Source    string `gorm:"column:source"`
+	Target    string `gorm:"column:target"`
+	ReadOnly  bool   `gorm:"column:read_only"`
+	Position  int    `gorm:"column:position"` // preserves declared order
+}
+
+func (serviceMountModel) TableName() string { return "service_mounts" }
 
 // ─── Network ──────────────────────────────────────────────────────────────────
 
@@ -206,6 +245,22 @@ type serviceConfigModel struct {
 }
 
 func (serviceConfigModel) TableName() string { return "service_configs" }
+
+// ─── Template ─────────────────────────────────────────────────────────────────
+
+type templateModel struct {
+	ID           string      `gorm:"type:uuid;primaryKey;column:id"`
+	Name         string      `gorm:"uniqueIndex;not null;column:name"`
+	Description  string      `gorm:"column:description"`
+	Version      int         `gorm:"column:version"`
+	SpecJSON     []byte      `gorm:"type:jsonb;column:spec"`
+	LockedFields stringSlice `gorm:"type:text;column:locked_fields"`
+	CreatedBy    string      `gorm:"type:uuid;column:created_by"`
+	CreatedAt    time.Time   `gorm:"column:created_at;autoCreateTime:false"`
+	UpdatedAt    time.Time   `gorm:"column:updated_at;autoUpdateTime:false"`
+}
+
+func (templateModel) TableName() string { return "templates" }
 
 // ─── Deployment ───────────────────────────────────────────────────────────────
 

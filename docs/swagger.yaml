@@ -19,7 +19,14 @@ definitions:
       content:
         type: string
     required:
+    - comment
     - content
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AssignHiveRequest:
+    properties:
+      hive_id:
+        example: 3f2504e0-4f89-11d3-9a0c-0305e82c3301
+        type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.AttachConfigRequest:
     properties:
@@ -96,6 +103,17 @@ definitions:
       workers:
         type: integer
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ConfigDiffResponse:
+    properties:
+      from_version:
+        type: integer
+      lines:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DiffLineDTO'
+        type: array
+      to_version:
+        type: integer
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ConfigListResponse:
     properties:
       items:
@@ -152,6 +170,19 @@ definitions:
         type: string
     required:
     - content
+    - name
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateHiveRequest:
+    properties:
+      color:
+        example: '#1e88e5'
+        type: string
+      description:
+        type: string
+      name:
+        example: Plateforme paiement
+        type: string
+    required:
     - name
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateNetworkRequest:
@@ -215,6 +246,24 @@ definitions:
     - image
     - name
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateTemplateRequest:
+    properties:
+      description:
+        type: string
+      locked_fields:
+        example:
+        - resources
+        items:
+          type: string
+        type: array
+      name:
+        example: java-api
+        type: string
+      spec:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateSpecDTO'
+    required:
+    - name
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateUserRequest:
     properties:
       email:
@@ -229,6 +278,16 @@ definitions:
     - email
     - password
     - role
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateVolumeRequest:
+    properties:
+      driver:
+        example: local
+        type: string
+      name:
+        type: string
+    required:
+    - name
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.DeploymentListResponse:
     properties:
@@ -264,6 +323,18 @@ definitions:
       trigger:
         type: string
       user_id:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.DiffLineDTO:
+    properties:
+      new_line:
+        type: integer
+      old_line:
+        type: integer
+      op:
+        description: equal | add | del
+        type: string
+      text:
         type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.EnvVarDTO:
@@ -305,6 +376,61 @@ definitions:
       message:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.HiveListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      service_count:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ImpactedServiceResponse:
+    properties:
+      name:
+        type: string
+      service_id:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.InstantiateTemplateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        example: orders-api
+        type: string
+      replicas:
+        type: integer
+      resources:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO'
+      tag:
+        type: string
+    required:
+    - name
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.LoginRequest:
     properties:
       email:
@@ -323,6 +449,33 @@ definitions:
         type: string
       role:
         type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.MountDTO:
+    properties:
+      read_only:
+        example: false
+        type: boolean
+      source:
+        example: app-data
+        type: string
+      target:
+        example: /var/lib/app
+        type: string
+      type:
+        description: volume | bind | tmpfs
+        example: volume
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.MountsResponse:
+    properties:
+      mounts:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountDTO'
+        type: array
+      warnings:
+        items:
+          type: string
+        type: array
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.NetworkListResponse:
     properties:
@@ -425,6 +578,12 @@ definitions:
         example: 67108864
         type: integer
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.RestoreConfigRequest:
+    properties:
+      comment:
+        example: rollback to known-good config
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.RotateSecretRequest:
     properties:
       value:
@@ -502,6 +661,8 @@ definitions:
         type: array
       full_image:
         type: string
+      hive_id:
+        type: string
       id:
         type: string
       image:
@@ -572,6 +733,13 @@ definitions:
           $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarInput'
         type: array
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SetMountsRequest:
+    properties:
+      mounts:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountDTO'
+        type: array
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.SwarmNetworkInfo:
     properties:
       driver:
@@ -583,6 +751,17 @@ definitions:
       scope:
         type: string
       subnet:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SwarmVolumeInfo:
+    properties:
+      driver:
+        type: string
+      mountpoint:
+        type: string
+      name:
+        type: string
+      scope:
         type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.TaskNetworkDetail:
@@ -625,6 +804,64 @@ definitions:
       updated_at:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.TemplateListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      locked_fields:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      spec:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateSpecDTO'
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.TemplateSpecDTO:
+    properties:
+      image:
+        example: nginx
+        type: string
+      network_ids:
+        items:
+          type: string
+        type: array
+      placement:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO'
+      replicas:
+        example: 2
+        type: integer
+      resources:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO'
+      tag:
+        example: "1.25"
+        type: string
+      update_config:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO'
+    required:
+    - image
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse:
     properties:
       access_expires_at:
@@ -659,6 +896,18 @@ definitions:
         example: 1
         type: integer
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.UpdateHiveRequest:
+    properties:
+      color:
+        example: '#1e88e5'
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.UpdateServiceRequest:
     properties:
       command:
@@ -683,6 +932,17 @@ definitions:
         type: string
       update_config:
         $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO'
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.UpdateTemplateRequest:
+    properties:
+      description:
+        type: string
+      locked_fields:
+        items:
+          type: string
+        type: array
+      spec:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateSpecDTO'
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.UpdateUserRequest:
     properties:
@@ -719,6 +979,30 @@ definitions:
       role:
         type: string
       updated_at:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.VolumeListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse:
+    properties:
+      created_at:
+        type: string
+      driver:
+        type: string
+      id:
+        type: string
+      name:
         type: string
     type: object
 host: localhost:8080
@@ -1006,6 +1290,74 @@ paths:
       summary: Get a config
       tags:
       - configs
+  /configs/{id}/diff:
+    get:
+      description: Returns a line-by-line diff turning version `from` into version
+        `to` (F-V2-08).
+      parameters:
+      - description: Config ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Base version number
+        in: query
+        name: from
+        required: true
+        type: integer
+      - description: Target version number
+        in: query
+        name: to
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigDiffResponse'
+        "400":
+          description: missing or invalid from/to
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: config or version not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Diff two config versions
+      tags:
+      - configs
+  /configs/{id}/services:
+    get:
+      description: Returns the services that attach this config — those that would
+        pick up a new version on their next deployment (F-V2-08).
+      parameters:
+      - description: Config ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ImpactedServiceResponse'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List services impacted by a config
+      tags:
+      - configs
   /configs/{id}/versions:
     get:
       description: Returns the full version history with content, newest first.
@@ -1088,6 +1440,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Add a config version
+      tags:
+      - configs
+  /configs/{id}/versions/{version}/restore:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new version whose content is identical to an earlier
+        version (F-V2-08). Attached services pick it up on their next deployment.
+      parameters:
+      - description: Config ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Version number to restore
+        in: path
+        name: version
+        required: true
+        type: integer
+      - description: Optional restore comment
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.RestoreConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: config or version not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore a config version
       tags:
       - configs
   /deployments:
@@ -1176,6 +1574,176 @@ paths:
       summary: Get a deployment
       tags:
       - deployments
+  /hives:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List hives (projects)
+      tags:
+      - hives
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Hive definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateHiveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: name already taken
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid name or color
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a hive
+      tags:
+      - hives
+  /hives/{id}:
+    delete:
+      description: Fails if the hive still contains services.
+      parameters:
+      - description: Hive ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: hive not empty
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a hive
+      tags:
+      - hives
+    get:
+      parameters:
+      - description: Hive ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a hive
+      tags:
+      - hives
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Hive ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateHiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a hive
+      tags:
+      - hives
+  /hives/{id}/services:
+    get:
+      parameters:
+      - description: Hive ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List a hive's services
+      tags:
+      - hives
   /networks:
     get:
       parameters:
@@ -2066,6 +2634,44 @@ paths:
       summary: Interactive container shell (WebSocket, Admin)
       tags:
       - supervision
+  /services/{id}/hive:
+    put:
+      consumes:
+      - application/json
+      description: Moves the service into a hive, or removes it from its hive when
+        hive_id is null.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Target hive (null to unassign)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AssignHiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: service or hive not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Assign a service to a hive
+      tags:
+      - hives
   /services/{id}/logs:
     get:
       description: 'Streams the service''s aggregated container logs as Server-Sent
@@ -2127,6 +2733,76 @@ paths:
       summary: Stream a service's logs (SSE, F-V2-01)
       tags:
       - supervision
+  /services/{id}/mounts:
+    get:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountsResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List a service's mounts
+      tags:
+      - volumes
+    put:
+      consumes:
+      - application/json
+      description: Atomically replaces the full mount set. Volume mounts must reference
+        an existing catalog volume. Bind mounts are restricted to Admins and journaled
+        (F-V2-06).
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Full mount set
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SetMountsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountsResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: bind mounts require Admin
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid mount or unknown volume
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace a service's mounts
+      tags:
+      - volumes
   /services/{id}/networks:
     get:
       parameters:
@@ -2528,6 +3204,199 @@ paths:
       summary: Tasks of a service (F-MVP-10)
       tags:
       - supervision
+  /services/from-template/{templateId}:
+    post:
+      consumes:
+      - application/json
+      description: Operator-allowed. Pre-fills the new service from the template;
+        locked fields cannot be overridden.
+      parameters:
+      - description: Template ID (UUID)
+        in: path
+        name: templateId
+        required: true
+        type: string
+      - description: Instance values
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.InstantiateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: template not found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: service name already taken
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: locked field overridden or invalid value
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a service from a template
+      tags:
+      - templates
+  /templates:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List service templates
+      tags:
+      - templates
+    post:
+      consumes:
+      - application/json
+      description: Admin-only. Defines defaults (image, scaling, resources, strategy,
+        placement, networks) and optional locked fields.
+      parameters:
+      - description: Template definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: name already taken
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid template
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a service template
+      tags:
+      - templates
+  /templates/{id}:
+    delete:
+      parameters:
+      - description: Template ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a service template
+      tags:
+      - templates
+    get:
+      parameters:
+      - description: Template ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a service template
+      tags:
+      - templates
+    put:
+      consumes:
+      - application/json
+      description: Admin-only. Replaces the spec and locks, bumping the template version.
+        The name is immutable.
+      parameters:
+      - description: Template ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a service template
+      tags:
+      - templates
   /users:
     get:
       parameters:
@@ -2660,6 +3529,153 @@ paths:
       summary: Update a user (Admin only)
       tags:
       - users
+  /volumes:
+    get:
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.VolumeListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List named volumes
+      tags:
+      - volumes
+    post:
+      consumes:
+      - application/json
+      description: Registers a named volume in the catalog. Local volumes are materialised
+        per-node by Docker when a service mounting them is deployed.
+      parameters:
+      - description: Volume definition
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateVolumeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: name already taken
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid name
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a named volume
+      tags:
+      - volumes
+  /volumes/{id}:
+    delete:
+      description: Fails if the volume is still mounted by any service.
+      parameters:
+      - description: Volume ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: volume in use
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a named volume
+      tags:
+      - volumes
+    get:
+      parameters:
+      - description: Volume ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a named volume
+      tags:
+      - volumes
+  /volumes/swarm:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SwarmVolumeInfo'
+            type: array
+        "503":
+          description: orchestrator unavailable
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List named volumes on the Swarm cluster
+      tags:
+      - volumes
 securityDefinitions:
   BearerAuth:
     description: 'Format: "Bearer <token>"'

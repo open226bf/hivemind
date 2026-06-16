@@ -7,10 +7,13 @@ import (
 	"github.com/orange/hivemind/internal/domain/auditlog"
 	"github.com/orange/hivemind/internal/domain/config"
 	"github.com/orange/hivemind/internal/domain/deployment"
+	"github.com/orange/hivemind/internal/domain/hive"
 	"github.com/orange/hivemind/internal/domain/network"
 	"github.com/orange/hivemind/internal/domain/secret"
 	"github.com/orange/hivemind/internal/domain/service"
+	"github.com/orange/hivemind/internal/domain/template"
 	"github.com/orange/hivemind/internal/domain/user"
+	"github.com/orange/hivemind/internal/domain/volume"
 	"github.com/orange/hivemind/pkg/pagination"
 )
 
@@ -56,11 +59,29 @@ type ServiceRepository interface {
 	AttachConfig(ctx context.Context, serviceID, configID uuid.UUID, targetPath string) error
 	DetachConfig(ctx context.Context, serviceID, configID uuid.UUID) error
 	GetConfigAttachments(ctx context.Context, serviceID uuid.UUID) ([]ServiceConfigAttachment, error)
+	// ServiceIDsByConfigID returns the IDs of services that attach a given config
+	// — the "impacted services" of a config change (F-V2-08).
+	ServiceIDsByConfigID(ctx context.Context, configID uuid.UUID) ([]uuid.UUID, error)
+
+	// Mounts (atomic replacement, F-V2-06)
+	SetMounts(ctx context.Context, serviceID uuid.UUID, mounts []volume.Mount) error
+	GetMounts(ctx context.Context, serviceID uuid.UUID) ([]volume.Mount, error)
+	// CountMountsByVolumeName returns how many service mounts reference a named
+	// volume — used to refuse deletion of an in-use volume.
+	CountMountsByVolumeName(ctx context.Context, name string) (int64, error)
+
+	// CountServicesByHive counts the services assigned to a hive — used to refuse
+	// deletion of a non-empty hive (project).
+	CountServicesByHive(ctx context.Context, hiveID uuid.UUID) (int64, error)
 }
 
 type ServiceFilter struct {
 	Name   string
 	Status string
+	// HiveID filters by project. When set, only services of that hive are
+	// returned; when Unassigned is true, only services without a hive.
+	HiveID     *uuid.UUID
+	Unassigned bool
 }
 
 type ServiceSecretAttachment struct {
@@ -118,6 +139,36 @@ type NetworkRepository interface {
 	List(ctx context.Context, p pagination.Page) ([]*network.Network, int64, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
+}
+
+// ─── Volume ───────────────────────────────────────────────────────────────────
+
+type VolumeRepository interface {
+	Save(ctx context.Context, v *volume.Volume) error
+	FindByID(ctx context.Context, id uuid.UUID) (*volume.Volume, error)
+	FindByName(ctx context.Context, name string) (*volume.Volume, error)
+	List(ctx context.Context, p pagination.Page) ([]*volume.Volume, int64, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// ─── Hive (project) ───────────────────────────────────────────────────────────
+
+type HiveRepository interface {
+	Save(ctx context.Context, h *hive.Hive) error
+	FindByID(ctx context.Context, id uuid.UUID) (*hive.Hive, error)
+	List(ctx context.Context, p pagination.Page) ([]*hive.Hive, int64, error)
+	Update(ctx context.Context, h *hive.Hive) error
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// ─── Template ─────────────────────────────────────────────────────────────────
+
+type TemplateRepository interface {
+	Save(ctx context.Context, t *template.Template) error
+	FindByID(ctx context.Context, id uuid.UUID) (*template.Template, error)
+	List(ctx context.Context, p pagination.Page) ([]*template.Template, int64, error)
+	Update(ctx context.Context, t *template.Template) error
+	Delete(ctx context.Context, id uuid.UUID) error
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────

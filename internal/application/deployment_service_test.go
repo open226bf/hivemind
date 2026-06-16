@@ -164,6 +164,11 @@ func (o *fakeOrchestrator) RemoveNetwork(context.Context, string) error { return
 func (o *fakeOrchestrator) ListNetworks(context.Context) ([]ports.SwarmNetworkInfo, error) {
 	return nil, nil
 }
+func (o *fakeOrchestrator) CreateVolume(context.Context, string, string) error { return nil }
+func (o *fakeOrchestrator) RemoveVolume(context.Context, string) error         { return nil }
+func (o *fakeOrchestrator) ListVolumes(context.Context) ([]ports.SwarmVolumeInfo, error) {
+	return nil, nil
+}
 func (o *fakeOrchestrator) ClusterInfo(context.Context) (*ports.ClusterInfo, error) {
 	return &ports.ClusterInfo{}, nil
 }

@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -16,6 +17,7 @@ var (
 	ErrContentTooLarge = errors.New("config content exceeds 500 KB")
 	ErrInvalidUTF8     = errors.New("config content must be valid UTF-8")
 	ErrInvalidName     = errors.New("config name must match ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$")
+	ErrCommentRequired = errors.New("a comment is required for every config version")
 )
 
 var nameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$`)
@@ -47,6 +49,9 @@ func New(name, targetPath string, content []byte, comment string, createdBy uuid
 	if err := validateContent(content); err != nil {
 		return nil, nil, err
 	}
+	if strings.TrimSpace(comment) == "" {
+		return nil, nil, ErrCommentRequired
+	}
 	id := uuid.New()
 	c := &Config{
 		ID:             id,
@@ -71,6 +76,9 @@ func New(name, targetPath string, content []byte, comment string, createdBy uuid
 func (c *Config) NewVersion(content []byte, comment string, createdBy uuid.UUID) (*ConfigVersion, error) {
 	if err := validateContent(content); err != nil {
 		return nil, err
+	}
+	if strings.TrimSpace(comment) == "" {
+		return nil, ErrCommentRequired
 	}
 	c.CurrentVersion++
 	c.UpdatedAt = time.Now().UTC()

@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/orange/hivemind/internal/domain/service"
+	"github.com/orange/hivemind/internal/domain/volume"
 	"github.com/orange/hivemind/internal/ports"
 	"github.com/orange/hivemind/pkg/domainerrors"
 	"github.com/orange/hivemind/pkg/pagination"
@@ -69,6 +70,11 @@ func (r *ServiceRepository) List(ctx context.Context, filter ports.ServiceFilter
 	if filter.Status != "" {
 		q = q.Where("status = ?", filter.Status)
 	}
+	if filter.Unassigned {
+		q = q.Where("hive_id IS NULL")
+	} else if filter.HiveID != nil {
+		q = q.Where("hive_id = ?", filter.HiveID.String())
+	}
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count services: %w", err)
 	}
@@ -93,7 +99,7 @@ func (r *ServiceRepository) Update(ctx context.Context, s *service.Service) erro
 func (r *ServiceRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		sid := id.String()
-		for _, table := range []string{"env_vars", "service_networks", "service_secrets", "service_configs"} {
+		for _, table := range []string{"env_vars", "service_networks", "service_secrets", "service_configs", "service_mounts"} {
 			if err := tx.Exec(fmt.Sprintf("DELETE FROM %s WHERE service_id = ?", table), sid).Error; err != nil {
 				return fmt.Errorf("delete %s: %w", table, err)
 			}
@@ -289,6 +295,21 @@ func (r *ServiceRepository) DetachConfig(ctx context.Context, serviceID, configI
 	return nil
 }
 
+func (r *ServiceRepository) ServiceIDsByConfigID(ctx context.Context, configID uuid.UUID) ([]uuid.UUID, error) {
+	var rows []serviceConfigModel
+	if err := r.db.WithContext(ctx).
+		Where("config_id = ?", configID.String()).
+		Find(&rows).Error; err != nil {
+		return nil, fmt.Errorf("services by config: %w", err)
+	}
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		id, _ := uuid.Parse(row.ServiceID)
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 func (r *ServiceRepository) GetConfigAttachments(ctx context.Context, serviceID uuid.UUID) ([]ports.ServiceConfigAttachment, error) {
 	var rows []serviceConfigModel
 	if err := r.db.WithContext(ctx).
@@ -304,11 +325,83 @@ func (r *ServiceRepository) GetConfigAttachments(ctx context.Context, serviceID 
 	return out, nil
 }
 
+// ─── Mounts (F-V2-06) ─────────────────────────────────────────────────────────
+
+func (r *ServiceRepository) SetMounts(ctx context.Context, serviceID uuid.UUID, mounts []volume.Mount) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("service_id = ?", serviceID.String()).Delete(&serviceMountModel{}).Error; err != nil {
+			return fmt.Errorf("clear mounts: %w", err)
+		}
+		if len(mounts) == 0 {
+			return nil
+		}
+		models := make([]serviceMountModel, 0, len(mounts))
+		for i, m := range mounts {
+			models = append(models, serviceMountModel{
+				ID:        uuid.NewString(),
+				ServiceID: serviceID.String(),
+				Type:      string(m.Type),
+				Source:    m.Source,
+				Target:    m.Target,
+				ReadOnly:  m.ReadOnly,
+				Position:  i,
+			})
+		}
+		return tx.Create(&models).Error
+	})
+}
+
+func (r *ServiceRepository) GetMounts(ctx context.Context, serviceID uuid.UUID) ([]volume.Mount, error) {
+	var models []serviceMountModel
+	if err := r.db.WithContext(ctx).
+		Where("service_id = ?", serviceID.String()).
+		Order("position ASC").
+		Find(&models).Error; err != nil {
+		return nil, fmt.Errorf("get mounts: %w", err)
+	}
+	out := make([]volume.Mount, 0, len(models))
+	for _, m := range models {
+		out = append(out, volume.Mount{
+			Type:     volume.MountType(m.Type),
+			Source:   m.Source,
+			Target:   m.Target,
+			ReadOnly: m.ReadOnly,
+		})
+	}
+	return out, nil
+}
+
+func (r *ServiceRepository) CountMountsByVolumeName(ctx context.Context, name string) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&serviceMountModel{}).
+		Where("type = ? AND source = ?", string(volume.MountVolume), name).
+		Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("count mounts by volume: %w", err)
+	}
+	return count, nil
+}
+
+func (r *ServiceRepository) CountServicesByHive(ctx context.Context, hiveID uuid.UUID) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&serviceModel{}).
+		Where("hive_id = ?", hiveID.String()).
+		Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("count services by hive: %w", err)
+	}
+	return count, nil
+}
+
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 func serviceToModel(s *service.Service) *serviceModel {
+	var hiveID *string
+	if s.HiveID != nil {
+		v := s.HiveID.String()
+		hiveID = &v
+	}
 	return &serviceModel{
 		ID:          s.ID.String(),
+		HiveID:      hiveID,
 		Name:        s.Name,
 		Description: s.Description,
 		Image:       s.Image,
@@ -342,8 +435,15 @@ func serviceToModel(s *service.Service) *serviceModel {
 
 func serviceToDomain(m *serviceModel) *service.Service {
 	id, _ := uuid.Parse(m.ID)
+	var hiveID *uuid.UUID
+	if m.HiveID != nil && *m.HiveID != "" {
+		if hid, err := uuid.Parse(*m.HiveID); err == nil {
+			hiveID = &hid
+		}
+	}
 	return &service.Service{
 		ID:          id,
+		HiveID:      hiveID,
 		Name:        m.Name,
 		Description: m.Description,
 		Image:       m.Image,

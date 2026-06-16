@@ -60,6 +60,12 @@ type Orchestrator interface {
 	RemoveNetwork(ctx context.Context, swarmNetworkID string) error
 	ListNetworks(ctx context.Context) ([]SwarmNetworkInfo, error)
 
+	// CreateVolume ensures a named volume exists (idempotent on name).
+	CreateVolume(ctx context.Context, name, driver string) error
+	RemoveVolume(ctx context.Context, name string) error
+	// ListVolumes returns the named volumes visible on the cluster nodes.
+	ListVolumes(ctx context.Context) ([]SwarmVolumeInfo, error)
+
 	// ClusterInfo returns the nodes composing the orchestration cluster together
 	// with their reported capacity and health. Powers the cluster dashboard.
 	ClusterInfo(ctx context.Context) (*ClusterInfo, error)
@@ -100,6 +106,14 @@ type SwarmNetworkInfo struct {
 	Subnet string
 }
 
+// SwarmVolumeInfo is a lightweight snapshot of a named volume on a cluster node.
+type SwarmVolumeInfo struct {
+	Name       string
+	Driver     string
+	Mountpoint string
+	Scope      string
+}
+
 type ServiceSpec struct {
 	Name         string
 	Image        string
@@ -113,7 +127,16 @@ type ServiceSpec struct {
 	Networks     []NetworkAttachment
 	Secrets      []SecretAttachment
 	Configs      []ConfigAttachment
+	Mounts       []MountSpec
 	Labels       map[string]string
+}
+
+// MountSpec is one filesystem mount applied to a service's tasks (F-V2-06).
+type MountSpec struct {
+	Type     string // volume | bind | tmpfs
+	Source   string
+	Target   string
+	ReadOnly bool
 }
 
 type ResourceSpec struct {

@@ -25,9 +25,12 @@ type Dependencies struct {
 	Auth         *application.AuthService
 	Users        *application.UserService
 	Services     *application.ServiceService
+	Hives        *application.HiveService
 	Networks     *application.NetworkService
+	Volumes      *application.VolumeService
 	Secrets      *application.SecretService
 	Configs      *application.ConfigService
+	Templates    *application.TemplateService
 	Deployments  *application.DeploymentService
 	Cluster      *application.ClusterService
 	Orchestrator ports.Orchestrator
@@ -71,9 +74,12 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewAuthHandler(deps.Auth).Register(public, protected)
 	handler.NewUserHandler(deps.Users).Register(protected)
 	handler.NewServiceHandler(deps.Services).Register(protected)
+	handler.NewHiveHandler(deps.Hives).Register(protected)
 	handler.NewNetworkHandler(deps.Networks, deps.Orchestrator).Register(protected)
+	handler.NewVolumeHandler(deps.Volumes, deps.Orchestrator, deps.AuditLog).Register(protected)
 	handler.NewSecretHandler(deps.Secrets).Register(protected)
 	handler.NewConfigHandler(deps.Configs).Register(protected)
+	handler.NewTemplateHandler(deps.Templates).Register(protected)
 	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
 	handler.NewClusterHandler(deps.Cluster).Register(protected)
 

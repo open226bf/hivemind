@@ -12,8 +12,10 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -412,6 +414,48 @@ func (o *SwarmOrchestrator) networkIDByName(ctx context.Context, name string) (s
 	return "", fmt.Errorf("network %q reported as existing but not found", name)
 }
 
+// ─── Volumes ──────────────────────────────────────────────────────────────────
+
+func (o *SwarmOrchestrator) CreateVolume(ctx context.Context, name, driver string) error {
+	if driver == "" {
+		driver = "local"
+	}
+	_, err := o.cli.VolumeCreate(ctx, volume.CreateOptions{Name: name, Driver: driver})
+	if err != nil {
+		// VolumeCreate is idempotent on name when the driver/opts match, so a
+		// conflict is not an error for our ensure-on-deploy semantics.
+		if errdefs.IsConflict(err) {
+			return nil
+		}
+		return fmt.Errorf("volume create: %w", err)
+	}
+	return nil
+}
+
+func (o *SwarmOrchestrator) RemoveVolume(ctx context.Context, name string) error {
+	if err := o.cli.VolumeRemove(ctx, name, false); err != nil && !errdefs.IsNotFound(err) {
+		return fmt.Errorf("volume remove: %w", err)
+	}
+	return nil
+}
+
+func (o *SwarmOrchestrator) ListVolumes(ctx context.Context) ([]ports.SwarmVolumeInfo, error) {
+	resp, err := o.cli.VolumeList(ctx, volume.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("volume list: %w", err)
+	}
+	out := make([]ports.SwarmVolumeInfo, 0, len(resp.Volumes))
+	for _, v := range resp.Volumes {
+		out = append(out, ports.SwarmVolumeInfo{
+			Name:       v.Name,
+			Driver:     v.Driver,
+			Mountpoint: v.Mountpoint,
+			Scope:      v.Scope,
+		})
+	}
+	return out, nil
+}
+
 // ─── Cluster ──────────────────────────────────────────────────────────────────
 
 func (o *SwarmOrchestrator) ClusterInfo(ctx context.Context) (*ports.ClusterInfo, error) {
@@ -471,6 +515,9 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 			},
 		})
 	}
+	for _, m := range spec.Mounts {
+		taskContainer.Mounts = append(taskContainer.Mounts, toMount(m))
+	}
 
 	task := swarm.TaskSpec{
 		ContainerSpec: taskContainer,
@@ -526,6 +573,16 @@ func toPlacement(p ports.PlacementSpec) *swarm.Placement {
 		})
 	}
 	return out
+}
+
+// toMount maps a platform mount spec to Docker's mount.Mount.
+func toMount(m ports.MountSpec) mount.Mount {
+	return mount.Mount{
+		Type:     mount.Type(m.Type),
+		Source:   m.Source,
+		Target:   m.Target,
+		ReadOnly: m.ReadOnly,
+	}
 }
 
 func toUpdateConfig(uc ports.UpdateConfigSpec) *swarm.UpdateConfig {
