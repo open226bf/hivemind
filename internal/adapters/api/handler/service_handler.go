@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/open226bf/hivemind/internal/adapters/api/dto"
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
@@ -63,6 +64,16 @@ func (h *ServiceHandler) List(c *gin.Context) {
 	filter := ports.ServiceFilter{
 		Name:   c.Query("name"),
 		Status: c.Query("status"),
+	}
+	if c.Query("unassigned") == "true" {
+		filter.Unassigned = true
+	} else if hid := c.Query("hive_id"); hid != "" {
+		id, err := uuid.Parse(hid)
+		if err != nil {
+			dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid hive_id")
+			return
+		}
+		filter.HiveID = &id
 	}
 
 	items, total, err := h.svc.List(c.Request.Context(), filter, page)
@@ -428,8 +439,13 @@ func isValidationError(err error) bool {
 // ─── DTO converters ───────────────────────────────────────────────────────────
 
 func toServiceResponse(s *service.Service) dto.ServiceResponse {
+	hiveID := ""
+	if s.HiveID != nil {
+		hiveID = s.HiveID.String()
+	}
 	return dto.ServiceResponse{
 		ID:             s.ID.String(),
+		HiveID:         hiveID,
 		Name:           s.Name,
 		Description:    s.Description,
 		Image:          s.Image,

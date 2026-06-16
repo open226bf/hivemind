@@ -11,6 +11,7 @@ import (
 	"github.com/open226bf/hivemind/internal/adapters/orchestrator"
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/service"
+	"github.com/open226bf/hivemind/internal/domain/volume"
 	"github.com/open226bf/hivemind/internal/ports"
 	"github.com/open226bf/hivemind/pkg/domainerrors"
 	"github.com/open226bf/hivemind/pkg/pagination"
@@ -25,6 +26,7 @@ type fakeServiceRepo struct {
 	networks map[uuid.UUID][]uuid.UUID // serviceID -> networkIDs
 	secrets  map[uuid.UUID][]ports.ServiceSecretAttachment
 	configs  map[uuid.UUID][]ports.ServiceConfigAttachment
+	mounts   map[uuid.UUID][]volume.Mount
 }
 
 func newFakeServiceRepo() *fakeServiceRepo {
@@ -35,6 +37,7 @@ func newFakeServiceRepo() *fakeServiceRepo {
 		networks: map[uuid.UUID][]uuid.UUID{},
 		secrets:  map[uuid.UUID][]ports.ServiceSecretAttachment{},
 		configs:  map[uuid.UUID][]ports.ServiceConfigAttachment{},
+		mounts:   map[uuid.UUID][]volume.Mount{},
 	}
 }
 
@@ -62,9 +65,15 @@ func (r *fakeServiceRepo) FindByName(_ context.Context, name string) (*service.S
 	return nil, domainerrors.ErrNotFound
 }
 
-func (r *fakeServiceRepo) List(_ context.Context, _ ports.ServiceFilter, _ pagination.Page) ([]*service.Service, int64, error) {
+func (r *fakeServiceRepo) List(_ context.Context, f ports.ServiceFilter, _ pagination.Page) ([]*service.Service, int64, error) {
 	items := make([]*service.Service, 0, len(r.byID))
 	for _, s := range r.byID {
+		if f.Unassigned && s.HiveID != nil {
+			continue
+		}
+		if f.HiveID != nil && (s.HiveID == nil || *s.HiveID != *f.HiveID) {
+			continue
+		}
 		items = append(items, s)
 	}
 	return items, int64(len(items)), nil
@@ -162,6 +171,44 @@ func (r *fakeServiceRepo) DetachConfig(_ context.Context, serviceID, configID uu
 }
 func (r *fakeServiceRepo) GetConfigAttachments(_ context.Context, serviceID uuid.UUID) ([]ports.ServiceConfigAttachment, error) {
 	return r.configs[serviceID], nil
+}
+func (r *fakeServiceRepo) ServiceIDsByConfigID(_ context.Context, configID uuid.UUID) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	for sid, atts := range r.configs {
+		for _, a := range atts {
+			if a.ConfigID == configID {
+				ids = append(ids, sid)
+			}
+		}
+	}
+	return ids, nil
+}
+func (r *fakeServiceRepo) SetMounts(_ context.Context, serviceID uuid.UUID, mounts []volume.Mount) error {
+	r.mounts[serviceID] = mounts
+	return nil
+}
+func (r *fakeServiceRepo) GetMounts(_ context.Context, serviceID uuid.UUID) ([]volume.Mount, error) {
+	return r.mounts[serviceID], nil
+}
+func (r *fakeServiceRepo) CountMountsByVolumeName(_ context.Context, name string) (int64, error) {
+	var n int64
+	for _, ms := range r.mounts {
+		for _, m := range ms {
+			if m.Type == volume.MountVolume && m.Source == name {
+				n++
+			}
+		}
+	}
+	return n, nil
+}
+func (r *fakeServiceRepo) CountServicesByHive(_ context.Context, hiveID uuid.UUID) (int64, error) {
+	var n int64
+	for _, s := range r.byID {
+		if s.HiveID != nil && *s.HiveID == hiveID {
+			n++
+		}
+	}
+	return n, nil
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

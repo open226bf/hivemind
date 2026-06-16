@@ -389,6 +389,21 @@ func (s *DeploymentService) buildSpec(ctx context.Context, svc *service.Service)
 		})
 	}
 
+	// Mounts (F-V2-06) — passed straight through. Local volumes are created
+	// per-node by Docker when a task first mounts them, so no pre-provisioning.
+	mounts, err := s.services.GetMounts(ctx, svc.ID)
+	if err != nil {
+		return spec, err
+	}
+	for _, m := range mounts {
+		spec.Mounts = append(spec.Mounts, ports.MountSpec{
+			Type:     string(m.Type),
+			Source:   m.Source,
+			Target:   m.Target,
+			ReadOnly: m.ReadOnly,
+		})
+	}
+
 	return spec, nil
 }
 

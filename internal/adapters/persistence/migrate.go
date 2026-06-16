@@ -11,10 +11,14 @@ import (
 func Migrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		&userModel{},
+		&hiveModel{},
 		&serviceModel{},
 		&envVarModel{},
 		&networkModel{},
 		&serviceNetworkModel{},
+		&volumeModel{},
+		&serviceMountModel{},
+		&templateModel{},
 		&secretModel{},
 		&secretVersionModel{},
 		&serviceSecretModel{},

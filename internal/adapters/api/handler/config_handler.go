@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -31,6 +32,9 @@ func (h *ConfigHandler) Register(protected *gin.RouterGroup) {
 	g.GET("/:id", middleware.RequireRole(user.RoleViewer), h.Get)
 	g.GET("/:id/versions", middleware.RequireRole(user.RoleViewer), h.ListVersions)
 	g.POST("/:id/versions", middleware.RequireRole(user.RoleOperator), h.AddVersion)
+	g.GET("/:id/diff", middleware.RequireRole(user.RoleViewer), h.Diff)
+	g.POST("/:id/versions/:version/restore", middleware.RequireRole(user.RoleOperator), h.RestoreVersion)
+	g.GET("/:id/services", middleware.RequireRole(user.RoleViewer), h.ImpactedServices)
 	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
 
 	s := protected.Group("/services/:id/configs")
@@ -212,6 +216,112 @@ func (h *ConfigHandler) AddVersion(c *gin.Context) {
 	c.JSON(http.StatusOK, toConfigResponse(cfg))
 }
 
+// Diff godoc
+//
+//	@Summary		Diff two config versions
+//	@Description	Returns a line-by-line diff turning version `from` into version `to` (F-V2-08).
+//	@Tags			configs
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id		path		string	true	"Config ID (UUID)"
+//	@Param			from	query		int		true	"Base version number"
+//	@Param			to		query		int		true	"Target version number"
+//	@Success		200		{object}	dto.ConfigDiffResponse
+//	@Failure		400		{object}	dto.ErrorResponse	"missing or invalid from/to"
+//	@Failure		404		{object}	dto.ErrorResponse	"config or version not found"
+//	@Router			/configs/{id}/diff [get]
+func (h *ConfigHandler) Diff(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	from, err1 := strconv.Atoi(c.Query("from"))
+	to, err2 := strconv.Atoi(c.Query("to"))
+	if err1 != nil || err2 != nil || from < 1 || to < 1 {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "from and to must be positive version numbers")
+		return
+	}
+
+	diff, err := h.svc.DiffVersions(c.Request.Context(), id, from, to)
+	if err != nil {
+		h.writeConfigError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toConfigDiffResponse(diff))
+}
+
+// RestoreVersion godoc
+//
+//	@Summary		Restore a config version
+//	@Description	Creates a new version whose content is identical to an earlier version (F-V2-08). Attached services pick it up on their next deployment.
+//	@Tags			configs
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string						true	"Config ID (UUID)"
+//	@Param			version	path		int							true	"Version number to restore"
+//	@Param			body	body		dto.RestoreConfigRequest	false	"Optional restore comment"
+//	@Success		200		{object}	dto.ConfigResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse	"config or version not found"
+//	@Router			/configs/{id}/versions/{version}/restore [post]
+func (h *ConfigHandler) RestoreVersion(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	version, err := strconv.Atoi(c.Param("version"))
+	if err != nil || version < 1 {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "version must be a positive integer")
+		return
+	}
+
+	var req dto.RestoreConfigRequest
+	_ = c.ShouldBindJSON(&req) // body is optional
+
+	claims, ok := middleware.ClaimsFrom(c)
+	if !ok {
+		dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	cfg, err := h.svc.RestoreVersion(c.Request.Context(), id, version, req.Comment, claims.UserID)
+	if err != nil {
+		h.writeConfigError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toConfigResponse(cfg))
+}
+
+// ImpactedServices godoc
+//
+//	@Summary		List services impacted by a config
+//	@Description	Returns the services that attach this config — those that would pick up a new version on their next deployment (F-V2-08).
+//	@Tags			configs
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		string	true	"Config ID (UUID)"
+//	@Success		200	{array}		dto.ImpactedServiceResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/configs/{id}/services [get]
+func (h *ConfigHandler) ImpactedServices(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	services, err := h.svc.ImpactedServices(c.Request.Context(), id)
+	if err != nil {
+		h.writeConfigError(c, err)
+		return
+	}
+	out := make([]dto.ImpactedServiceResponse, len(services))
+	for i, s := range services {
+		out[i] = dto.ImpactedServiceResponse{ServiceID: s.ID.String(), Name: s.Name, Status: s.Status}
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 // Delete godoc
 //
 //	@Summary		Delete a config
@@ -339,13 +449,16 @@ func (h *ConfigHandler) DetachFromService(c *gin.Context) {
 
 func (h *ConfigHandler) writeConfigError(c *gin.Context, err error) {
 	switch {
+	case errors.Is(err, application.ErrVersionNotFound):
+		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, err.Error())
 	case errors.Is(err, domainerrors.ErrNotFound):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
 	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, config.ErrConfigInUse):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, config.ErrInvalidName),
 		errors.Is(err, config.ErrContentTooLarge),
-		errors.Is(err, config.ErrInvalidUTF8):
+		errors.Is(err, config.ErrInvalidUTF8),
+		errors.Is(err, config.ErrCommentRequired):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
@@ -360,6 +473,23 @@ func toConfigResponse(c *config.Config) dto.ConfigResponse {
 		CurrentVersion: c.CurrentVersion,
 		CreatedAt:      c.CreatedAt,
 		UpdatedAt:      c.UpdatedAt,
+	}
+}
+
+func toConfigDiffResponse(d *application.VersionDiff) dto.ConfigDiffResponse {
+	lines := make([]dto.DiffLineDTO, len(d.Lines))
+	for i, l := range d.Lines {
+		lines[i] = dto.DiffLineDTO{
+			Op:      string(l.Op),
+			Text:    l.Text,
+			OldLine: l.OldLine,
+			NewLine: l.NewLine,
+		}
+	}
+	return dto.ConfigDiffResponse{
+		FromVersion: d.FromVersion,
+		ToVersion:   d.ToVersion,
+		Lines:       lines,
 	}
 }
 

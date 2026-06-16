@@ -133,6 +133,19 @@ func (*StubOrchestrator) ListNetworks(_ context.Context) ([]ports.SwarmNetworkIn
 	}, nil
 }
 
+func (*StubOrchestrator) CreateVolume(_ context.Context, name, driver string) error {
+	slog.Info("stub: create volume", "name", name, "driver", driver)
+	return nil
+}
+
+func (*StubOrchestrator) RemoveVolume(_ context.Context, name string) error { return nil }
+
+func (*StubOrchestrator) ListVolumes(_ context.Context) ([]ports.SwarmVolumeInfo, error) {
+	return []ports.SwarmVolumeInfo{
+		{Name: "stub-data", Driver: "local", Mountpoint: "/var/lib/docker/volumes/stub-data/_data", Scope: "local"},
+	}, nil
+}
+
 // ClusterInfo returns a deterministic 3-node topology (one manager-leader plus
 // two workers) so the cluster dashboard is fully exercisable without a real
 // Swarm. Capacities are fixed sample values.

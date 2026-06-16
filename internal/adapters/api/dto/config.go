@@ -14,7 +14,13 @@ type CreateConfigRequest struct {
 // AddConfigVersionRequest is the body for POST /configs/{id}/versions.
 type AddConfigVersionRequest struct {
 	Content string `json:"content" binding:"required"`
-	Comment string `json:"comment" example:"tune worker_processes"`
+	Comment string `json:"comment" binding:"required" example:"tune worker_processes"`
+}
+
+// RestoreConfigRequest is the body for restoring a config version. The comment
+// is optional; when blank a default referencing the restored version is used.
+type RestoreConfigRequest struct {
+	Comment string `json:"comment" example:"rollback to known-good config"`
 }
 
 // AttachConfigRequest is the body for POST /services/{id}/configs.
@@ -56,4 +62,26 @@ type ServiceConfigResponse struct {
 	ConfigID   string `json:"config_id"`
 	Name       string `json:"name"`
 	TargetPath string `json:"target_path"`
+}
+
+// DiffLineDTO is one line of a config version diff (F-V2-08).
+type DiffLineDTO struct {
+	Op      string `json:"op"` // equal | add | del
+	Text    string `json:"text"`
+	OldLine int    `json:"old_line"`
+	NewLine int    `json:"new_line"`
+}
+
+// ConfigDiffResponse is a line-by-line diff between two config versions.
+type ConfigDiffResponse struct {
+	FromVersion int           `json:"from_version"`
+	ToVersion   int           `json:"to_version"`
+	Lines       []DiffLineDTO `json:"lines"`
+}
+
+// ImpactedServiceResponse is a service affected by a config change.
+type ImpactedServiceResponse struct {
+	ServiceID string `json:"service_id"`
+	Name      string `json:"name"`
+	Status    string `json:"status"`
 }
