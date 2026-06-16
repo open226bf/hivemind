@@ -181,6 +181,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/cluster/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Aggregated health and capacity of the orchestration cluster (nodes, CPU/memory) combined with catalog and deployment-activity counts. Cluster health is best-effort: when the orchestrator is unreachable the counts are still returned with cluster.reachable=false.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cluster"
+                ],
+                "summary": "Cluster dashboard overview",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/configs": {
             "get": {
                 "security": [
@@ -771,6 +814,52 @@ const docTemplate = `{
                     },
                     "422": {
                         "description": "invalid name",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/networks/swarm": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns lightweight info about every overlay network visible on the Docker Swarm cluster. Useful for discovering existing networks before creating or attaching.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "networks"
+                ],
+                "summary": "List overlay networks on the Swarm cluster",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SwarmNetworkInfo"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "orchestrator unavailable",
                         "schema": {
                             "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
@@ -2238,6 +2327,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/services/{id}/placement": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates only the scheduling placement: hard constraints (e.g. \"node.role==worker\"), spread preferences (e.g. \"node.labels.zone\") and the max replicas per node (0 = unlimited). Leaves every other field unchanged.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "services"
+                ],
+                "summary": "Set a service's placement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Placement rules",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "validation_error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "malformed constraint or empty preference",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/services/{id}/resources": {
             "put": {
                 "security": [
@@ -2602,9 +2767,236 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "List users (Admin only)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 20, max 100)",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create a user (Admin only)",
+                "parameters": [
+                    {
+                        "description": "User",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "email already in use",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update a user (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "last admin / self-demote",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Delete a user (Admin only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "deleted"
+                    },
+                    "403": {
+                        "description": "last admin / self-delete",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "github_com_orange_hivemind_internal_adapters_api_dto.ActivitySummaryDTO": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "type": "integer"
+                },
+                "in_progress": {
+                    "type": "integer"
+                },
+                "succeeded": {
+                    "type": "integer"
+                },
+                "total_deployments": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_orange_hivemind_internal_adapters_api_dto.AddConfigVersionRequest": {
             "type": "object",
             "required": [
@@ -2661,6 +3053,75 @@ const docTemplate = `{
                 "target_path": {
                     "type": "string",
                     "example": "/run/secrets/db_password"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.CatalogSummaryDTO": {
+            "type": "object",
+            "properties": {
+                "configs": {
+                    "type": "integer"
+                },
+                "networks": {
+                    "type": "integer"
+                },
+                "secrets": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "activity": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ActivitySummaryDTO"
+                },
+                "catalog": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CatalogSummaryDTO"
+                },
+                "cluster": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterSummaryDTO"
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeDTO"
+                    }
+                },
+                "services": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceSummaryDTO"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.ClusterSummaryDTO": {
+            "type": "object",
+            "properties": {
+                "engine_version": {
+                    "type": "string"
+                },
+                "leader_host": {
+                    "type": "string"
+                },
+                "managers": {
+                    "type": "integer"
+                },
+                "node_total": {
+                    "type": "integer"
+                },
+                "reachable": {
+                    "type": "boolean"
+                },
+                "ready_nodes": {
+                    "type": "integer"
+                },
+                "total_cpus": {
+                    "type": "number"
+                },
+                "total_memory_bytes": {
+                    "type": "integer"
+                },
+                "workers": {
+                    "type": "integer"
                 }
             }
         },
@@ -2768,6 +3229,10 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "backend-net"
+                },
+                "subnet": {
+                    "type": "string",
+                    "example": "10.0.9.0/24"
                 }
             }
         },
@@ -2819,6 +3284,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "placement": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                },
                 "replicas": {
                     "type": "integer"
                 },
@@ -2830,6 +3298,27 @@ const docTemplate = `{
                 },
                 "update_config": {
                     "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password",
+                "role"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "role": {
+                    "description": "admin | operator | viewer",
+                    "type": "string",
+                    "example": "operator"
                 }
             }
         },
@@ -3020,8 +3509,76 @@ const docTemplate = `{
                 "scope": {
                     "type": "string"
                 },
+                "subnet": {
+                    "type": "string"
+                },
                 "swarm_id": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.NodeDTO": {
+            "type": "object",
+            "properties": {
+                "addr": {
+                    "type": "string"
+                },
+                "availability": {
+                    "type": "string"
+                },
+                "cpus": {
+                    "type": "number"
+                },
+                "engine_version": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "leader": {
+                    "type": "boolean"
+                },
+                "memory_bytes": {
+                    "type": "integer"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO": {
+            "type": "object",
+            "properties": {
+                "constraints": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "node.role==worker"
+                    ]
+                },
+                "max_replicas_per_node": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "preferences": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "node.labels.zone"
+                    ]
                 }
             }
         },
@@ -3186,6 +3743,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "placement": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                },
                 "replicas": {
                     "type": "integer"
                 },
@@ -3243,6 +3803,23 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_orange_hivemind_internal_adapters_api_dto.ServiceSummaryDTO": {
+            "type": "object",
+            "properties": {
+                "deployed": {
+                    "type": "integer"
+                },
+                "draft": {
+                    "type": "integer"
+                },
+                "removed": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_orange_hivemind_internal_adapters_api_dto.ServiceTasksResponse": {
             "type": "object",
             "properties": {
@@ -3265,10 +3842,44 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_orange_hivemind_internal_adapters_api_dto.SwarmNetworkInfo": {
+            "type": "object",
+            "properties": {
+                "driver": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "subnet": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.TaskNetworkDetail": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_orange_hivemind_internal_adapters_api_dto.TaskStateResponse": {
             "type": "object",
             "properties": {
                 "container_id": {
+                    "type": "string"
+                },
+                "created_at": {
                     "type": "string"
                 },
                 "current_state": {
@@ -3280,11 +3891,32 @@ const docTemplate = `{
                 "error_message": {
                     "type": "string"
                 },
+                "exit_code": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "string"
                 },
+                "image": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "networks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TaskNetworkDetail"
+                    }
+                },
                 "node": {
                     "type": "string"
+                },
+                "pid": {
+                    "type": "integer"
+                },
+                "slot": {
+                    "type": "integer"
                 },
                 "updated_at": {
                     "type": "string"
@@ -3360,6 +3992,9 @@ const docTemplate = `{
                 "image": {
                     "type": "string"
                 },
+                "placement": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                },
                 "replicas": {
                     "type": "integer"
                 },
@@ -3371,6 +4006,63 @@ const docTemplate = `{
                 },
                 "update_config": {
                     "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.UserListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.UserResponse": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         }

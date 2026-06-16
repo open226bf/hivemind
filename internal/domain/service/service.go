@@ -18,6 +18,8 @@ var (
 	ErrInvalidFailureAction = errors.New("failure_action must be one of: pause, continue, rollback")
 	ErrInvalidOrder         = errors.New("order must be one of: start-first, stop-first")
 	ErrInvalidFailureRatio  = errors.New("max_failure_ratio must be between 0 and 1")
+	ErrInvalidConstraint    = errors.New("placement constraint must be of the form key==value or key!=value")
+	ErrInvalidPreference    = errors.New("placement preference (spread descriptor) must not be empty")
 )
 
 var nameRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
@@ -56,6 +58,38 @@ func (r Resources) Validate() error {
 	}
 	if r.MemLimit > 0 && r.MemLimit < r.MemReservation {
 		return ErrResourceConflict
+	}
+	return nil
+}
+
+// Placement controls where the orchestrator schedules a service's tasks across
+// the cluster (Swarm placement). Constraints are hard filters; preferences are
+// soft spreading hints; MaxReplicas caps the number of tasks on a single node
+// (0 = unlimited).
+type Placement struct {
+	Constraints []string // e.g. "node.role==worker", "node.labels.zone==a"
+	Preferences []string // spread descriptors, e.g. "node.labels.zone"
+	MaxReplicas uint64   // max tasks per node; 0 = unlimited
+}
+
+// constraintRegex matches a Swarm placement constraint: a non-empty key, the
+// == or != operator, and a non-empty value. Whitespace around the operator is
+// tolerated and normalised away by NormalizedConstraints.
+var constraintRegex = regexp.MustCompile(`^\s*\S+\s*(==|!=)\s*\S.*$`)
+
+// Validate checks that every constraint is well-formed and every preference is
+// non-empty. Empty entries are rejected so a stray blank line in the UI does not
+// silently produce a meaningless rule.
+func (p Placement) Validate() error {
+	for _, c := range p.Constraints {
+		if strings.TrimSpace(c) == "" || !constraintRegex.MatchString(c) {
+			return ErrInvalidConstraint
+		}
+	}
+	for _, pref := range p.Preferences {
+		if strings.TrimSpace(pref) == "" {
+			return ErrInvalidPreference
+		}
 	}
 	return nil
 }
@@ -135,6 +169,7 @@ type Service struct {
 	Command        []string
 	Entrypoint     []string
 	Resources      Resources
+	Placement      Placement
 	UpdateConfig   UpdateConfig
 	Status         Status
 	SwarmServiceID string // set after first deploy
@@ -167,6 +202,15 @@ func (s *Service) SetResources(r Resources) error {
 		return err
 	}
 	s.Resources = r
+	s.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (s *Service) SetPlacement(p Placement) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	s.Placement = p
 	s.UpdatedAt = time.Now().UTC()
 	return nil
 }

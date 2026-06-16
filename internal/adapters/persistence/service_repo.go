@@ -322,6 +322,10 @@ func serviceToModel(s *service.Service) *serviceModel {
 		MemReservation: s.Resources.MemReservation,
 		MemLimit:       s.Resources.MemLimit,
 
+		PlacementConstraints: stringSlice(s.Placement.Constraints),
+		PlacementPreferences: stringSlice(s.Placement.Preferences),
+		PlacementMaxReplicas: s.Placement.MaxReplicas,
+
 		UpdateParallelism:     s.UpdateConfig.Parallelism,
 		UpdateDelay:           s.UpdateConfig.Delay.Nanoseconds(),
 		UpdateFailureAction:   s.UpdateConfig.FailureAction,
@@ -352,6 +356,11 @@ func serviceToDomain(m *serviceModel) *service.Service {
 			CPULimit:       m.CPULimit,
 			MemReservation: m.MemReservation,
 			MemLimit:       m.MemLimit,
+		},
+		Placement: service.Placement{
+			Constraints: []string(m.PlacementConstraints),
+			Preferences: []string(m.PlacementPreferences),
+			MaxReplicas: m.PlacementMaxReplicas,
 		},
 		UpdateConfig: service.UpdateConfig{
 			Parallelism:     m.UpdateParallelism,

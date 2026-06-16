@@ -475,6 +475,7 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 	task := swarm.TaskSpec{
 		ContainerSpec: taskContainer,
 		Resources:     toResources(spec.Resources),
+		Placement:     toPlacement(spec.Placement),
 	}
 	for _, n := range spec.Networks {
 		task.Networks = append(task.Networks, swarm.NetworkAttachmentConfig{Target: n.SwarmNetworkID})
@@ -507,6 +508,24 @@ func toResources(r ports.ResourceSpec) *swarm.ResourceRequirements {
 		}
 	}
 	return req
+}
+
+// toPlacement maps a placement spec to Swarm's Placement. Returns nil when no
+// placement rule is set so the service spec stays minimal (and diff-stable).
+func toPlacement(p ports.PlacementSpec) *swarm.Placement {
+	if len(p.Constraints) == 0 && len(p.Preferences) == 0 && p.MaxReplicas == 0 {
+		return nil
+	}
+	out := &swarm.Placement{
+		Constraints: p.Constraints,
+		MaxReplicas: p.MaxReplicas,
+	}
+	for _, pref := range p.Preferences {
+		out.Preferences = append(out.Preferences, swarm.PlacementPreference{
+			Spread: &swarm.SpreadOver{SpreadDescriptor: pref},
+		})
+	}
+	return out
 }
 
 func toUpdateConfig(uc ports.UpdateConfigSpec) *swarm.UpdateConfig {

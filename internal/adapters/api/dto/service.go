@@ -14,6 +14,7 @@ type CreateServiceRequest struct {
 	Command      []string         `json:"command"`
 	Entrypoint   []string         `json:"entrypoint"`
 	Resources    *ResourcesDTO    `json:"resources"`
+	Placement    *PlacementDTO    `json:"placement"`
 	UpdateConfig *UpdateConfigDTO `json:"update_config"`
 }
 
@@ -27,6 +28,7 @@ type UpdateServiceRequest struct {
 	Command      *[]string        `json:"command"`
 	Entrypoint   *[]string        `json:"entrypoint"`
 	Resources    *ResourcesDTO    `json:"resources"`
+	Placement    *PlacementDTO    `json:"placement"`
 	UpdateConfig *UpdateConfigDTO `json:"update_config"`
 }
 
@@ -38,6 +40,16 @@ type ResourcesDTO struct {
 	CPULimit       float64 `json:"cpu_limit"       example:"0.5"`
 	MemReservation int64   `json:"mem_reservation" example:"67108864"`  // bytes
 	MemLimit       int64   `json:"mem_limit"       example:"134217728"` // bytes
+}
+
+// PlacementDTO controls where the scheduler places a service's tasks.
+// Constraints are hard filters (e.g. "node.role==worker"); preferences are
+// spread descriptors (e.g. "node.labels.zone"); max_replicas_per_node caps how
+// many tasks may run on a single node (0 = unlimited).
+type PlacementDTO struct {
+	Constraints        []string `json:"constraints"        example:"node.role==worker"`
+	Preferences        []string `json:"preferences"        example:"node.labels.zone"`
+	MaxReplicasPerNode uint64   `json:"max_replicas_per_node" example:"0"`
 }
 
 // UpdateConfigDTO controls rolling-update behaviour.
@@ -65,6 +77,7 @@ type ServiceResponse struct {
 	Command        []string        `json:"command"`
 	Entrypoint     []string        `json:"entrypoint"`
 	Resources      ResourcesDTO    `json:"resources"`
+	Placement      PlacementDTO    `json:"placement"`
 	UpdateConfig   UpdateConfigDTO `json:"update_config"`
 	Status         string          `json:"status"`
 	SwarmServiceID string          `json:"swarm_service_id,omitempty"`
