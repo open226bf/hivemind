@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# Cancel superseded runs on the same ref to save CI minutes.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -15,8 +14,6 @@ permissions:
   contents: read
 
 env:
-  # Minimum total statement coverage (%) required for the coverage job to pass.
-  # Tune as the suite grows.
   COVERAGE_THRESHOLD: "60"
 
 jobs:
@@ -73,34 +70,34 @@ jobs:
         run: |
           go test -race -covermode=atomic -coverprofile=coverage.out -coverpkg=./... ./...
 
-      - name: Coverage report
+      - name: Compute coverage
         id: cov
         run: |
-          go tool cover -func=coverage.out | tee coverage.txt
-          total=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
+          total=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub(/%/, "", $3); print $3}')
           echo "total=$total" >> "$GITHUB_OUTPUT"
-          {
-            echo "## Coverage: ${total}%"
-            echo ""
-            echo "Threshold: ${COVERAGE_THRESHOLD}%"
-            echo ""
-            echo '<details><summary>Per-function coverage</summary>'
-            echo ""
-            echo '```'
-            cat coverage.txt
-            echo '```'
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "## Coverage: ${total}%" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Threshold: ${COVERAGE_THRESHOLD}%" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "<details><summary>Per-function coverage</summary>" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          go tool cover -func=coverage.out >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "</details>" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Enforce coverage threshold
         run: |
           total="${{ steps.cov.outputs.total }}"
-          awk -v t="$total" -v min="$COVERAGE_THRESHOLD" 'BEGIN {
-            if (t+0 < min+0) {
-              printf "::error::Coverage %.1f%% is below the required %s%%\n", t, min;
+          min="${COVERAGE_THRESHOLD}"
+
+          awk -v t="$total" -v m="$min" 'BEGIN {
+            if (t+0 < m+0) {
+              printf "::error::Coverage %.1f%% is below required %s%%\n", t, m;
               exit 1
             }
-            printf "Coverage %.1f%% meets the required %s%%\n", t, min
+            printf "Coverage %.1f%% meets required %s%%\n", t, m
           }'
 
       - name: Upload coverage artifact
@@ -110,16 +107,11 @@ jobs:
           name: coverage
           path: |
             coverage.out
-            coverage.txt
           retention-days: 14
 
-      # Optional: publish to Codecov. No-op unless CODECOV_TOKEN is set as a
-      # repository secret; never fails the build.
       - name: Upload to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           files: coverage.out
           fail_ci_if_error: false
