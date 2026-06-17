@@ -282,10 +282,10 @@ func (s *AgentService) invalidate(id uuid.UUID) {
 
 // ─── install scripts ──────────────────────────────────────────────────────────
 
-// DefaultAgentImage is used when AGENT_IMAGE is not configured. On a multi-node
-// Swarm the image must be pullable by every node, so point AGENT_IMAGE at a
-// registry path (e.g. registry.example.com/hivemind/agent:1.2.3).
-const DefaultAgentImage = "hivemind/agent:latest"
+// DefaultAgentImage is used when AGENT_IMAGE is not configured. It points at the
+// published multi-arch image so the generated compose is pullable by every node
+// out of the box. Override AGENT_IMAGE to pin a version or use a private registry.
+const DefaultAgentImage = "open226/hivemind-agent:latest"
 
 func composeMTLS(image string) string {
 	return fmt.Sprintf(`version: "3.8"
