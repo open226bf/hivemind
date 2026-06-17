@@ -64,8 +64,8 @@ func (s *ConfigService) Get(ctx context.Context, id uuid.UUID) (*config.Config, 
 	return s.configs.FindByID(ctx, id)
 }
 
-func (s *ConfigService) List(ctx context.Context, page pagination.Page) ([]*config.Config, int64, error) {
-	return s.configs.List(ctx, page)
+func (s *ConfigService) List(ctx context.Context, clusterID uuid.UUID, page pagination.Page) ([]*config.Config, int64, error) {
+	return s.configs.List(ctx, clusterID, page)
 }
 
 // ListVersions returns the full version history (with content) of a config,

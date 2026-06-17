@@ -110,6 +110,8 @@ type ServiceFilter struct {
 	// returned; when Unassigned is true, only services without a hive.
 	HiveID     *uuid.UUID
 	Unassigned bool
+	// ClusterID filters by orchestration target. Nil = all clusters.
+	ClusterID *uuid.UUID
 }
 
 type ServiceSecretAttachment struct {
@@ -147,7 +149,7 @@ type SecretRepository interface {
 	// encrypted at rest by the adapter and never returned by any read method.
 	Save(ctx context.Context, s *secret.Secret, v *secret.SecretVersion, value []byte) error
 	FindByID(ctx context.Context, id uuid.UUID) (*secret.Secret, error)
-	List(ctx context.Context, p pagination.Page) ([]*secret.Secret, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*secret.Secret, int64, error)
 	// Update rotates a secret: bumps the parent record and stores the new
 	// encrypted version value.
 	Update(ctx context.Context, s *secret.Secret, newVersion *secret.SecretVersion, value []byte) error
@@ -164,7 +166,7 @@ type SecretRepository interface {
 type NetworkRepository interface {
 	Save(ctx context.Context, n *network.Network) error
 	FindByID(ctx context.Context, id uuid.UUID) (*network.Network, error)
-	List(ctx context.Context, p pagination.Page) ([]*network.Network, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*network.Network, int64, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
 }
@@ -175,7 +177,7 @@ type VolumeRepository interface {
 	Save(ctx context.Context, v *volume.Volume) error
 	FindByID(ctx context.Context, id uuid.UUID) (*volume.Volume, error)
 	FindByName(ctx context.Context, name string) (*volume.Volume, error)
-	List(ctx context.Context, p pagination.Page) ([]*volume.Volume, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*volume.Volume, int64, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -205,7 +207,7 @@ type ConfigRepository interface {
 	Save(ctx context.Context, c *config.Config, v *config.ConfigVersion) error
 	FindByID(ctx context.Context, id uuid.UUID) (*config.Config, error)
 	ListVersions(ctx context.Context, configID uuid.UUID) ([]*config.ConfigVersion, error)
-	List(ctx context.Context, p pagination.Page) ([]*config.Config, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*config.Config, int64, error)
 	Update(ctx context.Context, c *config.Config, newVersion *config.ConfigVersion) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)

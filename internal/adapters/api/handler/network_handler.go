@@ -56,7 +56,7 @@ func (h *NetworkHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/networks [get]
 func (h *NetworkHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), page)
+	items, total, err := h.svc.List(c.Request.Context(), queryCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list networks")
 		return

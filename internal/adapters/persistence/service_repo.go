@@ -75,6 +75,9 @@ func (r *ServiceRepository) List(ctx context.Context, filter ports.ServiceFilter
 	} else if filter.HiveID != nil {
 		q = q.Where("hive_id = ?", filter.HiveID.String())
 	}
+	if filter.ClusterID != nil {
+		q = scopeCluster(q, *filter.ClusterID)
+	}
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count services: %w", err)
 	}

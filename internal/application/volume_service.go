@@ -51,8 +51,8 @@ func (s *VolumeService) Get(ctx context.Context, id uuid.UUID) (*volume.Volume, 
 	return s.volumes.FindByID(ctx, id)
 }
 
-func (s *VolumeService) List(ctx context.Context, page pagination.Page) ([]*volume.Volume, int64, error) {
-	return s.volumes.List(ctx, page)
+func (s *VolumeService) List(ctx context.Context, clusterID uuid.UUID, page pagination.Page) ([]*volume.Volume, int64, error) {
+	return s.volumes.List(ctx, clusterID, page)
 }
 
 // Delete removes a named volume, refusing if any service still mounts it.

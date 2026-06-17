@@ -98,18 +98,18 @@ type CatalogSummary struct {
 // is still returned with Cluster.Reachable=false, so the dashboard degrades
 // gracefully rather than failing wholesale.
 func (s *ClusterService) Overview(ctx context.Context) (*Overview, error) {
-	return s.overview(ctx, s.defaultOrchestrator)
+	return s.overview(ctx, s.defaultOrchestrator, uuid.Nil)
 }
 
-// OverviewForCluster is the dashboard snapshot scoped to a specific cluster's
-// node health. The catalog and activity counts remain platform-wide.
+// OverviewForCluster is the dashboard snapshot scoped to a specific cluster:
+// node health, service and catalog counts are all filtered to that cluster.
 func (s *ClusterService) OverviewForCluster(ctx context.Context, clusterID uuid.UUID) (*Overview, error) {
 	ov, err := s.overview(ctx, func(ctx context.Context) (ports.Orchestrator, error) {
 		if s.registry == nil {
 			return nil, ErrOrchestratorUnavailable
 		}
 		return s.registry.For(ctx, clusterID)
-	})
+	}, clusterID)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (s *ClusterService) defaultOrchestrator(ctx context.Context) (ports.Orchest
 	return s.registry.Default(ctx)
 }
 
-func (s *ClusterService) overview(ctx context.Context, resolve func(context.Context) (ports.Orchestrator, error)) (*Overview, error) {
+func (s *ClusterService) overview(ctx context.Context, resolve func(context.Context) (ports.Orchestrator, error), clusterID uuid.UUID) (*Overview, error) {
 	ov := &Overview{}
 
 	if orch, err := resolve(ctx); err == nil && orch != nil {
@@ -151,7 +151,7 @@ func (s *ClusterService) overview(ctx context.Context, resolve func(context.Cont
 		}
 	}
 
-	svc, err := s.serviceSummary(ctx)
+	svc, err := s.serviceSummary(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (s *ClusterService) overview(ctx context.Context, resolve func(context.Cont
 	}
 	ov.Activity = act
 
-	cat, err := s.catalogSummary(ctx)
+	cat, err := s.catalogSummary(ctx, clusterID)
 	if err != nil {
 		return nil, err
 	}
@@ -193,20 +193,20 @@ func summarizeNodes(nodes []ports.NodeInfo) ClusterSummary {
 	return cs
 }
 
-func (s *ClusterService) serviceSummary(ctx context.Context) (ServiceSummary, error) {
-	total, err := s.countServices(ctx, "")
+func (s *ClusterService) serviceSummary(ctx context.Context, clusterID uuid.UUID) (ServiceSummary, error) {
+	total, err := s.countServices(ctx, "", clusterID)
 	if err != nil {
 		return ServiceSummary{}, err
 	}
-	draft, err := s.countServices(ctx, string(service.StatusDraft))
+	draft, err := s.countServices(ctx, string(service.StatusDraft), clusterID)
 	if err != nil {
 		return ServiceSummary{}, err
 	}
-	deployed, err := s.countServices(ctx, string(service.StatusDeployed))
+	deployed, err := s.countServices(ctx, string(service.StatusDeployed), clusterID)
 	if err != nil {
 		return ServiceSummary{}, err
 	}
-	removed, err := s.countServices(ctx, string(service.StatusRemoved))
+	removed, err := s.countServices(ctx, string(service.StatusRemoved), clusterID)
 	if err != nil {
 		return ServiceSummary{}, err
 	}
@@ -233,24 +233,28 @@ func (s *ClusterService) activitySummary(ctx context.Context) (ActivitySummary, 
 	return ActivitySummary{TotalDeployments: total, InProgress: inProgress, Succeeded: succeeded, Failed: failed}, nil
 }
 
-func (s *ClusterService) catalogSummary(ctx context.Context) (CatalogSummary, error) {
-	_, networks, err := s.networks.List(ctx, countPage())
+func (s *ClusterService) catalogSummary(ctx context.Context, clusterID uuid.UUID) (CatalogSummary, error) {
+	_, networks, err := s.networks.List(ctx, clusterID, countPage())
 	if err != nil {
 		return CatalogSummary{}, err
 	}
-	_, secrets, err := s.secrets.List(ctx, countPage())
+	_, secrets, err := s.secrets.List(ctx, clusterID, countPage())
 	if err != nil {
 		return CatalogSummary{}, err
 	}
-	_, configs, err := s.configs.List(ctx, countPage())
+	_, configs, err := s.configs.List(ctx, clusterID, countPage())
 	if err != nil {
 		return CatalogSummary{}, err
 	}
 	return CatalogSummary{Networks: networks, Secrets: secrets, Configs: configs}, nil
 }
 
-func (s *ClusterService) countServices(ctx context.Context, status string) (int64, error) {
-	_, total, err := s.services.List(ctx, ports.ServiceFilter{Status: status}, countPage())
+func (s *ClusterService) countServices(ctx context.Context, status string, clusterID uuid.UUID) (int64, error) {
+	filter := ports.ServiceFilter{Status: status}
+	if clusterID != uuid.Nil {
+		filter.ClusterID = &clusterID
+	}
+	_, total, err := s.services.List(ctx, filter, countPage())
 	return total, err
 }
 
