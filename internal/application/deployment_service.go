@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	ErrOrchestratorUnavailable = errors.New("deployment engine is not configured")
+	ErrOrchestratorUnavailable = errors.New("cluster orchestrator unavailable")
 	ErrServiceNotDeployed      = errors.New("service is not deployed")
 	ErrContainerNotInService   = errors.New("container does not belong to this service")
 )
@@ -74,10 +74,15 @@ func NewDeploymentService(
 // ErrOrchestratorUnavailable so callers keep their existing error handling.
 func (s *DeploymentService) orchFor(ctx context.Context, svc *service.Service) (ports.Orchestrator, error) {
 	if s.registry == nil {
-		return nil, ErrOrchestratorUnavailable
+		return nil, fmt.Errorf("%w: deployment engine is not configured", ErrOrchestratorUnavailable)
 	}
 	orch, err := s.registry.For(ctx, svc.ClusterID)
-	if err != nil || orch == nil {
+	if err != nil {
+		// Surface the real cause (agent offline, daemon down, unknown cluster…)
+		// instead of a generic "not configured" message.
+		return nil, fmt.Errorf("%w: %v", ErrOrchestratorUnavailable, err)
+	}
+	if orch == nil {
 		return nil, ErrOrchestratorUnavailable
 	}
 	return orch, nil
