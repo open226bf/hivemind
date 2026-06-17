@@ -87,6 +87,19 @@ type Orchestrator interface {
 	ClusterInfo(ctx context.Context) (*ClusterInfo, error)
 }
 
+// AgentHub manages the reverse-tunnel sessions opened by Hivemind agents (the
+// "agent" connection mode). An agent deployed on a cluster dials out to the hub,
+// so the cluster needs no inbound exposure. The registry uses the hub to obtain
+// an Orchestrator transported over a cluster's agent tunnel.
+type AgentHub interface {
+	// Orchestrator returns an Orchestrator backed by the agent's tunnel, routing
+	// control-plane calls to a manager-resident agent task. Fails when the agent
+	// has no live session.
+	Orchestrator(ctx context.Context, agentID string) (Orchestrator, error)
+	// Online reports whether the agent currently holds a live session.
+	Online(agentID string) bool
+}
+
 // OrchestratorRegistry resolves a cluster id to a live Orchestrator. It is the
 // single place that knows the platform is multi-cluster: every application
 // service holds a registry instead of a single orchestrator and resolves the

@@ -22,15 +22,19 @@ type closer interface{ Close() error }
 // UUID resolves to the default cluster.
 type Registry struct {
 	clusters ports.ClusterRepository
+	hub      ports.AgentHub // optional; resolves agent-mode clusters (nil = agent mode unavailable)
 
 	mu    sync.Mutex
 	cache map[uuid.UUID]ports.Orchestrator
 }
 
-// NewRegistry builds a registry backed by the cluster repository.
-func NewRegistry(clusters ports.ClusterRepository) *Registry {
+// NewRegistry builds a registry backed by the cluster repository. hub may be nil
+// until the agent transport is wired; agent-mode clusters then resolve to an
+// explicit error while direct-mode clusters keep working.
+func NewRegistry(clusters ports.ClusterRepository, hub ports.AgentHub) *Registry {
 	return &Registry{
 		clusters: clusters,
+		hub:      hub,
 		cache:    make(map[uuid.UUID]ports.Orchestrator),
 	}
 }
@@ -82,25 +86,43 @@ func (r *Registry) Invalidate(clusterID uuid.UUID) {
 	}
 }
 
-// build constructs the orchestrator for a cluster according to its type and
-// caches it. The caller must hold r.mu.
+// build constructs the orchestrator for a cluster and caches it. It dispatches
+// first on the connection mode (transport), then on the cluster type (backend).
+// The caller must hold r.mu.
 func (r *Registry) build(ctx context.Context, c *cluster.Cluster) (ports.Orchestrator, error) {
-	switch c.Type {
-	case cluster.TypeSwarm:
-		orch, err := NewSwarmOrchestratorFromSpec(ctx, ConnSpec{
-			Host:       c.Endpoint,
-			CACert:     []byte(c.TLS.CACert),
-			ClientCert: []byte(c.TLS.ClientCert),
-			ClientKey:  []byte(c.TLS.ClientKey),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("connect cluster %q: %w", c.Name, err)
+	var (
+		orch ports.Orchestrator
+		err  error
+	)
+
+	switch c.ConnectionMode {
+	case cluster.ModeAgent:
+		if r.hub == nil {
+			return nil, fmt.Errorf("cluster %q uses agent mode but the agent hub is not configured", c.Name)
 		}
-		r.cache[c.ID] = orch
-		return orch, nil
-	default:
-		return nil, fmt.Errorf("unsupported cluster type %q", c.Type)
+		orch, err = r.hub.Orchestrator(ctx, c.AgentID)
+		if err != nil {
+			return nil, fmt.Errorf("connect agent for cluster %q: %w", c.Name, err)
+		}
+	default: // direct
+		switch c.Type {
+		case cluster.TypeSwarm:
+			orch, err = NewSwarmOrchestratorFromSpec(ctx, ConnSpec{
+				Host:       c.Endpoint,
+				CACert:     []byte(c.TLS.CACert),
+				ClientCert: []byte(c.TLS.ClientCert),
+				ClientKey:  []byte(c.TLS.ClientKey),
+			})
+			if err != nil {
+				return nil, fmt.Errorf("connect cluster %q: %w", c.Name, err)
+			}
+		default:
+			return nil, fmt.Errorf("unsupported cluster type %q", c.Type)
+		}
 	}
+
+	r.cache[c.ID] = orch
+	return orch, nil
 }
 
 // StaticRegistry serves a single orchestrator for every cluster id. It backs the
