@@ -133,6 +133,15 @@ func main() {
 	} else if created {
 		log.Info("bootstrapped default cluster")
 	}
+	// Backfill resources that predate multi-cluster onto the default cluster so
+	// they resolve explicitly and satisfy the per-cluster name uniqueness.
+	if def, err := clusterRepo.FindDefault(context.Background()); err != nil {
+		log.Error("resolve default cluster for backfill", "err", err)
+		os.Exit(1)
+	} else if err := persistence.BackfillClusterID(db, def.ID.String()); err != nil {
+		log.Error("backfill cluster_id", "err", err)
+		os.Exit(1)
+	}
 
 	// ─── Orchestrator registry ───────────────────────────────────────────────
 	registry := buildRegistry(context.Background(), env, log, clusterRepo)

@@ -394,7 +394,7 @@ func (r *ServiceRepository) CountServicesByHive(ctx context.Context, hiveID uuid
 func (r *ServiceRepository) CountServicesByCluster(ctx context.Context, clusterID uuid.UUID) (int64, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&serviceModel{}).
-		Where("cluster_id = ?", clusterIDColumn(clusterID)).
+		Where("cluster_id = ?", clusterID.String()).
 		Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("count services by cluster: %w", err)
 	}
