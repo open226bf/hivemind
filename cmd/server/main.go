@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -292,6 +293,18 @@ func buildRegistry(ctx context.Context, env string, log *slog.Logger, clusters p
 // the connection is hijacked and handed to the hub as a reverse tunnel.
 func startAgentHub(addr string, ca *agentca.CA, svc *application.AgentService, hub *agenthub.Hub, log *slog.Logger) {
 	hosts := []string{"localhost", "127.0.0.1"}
+	// Include the host agents actually dial (from AGENT_HUB_PUBLIC_ADDR) so the
+	// server cert SAN matches without a separate setting.
+	if pub := os.Getenv("AGENT_HUB_PUBLIC_ADDR"); pub != "" {
+		host := pub
+		if h, _, err := net.SplitHostPort(pub); err == nil {
+			host = h
+		}
+		if host != "" {
+			hosts = append(hosts, host)
+		}
+	}
+	// Optional explicit extra SAN.
 	if h := os.Getenv("AGENT_HUB_HOSTNAME"); h != "" {
 		hosts = append(hosts, h)
 	}
