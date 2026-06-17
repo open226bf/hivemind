@@ -525,6 +525,20 @@ func (s *DeploymentService) buildSpec(ctx context.Context, orch ports.Orchestrat
 		})
 	}
 
+	// Published ports — passed straight through to the endpoint spec.
+	pubPorts, err := s.services.GetPorts(ctx, svc.ID)
+	if err != nil {
+		return spec, err
+	}
+	for _, p := range pubPorts {
+		spec.Ports = append(spec.Ports, ports.PortSpec{
+			TargetPort:    p.TargetPort,
+			PublishedPort: p.PublishedPort,
+			Protocol:      p.Protocol,
+			Mode:          p.Mode,
+		})
+	}
+
 	return spec, nil
 }
 

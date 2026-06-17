@@ -212,6 +212,18 @@ type serviceMountModel struct {
 
 func (serviceMountModel) TableName() string { return "service_mounts" }
 
+type servicePortModel struct {
+	ID            string `gorm:"type:uuid;primaryKey;column:id"`
+	ServiceID     string `gorm:"type:uuid;not null;index;column:service_id"`
+	TargetPort    uint32 `gorm:"column:target_port"`
+	PublishedPort uint32 `gorm:"column:published_port"`
+	Protocol      string `gorm:"column:protocol"` // tcp | udp | sctp
+	Mode          string `gorm:"column:mode"`     // ingress | host
+	Position      int    `gorm:"column:position"` // preserves declared order
+}
+
+func (servicePortModel) TableName() string { return "service_ports" }
+
 // ─── Network ──────────────────────────────────────────────────────────────────
 
 type networkModel struct {

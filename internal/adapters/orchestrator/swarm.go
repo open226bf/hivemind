@@ -638,7 +638,26 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 		TaskTemplate: task,
 		Mode:         swarm.ServiceMode{Replicated: &swarm.ReplicatedService{Replicas: &replicas}},
 		UpdateConfig: toUpdateConfig(spec.UpdateConfig),
+		EndpointSpec: toEndpointSpec(spec.Ports),
 	}
+}
+
+// toEndpointSpec maps published-port specs to Swarm's EndpointSpec. Returns nil
+// when no port is published so the service spec stays minimal (and diff-stable).
+func toEndpointSpec(specs []ports.PortSpec) *swarm.EndpointSpec {
+	if len(specs) == 0 {
+		return nil
+	}
+	out := &swarm.EndpointSpec{Ports: make([]swarm.PortConfig, 0, len(specs))}
+	for _, p := range specs {
+		out.Ports = append(out.Ports, swarm.PortConfig{
+			Protocol:      swarm.PortConfigProtocol(p.Protocol),
+			PublishMode:   swarm.PortConfigPublishMode(p.Mode),
+			TargetPort:    p.TargetPort,
+			PublishedPort: p.PublishedPort,
+		})
+	}
+	return out
 }
 
 func toResources(r ports.ResourceSpec) *swarm.ResourceRequirements {

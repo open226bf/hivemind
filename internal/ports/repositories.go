@@ -90,6 +90,10 @@ type ServiceRepository interface {
 	// Mounts (atomic replacement, F-V2-06)
 	SetMounts(ctx context.Context, serviceID uuid.UUID, mounts []volume.Mount) error
 	GetMounts(ctx context.Context, serviceID uuid.UUID) ([]volume.Mount, error)
+
+	// Published ports (atomic replacement)
+	SetPorts(ctx context.Context, serviceID uuid.UUID, ports []service.Port) error
+	GetPorts(ctx context.Context, serviceID uuid.UUID) ([]service.Port, error)
 	// CountMountsByVolumeName returns how many service mounts reference a named
 	// volume — used to refuse deletion of an in-use volume.
 	CountMountsByVolumeName(ctx context.Context, name string) (int64, error)
