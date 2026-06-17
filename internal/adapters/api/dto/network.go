@@ -8,8 +8,6 @@ type CreateNetworkRequest struct {
 	Subnet     string `json:"subnet"     example:"10.0.9.0/24"`
 	Attachable bool   `json:"attachable" example:"true"`
 	External   bool   `json:"external"   example:"false"`
-	// Cluster is the target cluster id. Empty selects the default cluster.
-	Cluster string `json:"cluster"`
 }
 
 // AttachNetworkRequest is the body for POST /services/{id}/networks.

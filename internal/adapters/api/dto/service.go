@@ -19,8 +19,6 @@ type CreateServiceRequest struct {
 	Placement    *PlacementDTO    `json:"placement"`
 	UpdateConfig *UpdateConfigDTO `json:"update_config"`
 	Hive         string           `json:"hive"`
-	// Cluster is the target cluster id. Empty selects the default cluster.
-	Cluster string `json:"cluster"`
 }
 
 // UpdateServiceRequest is the body for PUT /services/:id.

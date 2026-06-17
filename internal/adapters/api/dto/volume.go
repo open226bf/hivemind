@@ -8,8 +8,6 @@ import "time"
 type CreateVolumeRequest struct {
 	Name   string `json:"name"   binding:"required"`
 	Driver string `json:"driver" example:"local"`
-	// Cluster is the target cluster id. Empty selects the default cluster.
-	Cluster string `json:"cluster"`
 }
 
 // MountDTO declares one filesystem mount of a service.
