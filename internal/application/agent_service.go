@@ -321,6 +321,7 @@ func composeMTLS(image, rev string) string {
 services:
   agent:
     image: %s
+    user: root # needs the host docker.sock (root:docker)
     deploy:
       mode: global
       restart_policy: { condition: any }
@@ -350,6 +351,7 @@ func composeToken(image string) string {
 services:
   agent:
     image: %s
+    user: root # needs the host docker.sock (root:docker)
     deploy:
       mode: global
       restart_policy: { condition: any }
