@@ -78,8 +78,13 @@ func (h *AgentHandler) Connect(c *gin.Context) {
 		return
 	}
 
-	slog.Info("agent tunnel attached", "agent_id", agentID)
-	if err := h.hub.Attach(agentID, conn); err != nil {
+	node := toAgentNode(dto.AgentNodeDTO{
+		NodeID:   c.Query("node_id"),
+		Role:     c.Query("role"),
+		Hostname: c.Query("hostname"),
+	})
+	slog.Info("agent tunnel attached", "agent_id", agentID, "node", node.NodeID)
+	if err := h.hub.Attach(agentID, node.NodeID, node, conn); err != nil {
 		slog.Warn("agent tunnel ended", "agent_id", agentID, "err", err)
 	} else {
 		slog.Info("agent tunnel closed", "agent_id", agentID)
