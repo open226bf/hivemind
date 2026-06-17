@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"path"
 	"sort"
@@ -90,6 +91,23 @@ func NewSwarmOrchestratorFromSpec(ctx context.Context, spec ConnSpec) (*SwarmOrc
 	if _, err := cli.Ping(ctx); err != nil {
 		_ = cli.Close()
 		return nil, fmt.Errorf("docker ping: %w", err)
+	}
+	return &SwarmOrchestrator{cli: cli}, nil
+}
+
+// NewSwarmOrchestratorOverDial builds a Swarm orchestrator whose Docker API
+// calls are carried over a custom dialer — the agent reverse tunnel. The dialer
+// opens a stream to the agent, which proxies it to the cluster's docker.sock.
+// Connectivity is already proven by the live tunnel, so we do not ping here.
+func NewSwarmOrchestratorOverDial(dial func(ctx context.Context, network, addr string) (net.Conn, error)) (*SwarmOrchestrator, error) {
+	httpClient := &http.Client{Transport: &http.Transport{DialContext: dial}}
+	cli, err := client.NewClientWithOpts(
+		client.WithHost("tcp://hivemind-agent:2375"), // dummy: the dialer ignores the address
+		client.WithHTTPClient(httpClient),
+		client.WithAPIVersionNegotiation(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("docker client over tunnel: %w", err)
 	}
 	return &SwarmOrchestrator{cli: cli}, nil
 }
