@@ -44,6 +44,22 @@ func (r *fakeClusterRepo) FindByName(_ context.Context, name string) (*cluster.C
 	}
 	return nil, domainerrors.ErrNotFound
 }
+func (r *fakeClusterRepo) FindByAgentID(_ context.Context, agentID string) (*cluster.Cluster, error) {
+	for _, c := range r.byID {
+		if agentID != "" && c.AgentID == agentID {
+			return c, nil
+		}
+	}
+	return nil, domainerrors.ErrNotFound
+}
+func (r *fakeClusterRepo) FindByEnrollmentTokenHash(_ context.Context, h string) (*cluster.Cluster, error) {
+	for _, c := range r.byID {
+		if h != "" && c.EnrollmentTokenHash == h {
+			return c, nil
+		}
+	}
+	return nil, domainerrors.ErrNotFound
+}
 func (r *fakeClusterRepo) FindDefault(_ context.Context) (*cluster.Cluster, error) {
 	for _, c := range r.byID {
 		if c.IsDefault {
