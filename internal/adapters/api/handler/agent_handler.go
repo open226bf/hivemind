@@ -43,6 +43,7 @@ func (h *AgentHandler) Register(public, protected *gin.RouterGroup) {
 	a.POST("/register", h.AgentRegister)
 	a.POST("/heartbeat", h.AgentHeartbeat)
 	a.GET("/connect", h.Connect)
+	a.GET("/install", h.Install)
 
 	protected.POST("/clusters/:id/enroll", middleware.RequireRole(user.RoleAdmin), h.Enroll)
 }
@@ -125,6 +126,26 @@ func (h *AgentHandler) Enroll(c *gin.Context) {
 	})
 }
 
+// Install godoc
+//
+//	@Summary		Agent install script
+//	@Description	Returns a self-contained shell script to run on a cluster manager (creates secrets, writes the compose and runs docker stack deploy). Authenticated by the enrollment token.
+//	@Tags			agent
+//	@Produce		plain
+//	@Param			token	query	string	true	"Enrollment token"
+//	@Success		200		{string}	string	"shell script"
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Router			/agent/install [get]
+func (h *AgentHandler) Install(c *gin.Context) {
+	script, err := h.svc.InstallScript(c.Request.Context(), c.Query("token"), serverBaseURL(c))
+	if err != nil {
+		c.String(http.StatusUnauthorized, "# invalid or expired enrollment token\n")
+		return
+	}
+	c.Header("Content-Type", "text/x-shellscript; charset=utf-8")
+	c.String(http.StatusOK, script)
+}
+
 // AgentRegister godoc
 //
 //	@Summary	Agent enrollment / reconnection
@@ -196,18 +217,24 @@ func toAgentNode(n dto.AgentNodeDTO) ports.AgentNode {
 // cluster. The server URL comes from AGENT_PUBLIC_URL, falling back to the
 // request's scheme+host.
 func deployCommand(c *gin.Context, token string) string {
-	server := os.Getenv("AGENT_PUBLIC_URL")
-	if server == "" {
-		scheme := "https"
-		if c.Request.TLS == nil {
-			scheme = "http"
-		}
-		server = scheme + "://" + c.Request.Host
-	}
+	server := serverBaseURL(c)
 	return fmt.Sprintf(
 		"HIVEMIND_SERVER=%s HIVEMIND_ENROLL_TOKEN=%s docker stack deploy -c hivemind-agent.yml hivemind-agent",
 		server, token,
 	)
+}
+
+// serverBaseURL is the externally reachable base URL of this server, from
+// AGENT_PUBLIC_URL or derived from the request.
+func serverBaseURL(c *gin.Context) string {
+	if v := os.Getenv("AGENT_PUBLIC_URL"); v != "" {
+		return v
+	}
+	scheme := "https"
+	if c.Request.TLS == nil {
+		scheme = "http"
+	}
+	return scheme + "://" + c.Request.Host
 }
 
 func writeAgentError(c *gin.Context, err error) {

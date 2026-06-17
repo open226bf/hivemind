@@ -97,6 +97,40 @@ func (s *AgentService) Enroll(ctx context.Context, clusterID uuid.UUID) (*Enroll
 	return out, nil
 }
 
+// InstallScript renders a self-contained shell script to run on a cluster
+// manager: it provisions the agent (secrets + compose + stack deploy). The
+// caller authenticates with the enrollment token. When the CA is configured the
+// script installs the mutual-TLS agent (a fresh client certificate is issued and
+// embedded, rotating any previous one); otherwise it installs the token agent.
+func (s *AgentService) InstallScript(ctx context.Context, token, serverURL string) (string, error) {
+	if token == "" {
+		return "", ErrInvalidEnrollment
+	}
+	c, err := s.clusters.FindByEnrollmentTokenHash(ctx, cluster.HashEnrollmentToken(token))
+	if err != nil {
+		return "", ErrInvalidEnrollment
+	}
+	if ok, _ := c.MatchEnrollment(token); !ok {
+		return "", ErrInvalidEnrollment
+	}
+
+	if s.certs != nil {
+		certPEM, keyPEM, serial, err := s.certs.IssueClient(c.ID.String(), clientCertTTL)
+		if err != nil {
+			return "", fmt.Errorf("issue client cert: %w", err)
+		}
+		c.AgentID = c.ID.String()
+		c.AgentCertSerial = serial
+		if err := s.clusters.Update(ctx, c); err != nil {
+			return "", err
+		}
+		s.invalidate(c.ID)
+		return renderMTLSInstall(s.hubAddr, string(certPEM), string(keyPEM), string(s.certs.CertPEM())), nil
+	}
+
+	return renderTokenInstall(serverURL, token), nil
+}
+
 // AuthorizeTunnel validates a tunnel client certificate: the CN is the cluster
 // id and the serial must match the cluster's current certificate (mismatch =
 // revoked / rotated). Returns the agent id to attach the session under, and
@@ -214,4 +248,67 @@ func (s *AgentService) invalidate(id uuid.UUID) {
 	if s.registry != nil {
 		s.registry.Invalidate(id)
 	}
+}
+
+// ─── install scripts ──────────────────────────────────────────────────────────
+
+const composeMTLS = `version: "3.8"
+services:
+  agent:
+    image: hivemind/agent:latest
+    deploy:
+      mode: global
+      restart_policy: { condition: any }
+    environment:
+      HIVEMIND_HUB_ADDR: "${HIVEMIND_HUB_ADDR}"
+      HIVEMIND_CLIENT_CERT_FILE: /run/secrets/hivemind_client_cert
+      HIVEMIND_CLIENT_KEY_FILE: /run/secrets/hivemind_client_key
+      HIVEMIND_CA_CERT_FILE: /run/secrets/hivemind_ca_cert
+    secrets: [hivemind_client_cert, hivemind_client_key, hivemind_ca_cert]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+secrets:
+  hivemind_client_cert: { external: true }
+  hivemind_client_key: { external: true }
+  hivemind_ca_cert: { external: true }
+`
+
+const composeToken = `version: "3.8"
+services:
+  agent:
+    image: hivemind/agent:latest
+    deploy:
+      mode: global
+      restart_policy: { condition: any }
+    environment:
+      HIVEMIND_SERVER: "${HIVEMIND_SERVER}"
+      HIVEMIND_ENROLL_TOKEN: "${HIVEMIND_ENROLL_TOKEN}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+`
+
+func renderMTLSInstall(hubAddr, certPEM, keyPEM, caPEM string) string {
+	return fmt.Sprintf(`#!/bin/sh
+set -e
+echo "Installing Hivemind agent (mTLS)…"
+docker secret rm hivemind_client_cert hivemind_client_key hivemind_ca_cert 2>/dev/null || true
+printf '%%s' '%s' | docker secret create hivemind_client_cert - >/dev/null
+printf '%%s' '%s' | docker secret create hivemind_client_key  - >/dev/null
+printf '%%s' '%s' | docker secret create hivemind_ca_cert     - >/dev/null
+cat > /tmp/hivemind-agent.yml <<'YML'
+%sYML
+HIVEMIND_HUB_ADDR='%s' docker stack deploy -c /tmp/hivemind-agent.yml hivemind-agent
+echo "Done — the agent will dial Hivemind over mTLS."
+`, certPEM, keyPEM, caPEM, composeMTLS, hubAddr)
+}
+
+func renderTokenInstall(serverURL, token string) string {
+	return fmt.Sprintf(`#!/bin/sh
+set -e
+echo "Installing Hivemind agent…"
+cat > /tmp/hivemind-agent.yml <<'YML'
+%sYML
+HIVEMIND_SERVER='%s' HIVEMIND_ENROLL_TOKEN='%s' docker stack deploy -c /tmp/hivemind-agent.yml hivemind-agent
+echo "Done — the agent will dial %s."
+`, composeToken, serverURL, token, serverURL)
 }
