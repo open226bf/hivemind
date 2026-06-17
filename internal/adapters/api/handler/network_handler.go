@@ -56,7 +56,7 @@ func (h *NetworkHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/networks [get]
 func (h *NetworkHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), queryCluster(c), page)
+	items, total, err := h.svc.List(c.Request.Context(), currentCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list networks")
 		return
@@ -97,10 +97,7 @@ func (h *NetworkHandler) Create(c *gin.Context) {
 		return
 	}
 
-	clusterID, ok := parseOptionalCluster(c, req.Cluster)
-	if !ok {
-		return
-	}
+	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
 	n, err := h.svc.Create(c.Request.Context(), application.CreateNetworkInput{
 		Name:       req.Name,
 		Subnet:     req.Subnet,

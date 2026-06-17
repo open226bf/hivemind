@@ -186,7 +186,7 @@ type VolumeRepository interface {
 type HiveRepository interface {
 	Save(ctx context.Context, h *hive.Hive) error
 	FindByID(ctx context.Context, id uuid.UUID) (*hive.Hive, error)
-	List(ctx context.Context, p pagination.Page) ([]*hive.Hive, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*hive.Hive, int64, error)
 	Update(ctx context.Context, h *hive.Hive) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

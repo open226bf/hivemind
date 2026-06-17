@@ -57,7 +57,7 @@ func (h *ConfigHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/configs [get]
 func (h *ConfigHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), queryCluster(c), page)
+	items, total, err := h.svc.List(c.Request.Context(), currentCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list configs")
 		return
@@ -104,10 +104,7 @@ func (h *ConfigHandler) Create(c *gin.Context) {
 		return
 	}
 
-	clusterID, ok := parseOptionalCluster(c, req.Cluster)
-	if !ok {
-		return
-	}
+	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
 	cfg, err := h.svc.Create(c.Request.Context(), application.CreateConfigInput{
 		Name:       req.Name,
 		TargetPath: req.TargetPath,

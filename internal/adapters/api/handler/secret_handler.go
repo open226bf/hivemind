@@ -54,7 +54,7 @@ func (h *SecretHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/secrets [get]
 func (h *SecretHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), queryCluster(c), page)
+	items, total, err := h.svc.List(c.Request.Context(), currentCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list secrets")
 		return
@@ -101,10 +101,7 @@ func (h *SecretHandler) Create(c *gin.Context) {
 		return
 	}
 
-	clusterID, ok := parseOptionalCluster(c, req.Cluster)
-	if !ok {
-		return
-	}
+	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
 	sec, err := h.svc.Create(c.Request.Context(), application.CreateSecretInput{
 		Name:       req.Name,
 		TargetPath: req.TargetPath,
