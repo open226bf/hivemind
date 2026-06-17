@@ -31,16 +31,61 @@ type UpdateClusterRequest struct {
 // ClusterResponse is the canonical cluster representation. TLS material is never
 // returned; tls_enabled signals whether mutual TLS is configured.
 type ClusterResponse struct {
-	ID         string            `json:"id"`
-	Name       string            `json:"name"`
-	Type       string            `json:"type"`
-	Endpoint   string            `json:"endpoint,omitempty"`
-	IsDefault  bool              `json:"is_default"`
-	Status     string            `json:"status"`
-	Labels     map[string]string `json:"labels,omitempty"`
-	TLSEnabled bool              `json:"tls_enabled"`
-	CreatedAt  time.Time         `json:"created_at"`
-	UpdatedAt  time.Time         `json:"updated_at"`
+	ID             string            `json:"id"`
+	Name           string            `json:"name"`
+	Type           string            `json:"type"`
+	ConnectionMode string            `json:"connection_mode"`
+	Endpoint       string            `json:"endpoint,omitempty"`
+	IsDefault      bool              `json:"is_default"`
+	Status         string            `json:"status"`
+	Labels         map[string]string `json:"labels,omitempty"`
+	TLSEnabled     bool              `json:"tls_enabled"`
+	AgentStatus    string            `json:"agent_status,omitempty"`
+	AgentLastSeen  *time.Time        `json:"agent_last_seen,omitempty"`
+	CreatedAt      time.Time         `json:"created_at"`
+	UpdatedAt      time.Time         `json:"updated_at"`
+}
+
+// EnrollClusterResponse returns the one-time enrollment token plus a ready-to-run
+// deploy command for the agent stack. The token is shown only once.
+type EnrollClusterResponse struct {
+	ClusterID   string `json:"cluster_id"`
+	ClusterName string `json:"cluster_name"`
+	Token       string `json:"token"`
+	Command     string `json:"command"`
+}
+
+// ─── Agent handshake (agent-facing) ───────────────────────────────────────────
+
+// AgentNodeDTO is the node identity an agent reports.
+type AgentNodeDTO struct {
+	NodeID        string `json:"node_id"`
+	Hostname      string `json:"hostname"`
+	Role          string `json:"role"`
+	IsManager     bool   `json:"is_manager"`
+	IsLeader      bool   `json:"is_leader"`
+	EngineVersion string `json:"engine_version"`
+	SwarmID       string `json:"swarm_id"`
+}
+
+// AgentRegisterRequest is the agent enrollment / reconnection payload.
+type AgentRegisterRequest struct {
+	EnrollToken string       `json:"enroll_token"`
+	AgentID     string       `json:"agent_id"`
+	Node        AgentNodeDTO `json:"node"`
+}
+
+// AgentRegisterResponse returns the assigned agent identity and its cluster.
+type AgentRegisterResponse struct {
+	AgentID     string `json:"agent_id"`
+	ClusterID   string `json:"cluster_id"`
+	ClusterName string `json:"cluster_name"`
+}
+
+// AgentHeartbeatRequest reports liveness and current node role.
+type AgentHeartbeatRequest struct {
+	AgentID string       `json:"agent_id" binding:"required"`
+	Node    AgentNodeDTO `json:"node"`
 }
 
 // ClusterListResponse wraps a paginated list of clusters.

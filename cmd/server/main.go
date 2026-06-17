@@ -36,6 +36,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
+	"github.com/orange/hivemind/internal/adapters/agenthub"
 	"github.com/orange/hivemind/internal/adapters/api"
 	"github.com/orange/hivemind/internal/adapters/auth"
 	"github.com/orange/hivemind/internal/adapters/orchestrator"
@@ -143,8 +144,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// ─── Orchestrator registry ───────────────────────────────────────────────
-	registry := buildRegistry(context.Background(), env, log, clusterRepo)
+	// ─── Agent hub + orchestrator registry ───────────────────────────────────
+	hub := agenthub.New(0)
+	registry := buildRegistry(context.Background(), env, log, clusterRepo, hub)
 
 	// ─── Use cases ──────────────────────────────────────────────────────────
 	authSvc := application.NewAuthService(userRepo, tokens, clock.System{})
@@ -159,6 +161,7 @@ func main() {
 	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
 	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)
 	clusterSvc := application.NewClusterService(registry, clusterRepo, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
+	agentSvc := application.NewAgentService(clusterRepo, hub, registry)
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
@@ -188,6 +191,7 @@ func main() {
 		Deployments: deploymentSvc,
 		Snapshots:   snapshotSvc,
 		Cluster:     clusterSvc,
+		Agent:       agentSvc,
 		Registry:    registry,
 		AuditLog:    auditRepo,
 	})
@@ -232,7 +236,7 @@ func main() {
 // to each cluster's daemon. A probe of the ambient Docker environment keeps the
 // previous ergonomics: a connection failure is fatal in production but falls
 // back to the stub elsewhere, so `go run` works without a live Swarm.
-func buildRegistry(ctx context.Context, env string, log *slog.Logger, clusters ports.ClusterRepository) ports.OrchestratorRegistry {
+func buildRegistry(ctx context.Context, env string, log *slog.Logger, clusters ports.ClusterRepository, hub ports.AgentHub) ports.OrchestratorRegistry {
 	if os.Getenv("ORCHESTRATOR") == "stub" {
 		return orchestrator.NewStaticRegistry(orchestrator.NewStubOrchestrator())
 	}
@@ -247,9 +251,7 @@ func buildRegistry(ctx context.Context, env string, log *slog.Logger, clusters p
 	}
 	_ = probe.Close()
 	log.Info("connected to Docker Swarm orchestrator")
-	// hub is nil for now: agent-mode clusters resolve to an explicit error until
-	// the agent hub is wired; direct-mode clusters are unaffected.
-	return orchestrator.NewRegistry(clusters, nil)
+	return orchestrator.NewRegistry(clusters, hub)
 }
 
 // buildCipher selects the at-rest encryption strategy for sensitive values

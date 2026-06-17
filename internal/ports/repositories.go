@@ -25,6 +25,11 @@ type ClusterRepository interface {
 	Save(ctx context.Context, c *cluster.Cluster) error
 	FindByID(ctx context.Context, id uuid.UUID) (*cluster.Cluster, error)
 	FindByName(ctx context.Context, name string) (*cluster.Cluster, error)
+	// FindByAgentID resolves the cluster an enrolled agent is bound to.
+	FindByAgentID(ctx context.Context, agentID string) (*cluster.Cluster, error)
+	// FindByEnrollmentTokenHash resolves the cluster awaiting enrollment with the
+	// given token hash (used to enroll an agent that only knows the token).
+	FindByEnrollmentTokenHash(ctx context.Context, tokenHash string) (*cluster.Cluster, error)
 	// FindDefault returns the cluster flagged as default (ErrNotFound if none
 	// has been seeded yet).
 	FindDefault(ctx context.Context) (*cluster.Cluster, error)

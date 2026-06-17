@@ -259,6 +259,13 @@ func (c *Cluster) MarkAgentOffline() {
 	c.UpdatedAt = time.Now().UTC()
 }
 
+// HashEnrollmentToken returns the storage hash of an enrollment token. The
+// agent presents the plaintext token; the server hashes it to look up the
+// matching cluster (the plaintext is never persisted).
+func HashEnrollmentToken(token string) string {
+	return hashToken(token)
+}
+
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])

@@ -340,16 +340,19 @@ func (h *ClusterHandler) writeClusterError(c *gin.Context, err error) {
 
 func toClusterResponse(cl *cluster.Cluster) dto.ClusterResponse {
 	return dto.ClusterResponse{
-		ID:         cl.ID.String(),
-		Name:       cl.Name,
-		Type:       string(cl.Type),
-		Endpoint:   cl.Endpoint,
-		IsDefault:  cl.IsDefault,
-		Status:     string(cl.Status),
-		Labels:     cl.Labels,
-		TLSEnabled: cl.TLS.Enabled(),
-		CreatedAt:  cl.CreatedAt,
-		UpdatedAt:  cl.UpdatedAt,
+		ID:             cl.ID.String(),
+		Name:           cl.Name,
+		Type:           string(cl.Type),
+		ConnectionMode: string(cl.ConnectionMode),
+		Endpoint:       cl.Endpoint,
+		IsDefault:      cl.IsDefault,
+		Status:         string(cl.Status),
+		Labels:         cl.Labels,
+		TLSEnabled:     cl.TLS.Enabled(),
+		AgentStatus:    string(cl.AgentStatus),
+		AgentLastSeen:  cl.AgentLastSeen,
+		CreatedAt:      cl.CreatedAt,
+		UpdatedAt:      cl.UpdatedAt,
 	}
 }
 

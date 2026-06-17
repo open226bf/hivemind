@@ -100,6 +100,24 @@ type AgentHub interface {
 	Online(agentID string) bool
 }
 
+// AgentNode is a node identity reported by an agent task (transport-neutral).
+type AgentNode struct {
+	NodeID        string
+	Hostname      string
+	Role          string // "manager" | "worker"
+	IsManager     bool
+	IsLeader      bool
+	EngineVersion string
+}
+
+// AgentPresence records the liveness of agents from their heartbeats. It is the
+// write side of the agent hub used by the enrollment/heartbeat use case.
+type AgentPresence interface {
+	MarkSeen(agentID string, node AgentNode)
+	Forget(agentID string)
+	Online(agentID string) bool
+}
+
 // OrchestratorRegistry resolves a cluster id to a live Orchestrator. It is the
 // single place that knows the platform is multi-cluster: every application
 // service holds a registry instead of a single orchestrator and resolves the

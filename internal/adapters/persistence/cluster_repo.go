@@ -64,6 +64,36 @@ func (r *ClusterRepository) FindByName(ctx context.Context, name string) (*clust
 	return r.toDomain(&m)
 }
 
+func (r *ClusterRepository) FindByAgentID(ctx context.Context, agentID string) (*cluster.Cluster, error) {
+	if agentID == "" {
+		return nil, domainerrors.ErrNotFound
+	}
+	var m clusterModel
+	err := r.db.WithContext(ctx).Where("agent_id = ?", agentID).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, domainerrors.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find cluster by agent: %w", err)
+	}
+	return r.toDomain(&m)
+}
+
+func (r *ClusterRepository) FindByEnrollmentTokenHash(ctx context.Context, tokenHash string) (*cluster.Cluster, error) {
+	if tokenHash == "" {
+		return nil, domainerrors.ErrNotFound
+	}
+	var m clusterModel
+	err := r.db.WithContext(ctx).Where("enrollment_token_hash = ?", tokenHash).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, domainerrors.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find cluster by enrollment token: %w", err)
+	}
+	return r.toDomain(&m)
+}
+
 func (r *ClusterRepository) FindDefault(ctx context.Context) (*cluster.Cluster, error) {
 	var m clusterModel
 	err := r.db.WithContext(ctx).Where("is_default = ?", true).First(&m).Error
