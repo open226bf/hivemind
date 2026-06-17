@@ -127,6 +127,16 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 		hiveID = id
 	}
 
+	clusterID := uuid.Nil
+	if req.Cluster != "" {
+		id, err := uuid.Parse(req.Cluster)
+		if err != nil {
+			dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid cluster_id")
+			return
+		}
+		clusterID = id
+	}
+
 	in := application.CreateServiceInput{
 		Name:        req.Name,
 		Description: req.Description,
@@ -150,6 +160,7 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 	if hiveID != uuid.Nil {
 		in.Hive = hiveID
 	}
+	in.Cluster = clusterID
 
 	svc, err := h.svc.Create(c.Request.Context(), in)
 	if err != nil {
@@ -457,8 +468,13 @@ func toServiceResponse(s *service.Service) dto.ServiceResponse {
 	if s.HiveID != nil {
 		hiveID = s.HiveID.String()
 	}
+	clusterID := ""
+	if s.ClusterID != uuid.Nil {
+		clusterID = s.ClusterID.String()
+	}
 	return dto.ServiceResponse{
 		ID:             s.ID.String(),
+		ClusterID:      clusterID,
 		HiveID:         hiveID,
 		Name:           s.Name,
 		Description:    s.Description,

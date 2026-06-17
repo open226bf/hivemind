@@ -16,12 +16,12 @@ import (
 )
 
 type NetworkHandler struct {
-	svc          *application.NetworkService
-	orchestrator ports.Orchestrator
+	svc      *application.NetworkService
+	registry ports.OrchestratorRegistry
 }
 
-func NewNetworkHandler(svc *application.NetworkService, orch ports.Orchestrator) *NetworkHandler {
-	return &NetworkHandler{svc: svc, orchestrator: orch}
+func NewNetworkHandler(svc *application.NetworkService, registry ports.OrchestratorRegistry) *NetworkHandler {
+	return &NetworkHandler{svc: svc, registry: registry}
 }
 
 // Register wires network CRUD and service-attachment routes.
@@ -97,11 +97,16 @@ func (h *NetworkHandler) Create(c *gin.Context) {
 		return
 	}
 
+	clusterID, ok := parseOptionalCluster(c, req.Cluster)
+	if !ok {
+		return
+	}
 	n, err := h.svc.Create(c.Request.Context(), application.CreateNetworkInput{
 		Name:       req.Name,
 		Subnet:     req.Subnet,
 		Attachable: req.Attachable,
 		External:   req.External,
+		Cluster:    clusterID,
 	})
 	if err != nil {
 		h.writeNetworkError(c, err)
@@ -267,11 +272,11 @@ func (h *NetworkHandler) DetachFromService(c *gin.Context) {
 //	@Failure		503	{object}	dto.ErrorResponse	"orchestrator unavailable"
 //	@Router			/networks/swarm [get]
 func (h *NetworkHandler) DiscoverSwarm(c *gin.Context) {
-	if h.orchestrator == nil {
-		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, "orchestrator not configured")
+	orch, ok := resolveOrchestrator(c, h.registry)
+	if !ok {
 		return
 	}
-	nets, err := h.orchestrator.ListNetworks(c.Request.Context())
+	nets, err := orch.ListNetworks(c.Request.Context())
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list swarm networks")
 		return
@@ -295,7 +300,7 @@ func (h *NetworkHandler) writeNetworkError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, domainerrors.ErrNotFound):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, network.ErrNetworkInUse):
+	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, network.ErrNetworkInUse), errors.Is(err, application.ErrClusterMismatch):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, network.ErrInvalidName):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
@@ -307,6 +312,7 @@ func (h *NetworkHandler) writeNetworkError(c *gin.Context, err error) {
 func toNetworkResponse(n *network.Network) dto.NetworkResponse {
 	return dto.NetworkResponse{
 		ID:         n.ID.String(),
+		ClusterID:  clusterIDString(n.ClusterID),
 		Name:       n.Name,
 		Driver:     n.Driver,
 		Scope:      n.Scope,

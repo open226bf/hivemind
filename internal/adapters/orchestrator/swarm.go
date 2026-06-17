@@ -2,8 +2,12 @@ package orchestrator
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"path"
 	"sort"
 	"sync"
@@ -46,6 +50,71 @@ func NewSwarmOrchestrator(ctx context.Context) (*SwarmOrchestrator, error) {
 		return nil, fmt.Errorf("docker ping: %w", err)
 	}
 	return &SwarmOrchestrator{cli: cli}, nil
+}
+
+// ConnSpec describes how to reach a specific Docker daemon. An empty Host means
+// "use the ambient Docker environment" (the single-cluster behaviour, used by
+// the seeded default cluster). TLS material is in-memory PEM; when present the
+// client speaks mutual TLS to a remote daemon over TCP.
+type ConnSpec struct {
+	Host       string
+	CACert     []byte
+	ClientCert []byte
+	ClientKey  []byte
+}
+
+// NewSwarmOrchestratorFromSpec builds a Swarm orchestrator for an explicit
+// daemon address (and optional mutual TLS), verifying connectivity. With an
+// empty spec it is equivalent to NewSwarmOrchestrator.
+func NewSwarmOrchestratorFromSpec(ctx context.Context, spec ConnSpec) (*SwarmOrchestrator, error) {
+	if spec.Host == "" && len(spec.CACert) == 0 && len(spec.ClientCert) == 0 {
+		return NewSwarmOrchestrator(ctx)
+	}
+
+	opts := []client.Opt{client.FromEnv, client.WithAPIVersionNegotiation()}
+	if spec.Host != "" {
+		opts = append(opts, client.WithHost(spec.Host))
+	}
+	if len(spec.CACert) > 0 || len(spec.ClientCert) > 0 {
+		httpClient, err := tlsHTTPClient(spec)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, client.WithHTTPClient(httpClient))
+	}
+
+	cli, err := client.NewClientWithOpts(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("docker client: %w", err)
+	}
+	if _, err := cli.Ping(ctx); err != nil {
+		_ = cli.Close()
+		return nil, fmt.Errorf("docker ping: %w", err)
+	}
+	return &SwarmOrchestrator{cli: cli}, nil
+}
+
+// tlsHTTPClient builds an HTTP client speaking mutual TLS from in-memory PEM,
+// so cluster credentials never have to be written to disk.
+func tlsHTTPClient(spec ConnSpec) (*http.Client, error) {
+	cfg := &tls.Config{MinVersion: tls.VersionTLS12}
+
+	if len(spec.CACert) > 0 {
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(spec.CACert) {
+			return nil, errors.New("cluster TLS: invalid CA certificate PEM")
+		}
+		cfg.RootCAs = pool
+	}
+	if len(spec.ClientCert) > 0 || len(spec.ClientKey) > 0 {
+		cert, err := tls.X509KeyPair(spec.ClientCert, spec.ClientKey)
+		if err != nil {
+			return nil, fmt.Errorf("cluster TLS: invalid client key pair: %w", err)
+		}
+		cfg.Certificates = []tls.Certificate{cert}
+	}
+
+	return &http.Client{Transport: &http.Transport{TLSClientConfig: cfg}}, nil
 }
 
 func (o *SwarmOrchestrator) Close() error { return o.cli.Close() }

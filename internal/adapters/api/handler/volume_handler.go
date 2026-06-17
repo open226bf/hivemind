@@ -19,13 +19,13 @@ import (
 )
 
 type VolumeHandler struct {
-	svc          *application.VolumeService
-	orchestrator ports.Orchestrator
-	audit        ports.AuditLogRepository
+	svc      *application.VolumeService
+	registry ports.OrchestratorRegistry
+	audit    ports.AuditLogRepository
 }
 
-func NewVolumeHandler(svc *application.VolumeService, orch ports.Orchestrator, audit ports.AuditLogRepository) *VolumeHandler {
-	return &VolumeHandler{svc: svc, orchestrator: orch, audit: audit}
+func NewVolumeHandler(svc *application.VolumeService, registry ports.OrchestratorRegistry, audit ports.AuditLogRepository) *VolumeHandler {
+	return &VolumeHandler{svc: svc, registry: registry, audit: audit}
 }
 
 // Register wires volume catalog and service-mount routes.
@@ -98,7 +98,11 @@ func (h *VolumeHandler) Create(c *gin.Context) {
 		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
 		return
 	}
-	v, err := h.svc.Create(c.Request.Context(), application.CreateVolumeInput{Name: req.Name, Driver: req.Driver})
+	clusterID, ok := parseOptionalCluster(c, req.Cluster)
+	if !ok {
+		return
+	}
+	v, err := h.svc.Create(c.Request.Context(), application.CreateVolumeInput{Name: req.Name, Driver: req.Driver, Cluster: clusterID})
 	if err != nil {
 		h.writeVolumeError(c, err)
 		return
@@ -163,11 +167,11 @@ func (h *VolumeHandler) Delete(c *gin.Context) {
 //	@Failure		503	{object}	dto.ErrorResponse	"orchestrator unavailable"
 //	@Router			/volumes/swarm [get]
 func (h *VolumeHandler) DiscoverSwarm(c *gin.Context) {
-	if h.orchestrator == nil {
-		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, "orchestrator not configured")
+	orch, ok := resolveOrchestrator(c, h.registry)
+	if !ok {
 		return
 	}
-	vols, err := h.orchestrator.ListVolumes(c.Request.Context())
+	vols, err := orch.ListVolumes(c.Request.Context())
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list swarm volumes")
 		return
@@ -298,6 +302,7 @@ func (h *VolumeHandler) writeVolumeError(c *gin.Context, err error) {
 func toVolumeResponse(v *volume.Volume) dto.VolumeResponse {
 	return dto.VolumeResponse{
 		ID:        v.ID.String(),
+		ClusterID: clusterIDString(v.ClusterID),
 		Name:      v.Name,
 		Driver:    v.Driver,
 		CreatedAt: v.CreatedAt,

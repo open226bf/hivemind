@@ -8,6 +8,8 @@ type CreateSecretRequest struct {
 	Name       string `json:"name"        binding:"required" example:"db_password"`
 	TargetPath string `json:"target_path" example:"/run/secrets/db_password"`
 	Value      string `json:"value"       binding:"required"`
+	// Cluster is the target cluster id. Empty selects the default cluster.
+	Cluster string `json:"cluster"`
 }
 
 // RotateSecretRequest is the body for POST /secrets/{id}/rotate.
@@ -24,6 +26,7 @@ type AttachSecretRequest struct {
 // SecretResponse exposes secret metadata only — the value is never included.
 type SecretResponse struct {
 	ID             string    `json:"id"`
+	ClusterID      string    `json:"cluster_id,omitempty"`
 	Name           string    `json:"name"`
 	TargetPath     string    `json:"target_path"`
 	CurrentVersion int       `json:"current_version"`

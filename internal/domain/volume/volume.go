@@ -29,6 +29,7 @@ var nameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$`)
 // while in use.
 type Volume struct {
 	ID        uuid.UUID
+	ClusterID uuid.UUID // orchestration target; zero value = the default cluster
 	Name      string
 	Driver    string // "local" by default
 	CreatedAt time.Time

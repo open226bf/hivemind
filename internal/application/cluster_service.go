@@ -3,6 +3,8 @@ package application
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/orange/hivemind/internal/domain/deployment"
 	"github.com/orange/hivemind/internal/domain/service"
 	"github.com/orange/hivemind/internal/ports"
@@ -13,7 +15,8 @@ import (
 // orchestration-cluster health and capacity (from the orchestrator) combined
 // with catalog and activity counts (from the repositories).
 type ClusterService struct {
-	orch        ports.Orchestrator
+	registry    ports.OrchestratorRegistry
+	clusters    ports.ClusterRepository
 	services    ports.ServiceRepository
 	deployments ports.DeploymentRepository
 	networks    ports.NetworkRepository
@@ -22,7 +25,8 @@ type ClusterService struct {
 }
 
 func NewClusterService(
-	orch ports.Orchestrator,
+	registry ports.OrchestratorRegistry,
+	clusters ports.ClusterRepository,
 	services ports.ServiceRepository,
 	deployments ports.DeploymentRepository,
 	networks ports.NetworkRepository,
@@ -30,7 +34,8 @@ func NewClusterService(
 	configs ports.ConfigRepository,
 ) *ClusterService {
 	return &ClusterService{
-		orch:        orch,
+		registry:    registry,
+		clusters:    clusters,
 		services:    services,
 		deployments: deployments,
 		networks:    networks,
@@ -89,10 +94,32 @@ type CatalogSummary struct {
 // is still returned with Cluster.Reachable=false, so the dashboard degrades
 // gracefully rather than failing wholesale.
 func (s *ClusterService) Overview(ctx context.Context) (*Overview, error) {
+	return s.overview(ctx, s.defaultOrchestrator)
+}
+
+// OverviewForCluster is the dashboard snapshot scoped to a specific cluster's
+// node health. The catalog and activity counts remain platform-wide.
+func (s *ClusterService) OverviewForCluster(ctx context.Context, clusterID uuid.UUID) (*Overview, error) {
+	return s.overview(ctx, func(ctx context.Context) (ports.Orchestrator, error) {
+		if s.registry == nil {
+			return nil, ErrOrchestratorUnavailable
+		}
+		return s.registry.For(ctx, clusterID)
+	})
+}
+
+func (s *ClusterService) defaultOrchestrator(ctx context.Context) (ports.Orchestrator, error) {
+	if s.registry == nil {
+		return nil, ErrOrchestratorUnavailable
+	}
+	return s.registry.Default(ctx)
+}
+
+func (s *ClusterService) overview(ctx context.Context, resolve func(context.Context) (ports.Orchestrator, error)) (*Overview, error) {
 	ov := &Overview{}
 
-	if s.orch != nil {
-		if info, err := s.orch.ClusterInfo(ctx); err == nil {
+	if orch, err := resolve(ctx); err == nil && orch != nil {
+		if info, err := orch.ClusterInfo(ctx); err == nil {
 			ov.Nodes = info.Nodes
 			ov.Cluster = summarizeNodes(info.Nodes)
 			ov.Cluster.Reachable = true

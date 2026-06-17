@@ -24,6 +24,7 @@ var nameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}$`)
 
 type Config struct {
 	ID             uuid.UUID
+	ClusterID      uuid.UUID // orchestration target; zero value = the default cluster
 	Name           string
 	TargetPath     string
 	CurrentVersion int

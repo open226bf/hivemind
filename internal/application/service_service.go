@@ -17,6 +17,11 @@ import (
 
 var ErrServiceDeployed = errors.New("service is currently deployed — undeploy it before deleting")
 
+// ErrClusterMismatch is returned when a resource (network, secret, config) is
+// attached to a service that lives on a different cluster. Cross-cluster
+// attachments cannot be honoured at deploy time, so they are refused up front.
+var ErrClusterMismatch = errors.New("resource and service belong to different clusters")
+
 // ErrResourceExceedsCluster is returned when a CPU/memory reservation or limit
 // is larger than the biggest single node in the cluster. A task that no node
 // can satisfy would stay pending forever, so we reject it up front rather than
@@ -24,12 +29,12 @@ var ErrServiceDeployed = errors.New("service is currently deployed — undeploy 
 var ErrResourceExceedsCluster = errors.New("resource request exceeds the largest node's capacity")
 
 type ServiceService struct {
-	services     ports.ServiceRepository
-	orchestrator ports.Orchestrator // nil until F-MVP-08 is wired
+	services ports.ServiceRepository
+	registry ports.OrchestratorRegistry // nil until the orchestrator is wired
 }
 
-func NewServiceService(services ports.ServiceRepository, orchestrator ports.Orchestrator) *ServiceService {
-	return &ServiceService{services: services, orchestrator: orchestrator}
+func NewServiceService(services ports.ServiceRepository, registry ports.OrchestratorRegistry) *ServiceService {
+	return &ServiceService{services: services, registry: registry}
 }
 
 // ─── Input types ─────────────────────────────────────────────────────────────
@@ -46,6 +51,9 @@ type CreateServiceInput struct {
 	Placement    service.Placement
 	UpdateConfig *service.UpdateConfig
 	Hive         uuid.UUID
+	// Cluster is the orchestration target. The zero value selects the default
+	// cluster, so callers that don't care about placement keep working.
+	Cluster uuid.UUID
 }
 
 // UpdateServiceInput uses pointer fields so callers can omit unchanged fields.
@@ -86,6 +94,7 @@ func (s *ServiceService) Create(ctx context.Context, in CreateServiceInput) (*se
 		return nil, err
 	}
 
+	svc.ClusterID = in.Cluster
 	svc.Description = in.Description
 	svc.Command = in.Command
 	svc.Entrypoint = in.Entrypoint
@@ -93,7 +102,7 @@ func (s *ServiceService) Create(ctx context.Context, in CreateServiceInput) (*se
 	if err := svc.SetResources(in.Resources); err != nil {
 		return nil, err
 	}
-	if err := s.validateResourceCapacity(ctx, in.Resources); err != nil {
+	if err := s.validateResourceCapacity(ctx, in.Cluster, in.Resources); err != nil {
 		return nil, err
 	}
 
@@ -120,11 +129,15 @@ func (s *ServiceService) Create(ctx context.Context, in CreateServiceInput) (*se
 // best-effort: when the orchestrator is absent, unreachable, or reports no
 // capacity, the check is skipped (we cannot enforce a bound we cannot measure;
 // the domain still guarantees non-negative values and limit ≥ reservation).
-func (s *ServiceService) validateResourceCapacity(ctx context.Context, r service.Resources) error {
-	if s.orchestrator == nil {
+func (s *ServiceService) validateResourceCapacity(ctx context.Context, clusterID uuid.UUID, r service.Resources) error {
+	if s.registry == nil {
 		return nil
 	}
-	info, err := s.orchestrator.ClusterInfo(ctx)
+	orch, err := s.registry.For(ctx, clusterID)
+	if err != nil || orch == nil {
+		return nil // target unreachable: we cannot enforce a bound we cannot measure
+	}
+	info, err := orch.ClusterInfo(ctx)
 	if err != nil || info == nil || len(info.Nodes) == 0 {
 		return nil
 	}
@@ -205,7 +218,7 @@ func (s *ServiceService) Update(ctx context.Context, id uuid.UUID, in UpdateServ
 		if err := svc.SetResources(*in.Resources); err != nil {
 			return nil, err
 		}
-		if err := s.validateResourceCapacity(ctx, *in.Resources); err != nil {
+		if err := s.validateResourceCapacity(ctx, svc.ClusterID, *in.Resources); err != nil {
 			return nil, err
 		}
 		touched = true
@@ -248,7 +261,7 @@ func (s *ServiceService) SetResources(ctx context.Context, id uuid.UUID, r servi
 	if err := svc.SetResources(r); err != nil {
 		return nil, err
 	}
-	if err := s.validateResourceCapacity(ctx, r); err != nil {
+	if err := s.validateResourceCapacity(ctx, svc.ClusterID, r); err != nil {
 		return nil, err
 	}
 	if err := s.services.Update(ctx, svc); err != nil {
@@ -321,10 +334,14 @@ func (s *ServiceService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if svc.Status == service.StatusDeployed {
-		if s.orchestrator == nil {
+		if s.registry == nil {
 			return ErrServiceDeployed
 		}
-		if err := s.orchestrator.RemoveService(ctx, svc.SwarmServiceID); err != nil {
+		orch, err := s.registry.For(ctx, svc.ClusterID)
+		if err != nil || orch == nil {
+			return ErrServiceDeployed
+		}
+		if err := orch.RemoveService(ctx, svc.SwarmServiceID); err != nil {
 			return fmt.Errorf("remove swarm service: %w", err)
 		}
 	}

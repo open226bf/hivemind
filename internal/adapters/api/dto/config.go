@@ -9,6 +9,8 @@ type CreateConfigRequest struct {
 	TargetPath string `json:"target_path" example:"/etc/nginx/nginx.conf"`
 	Content    string `json:"content"     binding:"required"`
 	Comment    string `json:"comment"     example:"initial version"`
+	// Cluster is the target cluster id. Empty selects the default cluster.
+	Cluster string `json:"cluster"`
 }
 
 // AddConfigVersionRequest is the body for POST /configs/{id}/versions.
@@ -32,6 +34,7 @@ type AttachConfigRequest struct {
 // ConfigResponse exposes config metadata (no content).
 type ConfigResponse struct {
 	ID             string    `json:"id"`
+	ClusterID      string    `json:"cluster_id,omitempty"`
 	Name           string    `json:"name"`
 	TargetPath     string    `json:"target_path"`
 	CurrentVersion int       `json:"current_version"`

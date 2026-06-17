@@ -122,6 +122,7 @@ func (r *ConfigRepository) IsAttachedToService(ctx context.Context, id uuid.UUID
 func configToModel(c *config.Config) *configModel {
 	return &configModel{
 		ID:             c.ID.String(),
+		ClusterID:      clusterIDColumn(c.ClusterID),
 		Name:           c.Name,
 		TargetPath:     c.TargetPath,
 		CurrentVersion: c.CurrentVersion,
@@ -151,6 +152,7 @@ func configToDomain(m *configModel) *config.Config {
 	id, _ := uuid.Parse(m.ID)
 	return &config.Config{
 		ID:             id,
+		ClusterID:      parseClusterID(m.ClusterID),
 		Name:           m.Name,
 		TargetPath:     m.TargetPath,
 		CurrentVersion: m.CurrentVersion,

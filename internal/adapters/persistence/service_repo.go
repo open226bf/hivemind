@@ -391,6 +391,16 @@ func (r *ServiceRepository) CountServicesByHive(ctx context.Context, hiveID uuid
 	return count, nil
 }
 
+func (r *ServiceRepository) CountServicesByCluster(ctx context.Context, clusterID uuid.UUID) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&serviceModel{}).
+		Where("cluster_id = ?", clusterIDColumn(clusterID)).
+		Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("count services by cluster: %w", err)
+	}
+	return count, nil
+}
+
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 func serviceToModel(s *service.Service) *serviceModel {
@@ -401,6 +411,7 @@ func serviceToModel(s *service.Service) *serviceModel {
 	}
 	return &serviceModel{
 		ID:          s.ID.String(),
+		ClusterID:   clusterIDColumn(s.ClusterID),
 		HiveID:      hiveID,
 		Name:        s.Name,
 		Description: s.Description,
@@ -443,6 +454,7 @@ func serviceToDomain(m *serviceModel) *service.Service {
 	}
 	return &service.Service{
 		ID:          id,
+		ClusterID:   parseClusterID(m.ClusterID),
 		HiveID:      hiveID,
 		Name:        m.Name,
 		Description: m.Description,
