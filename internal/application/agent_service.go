@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -127,10 +128,28 @@ func (s *AgentService) InstallScript(ctx context.Context, token, serverURL strin
 			return "", err
 		}
 		s.invalidate(c.ID)
-		return renderMTLSInstall(s.image(), s.hubAddr, string(certPEM), string(keyPEM), string(s.certs.CertPEM())), nil
+		return renderMTLSInstall(s.image(), s.hubAddr, string(certPEM), string(keyPEM), string(s.certs.CertPEM()), secretRev(serial)), nil
 	}
 
 	return renderTokenInstall(s.image(), serverURL, token), nil
+}
+
+// secretRev derives a short, Docker-secret-name-safe revision from the cert
+// serial, so each rotation produces distinct secret names.
+func secretRev(serial string) string {
+	var b strings.Builder
+	for _, r := range serial {
+		if (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			b.WriteRune(r)
+		}
+		if b.Len() >= 16 {
+			break
+		}
+	}
+	if b.Len() == 0 {
+		return "v1"
+	}
+	return b.String()
 }
 
 // AuthorizeTunnel validates a tunnel client certificate: the CN is the cluster
@@ -287,7 +306,11 @@ func (s *AgentService) invalidate(id uuid.UUID) {
 // out of the box. Override AGENT_IMAGE to pin a version or use a private registry.
 const DefaultAgentImage = "open226/hivemind-agent:latest"
 
-func composeMTLS(image string) string {
+// composeMTLS renders the stack. Secrets are versioned (rev suffix) and mounted
+// at stable in-container paths via target:, so re-enrolling rotates the
+// certificate by deploying new secrets and updating the service (Docker secrets
+// are immutable and cannot be removed while in use).
+func composeMTLS(image, rev string) string {
 	return fmt.Sprintf(`version: "3.8"
 services:
   agent:
@@ -300,14 +323,20 @@ services:
       HIVEMIND_CLIENT_CERT_FILE: /run/secrets/hivemind_client_cert
       HIVEMIND_CLIENT_KEY_FILE: /run/secrets/hivemind_client_key
       HIVEMIND_CA_CERT_FILE: /run/secrets/hivemind_ca_cert
-    secrets: [hivemind_client_cert, hivemind_client_key, hivemind_ca_cert]
+    secrets:
+      - source: hivemind_client_cert_%s
+        target: hivemind_client_cert
+      - source: hivemind_client_key_%s
+        target: hivemind_client_key
+      - source: hivemind_ca_cert_%s
+        target: hivemind_ca_cert
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 secrets:
-  hivemind_client_cert: { external: true }
-  hivemind_client_key: { external: true }
-  hivemind_ca_cert: { external: true }
-`, image)
+  hivemind_client_cert_%s: { external: true }
+  hivemind_client_key_%s: { external: true }
+  hivemind_ca_cert_%s: { external: true }
+`, image, rev, rev, rev, rev, rev, rev)
 }
 
 func composeToken(image string) string {
@@ -333,19 +362,22 @@ func (s *AgentService) image() string {
 	return DefaultAgentImage
 }
 
-func renderMTLSInstall(image, hubAddr, certPEM, keyPEM, caPEM string) string {
+func renderMTLSInstall(image, hubAddr, certPEM, keyPEM, caPEM, rev string) string {
 	return fmt.Sprintf(`#!/bin/sh
 set -e
 echo "Installing Hivemind agent (mTLS)…"
-docker secret rm hivemind_client_cert hivemind_client_key hivemind_ca_cert 2>/dev/null || true
-printf '%%s' '%s' | docker secret create hivemind_client_cert - >/dev/null
-printf '%%s' '%s' | docker secret create hivemind_client_key  - >/dev/null
-printf '%%s' '%s' | docker secret create hivemind_ca_cert     - >/dev/null
+printf '%%s' '%s' | docker secret create hivemind_client_cert_%s - >/dev/null
+printf '%%s' '%s' | docker secret create hivemind_client_key_%s  - >/dev/null
+printf '%%s' '%s' | docker secret create hivemind_ca_cert_%s     - >/dev/null
 cat > /tmp/hivemind-agent.yml <<'YML'
 %sYML
 HIVEMIND_HUB_ADDR='%s' docker stack deploy -c /tmp/hivemind-agent.yml hivemind-agent
+# Prune now-unused previous secret revisions (best effort).
+for s in $(docker secret ls --format '{{.Name}}' | grep -E '^hivemind_(client_cert|client_key|ca_cert)_'); do
+  docker secret rm "$s" 2>/dev/null || true
+done
 echo "Done — the agent will dial Hivemind over mTLS."
-`, certPEM, keyPEM, caPEM, composeMTLS(image), hubAddr)
+`, certPEM, rev, keyPEM, rev, caPEM, rev, composeMTLS(image, rev), hubAddr)
 }
 
 func renderTokenInstall(image, serverURL, token string) string {
