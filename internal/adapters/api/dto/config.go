@@ -9,8 +9,6 @@ type CreateConfigRequest struct {
 	TargetPath string `json:"target_path" example:"/etc/nginx/nginx.conf"`
 	Content    string `json:"content"     binding:"required"`
 	Comment    string `json:"comment"     example:"initial version"`
-	// Cluster is the target cluster id. Empty selects the default cluster.
-	Cluster string `json:"cluster"`
 }
 
 // AddConfigVersionRequest is the body for POST /configs/{id}/versions.
