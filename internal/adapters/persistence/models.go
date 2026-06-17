@@ -79,11 +79,23 @@ type clusterModel struct {
 	AgentStatus         string      `gorm:"column:agent_status"`
 	AgentLastSeen       *time.Time  `gorm:"column:agent_last_seen"`
 	EnrollmentTokenHash string      `gorm:"column:enrollment_token_hash"`
+	AgentCertSerial     string      `gorm:"column:agent_cert_serial"`
 	CreatedAt           time.Time   `gorm:"column:created_at;autoCreateTime:false"`
 	UpdatedAt           time.Time   `gorm:"column:updated_at;autoUpdateTime:false"`
 }
 
 func (clusterModel) TableName() string { return "clusters" }
+
+// agentCAModel persists the single internal CA used to sign agent client certs
+// and the hub server cert. The private key is stored as AES-GCM ciphertext.
+type agentCAModel struct {
+	ID              string    `gorm:"primaryKey;column:id"` // always "ca"
+	CertPEM         string    `gorm:"type:text;column:cert_pem"`
+	EncryptedKeyPEM string    `gorm:"type:text;column:encrypted_key_pem"`
+	CreatedAt       time.Time `gorm:"column:created_at;autoCreateTime:false"`
+}
+
+func (agentCAModel) TableName() string { return "agent_ca" }
 
 // ─── User ─────────────────────────────────────────────────────────────────────
 

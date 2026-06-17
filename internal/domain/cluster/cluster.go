@@ -128,6 +128,10 @@ type Cluster struct {
 	AgentStatus         AgentStatus // liveness derived from heartbeats
 	AgentLastSeen       *time.Time
 	EnrollmentTokenHash string // sha256 hex of the one-time enrollment token; never the plaintext
+	// AgentCertSerial is the serial of the currently valid client certificate.
+	// Re-enrolling rotates it, which implicitly revokes the previous cert (the
+	// tunnel handler rejects a peer cert whose serial no longer matches).
+	AgentCertSerial string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -203,6 +207,7 @@ func (c *Cluster) UseDirectMode(endpoint string, tls TLS) {
 	c.AgentStatus = ""
 	c.AgentLastSeen = nil
 	c.EnrollmentTokenHash = ""
+	c.AgentCertSerial = ""
 	c.UpdatedAt = time.Now().UTC()
 }
 

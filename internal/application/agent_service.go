@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -12,12 +13,18 @@ import (
 	"github.com/open226bf/hivemind/pkg/domainerrors"
 )
 
+// clientCertTTL is how long an issued agent client certificate is valid.
+const clientCertTTL = 365 * 24 * time.Hour
+
 var (
 	// ErrInvalidEnrollment is returned when an agent presents a bad or expired
 	// enrollment token.
 	ErrInvalidEnrollment = errors.New("invalid or expired enrollment token")
 	// ErrAgentNotRegistered is returned when a heartbeat references an unknown agent.
 	ErrAgentNotRegistered = errors.New("agent is not registered")
+	// ErrCertRejected is returned when a tunnel client certificate does not match
+	// the cluster's current (non-revoked) certificate.
+	ErrCertRejected = errors.New("client certificate rejected")
 )
 
 // AgentService drives the agent handshake: an admin enrolls a cluster (issuing a
@@ -28,17 +35,26 @@ type AgentService struct {
 	clusters ports.ClusterRepository
 	presence ports.AgentPresence
 	registry ports.OrchestratorRegistry // optional; invalidated on mode/binding change
+	certs    ports.AgentCertIssuer      // optional; nil disables mTLS (dev/token mode)
+	hubAddr  string                     // advertised agent-hub address (mTLS endpoint)
 }
 
-func NewAgentService(clusters ports.ClusterRepository, presence ports.AgentPresence, registry ports.OrchestratorRegistry) *AgentService {
-	return &AgentService{clusters: clusters, presence: presence, registry: registry}
+func NewAgentService(clusters ports.ClusterRepository, presence ports.AgentPresence, registry ports.OrchestratorRegistry, certs ports.AgentCertIssuer, hubAddr string) *AgentService {
+	return &AgentService{clusters: clusters, presence: presence, registry: registry, certs: certs, hubAddr: hubAddr}
 }
 
-// Enrollment is the result of issuing an enrollment token (admin side).
+// Enrollment is the result of issuing an enrollment token (admin side). When the
+// CA is configured it also carries the client certificate material the agent
+// uses to authenticate the mTLS tunnel.
 type Enrollment struct {
 	ClusterID   uuid.UUID
 	ClusterName string
 	Token       string // plaintext, shown once
+	// mTLS material (empty when the CA is not configured — token/dev mode).
+	HubAddr       string
+	ClientCertPEM string
+	ClientKeyPEM  string
+	CACertPEM     string
 }
 
 // Enroll switches a cluster to agent mode (if needed) and issues a fresh
@@ -55,11 +71,52 @@ func (s *AgentService) Enroll(ctx context.Context, clusterID uuid.UUID) (*Enroll
 	if err != nil {
 		return nil, err
 	}
+
+	out := &Enrollment{ClusterID: c.ID, ClusterName: c.Name, Token: token}
+
+	// When the CA is configured, also issue a client certificate. The agent then
+	// authenticates the tunnel with mTLS; the cluster id is the certificate CN
+	// and the agent id, and the serial gates revocation.
+	if s.certs != nil {
+		certPEM, keyPEM, serial, err := s.certs.IssueClient(c.ID.String(), clientCertTTL)
+		if err != nil {
+			return nil, fmt.Errorf("issue client cert: %w", err)
+		}
+		c.AgentID = c.ID.String()
+		c.AgentCertSerial = serial
+		out.HubAddr = s.hubAddr
+		out.ClientCertPEM = string(certPEM)
+		out.ClientKeyPEM = string(keyPEM)
+		out.CACertPEM = string(s.certs.CertPEM())
+	}
+
 	if err := s.clusters.Update(ctx, c); err != nil {
 		return nil, err
 	}
 	s.invalidate(c.ID)
-	return &Enrollment{ClusterID: c.ID, ClusterName: c.Name, Token: token}, nil
+	return out, nil
+}
+
+// AuthorizeTunnel validates a tunnel client certificate: the CN is the cluster
+// id and the serial must match the cluster's current certificate (mismatch =
+// revoked / rotated). Returns the agent id to attach the session under, and
+// records presence.
+func (s *AgentService) AuthorizeTunnel(ctx context.Context, clusterID uuid.UUID, certSerial string, node ports.AgentNode) (string, error) {
+	c, err := s.clusters.FindByID(ctx, clusterID)
+	if err != nil {
+		return "", ErrCertRejected
+	}
+	if c.ConnectionMode != cluster.ModeAgent || c.AgentCertSerial == "" || c.AgentCertSerial != certSerial {
+		return "", ErrCertRejected
+	}
+	c.MarkAgentSeen()
+	if err := s.clusters.Update(ctx, c); err != nil {
+		return "", err
+	}
+	if c.AgentID != "" {
+		s.presence.MarkSeen(c.AgentID, node)
+	}
+	return c.AgentID, nil
 }
 
 // RegisterInput is what an agent presents on (re)connection.

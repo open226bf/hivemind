@@ -194,6 +194,7 @@ func (r *ClusterRepository) toModel(c *cluster.Cluster) (*clusterModel, error) {
 		AgentStatus:         string(c.AgentStatus),
 		AgentLastSeen:       c.AgentLastSeen,
 		EnrollmentTokenHash: c.EnrollmentTokenHash,
+		AgentCertSerial:     c.AgentCertSerial,
 		CreatedAt:           c.CreatedAt,
 		UpdatedAt:           c.UpdatedAt,
 	}, nil
@@ -231,6 +232,7 @@ func (r *ClusterRepository) toDomain(m *clusterModel) (*cluster.Cluster, error) 
 		AgentStatus:         cluster.AgentStatus(m.AgentStatus),
 		AgentLastSeen:       m.AgentLastSeen,
 		EnrollmentTokenHash: m.EnrollmentTokenHash,
+		AgentCertSerial:     m.AgentCertSerial,
 		CreatedAt:           m.CreatedAt,
 		UpdatedAt:           m.UpdatedAt,
 	}, nil

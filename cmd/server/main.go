@@ -22,9 +22,11 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -34,8 +36,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 
+	"github.com/open226bf/hivemind/internal/adapters/agentca"
 	"github.com/open226bf/hivemind/internal/adapters/agenthub"
 	"github.com/open226bf/hivemind/internal/adapters/api"
 	"github.com/open226bf/hivemind/internal/adapters/auth"
@@ -148,6 +152,15 @@ func main() {
 	hub := agenthub.New(0)
 	registry := buildRegistry(context.Background(), env, log, clusterRepo, hub)
 
+	// Internal CA: signs agent client certs (enrollment) and the hub server cert.
+	agentCA, err := persistence.NewAgentCARepository(db, cipher).LoadOrCreate(context.Background())
+	if err != nil {
+		log.Error("init agent CA", "err", err)
+		os.Exit(1)
+	}
+	// hubPublic is the mTLS address advertised to agents; the listener binds AGENT_HUB_ADDR.
+	hubPublic := os.Getenv("AGENT_HUB_PUBLIC_ADDR")
+
 	// ─── Use cases ──────────────────────────────────────────────────────────
 	authSvc := application.NewAuthService(userRepo, tokens, clock.System{})
 	userSvc := application.NewUserService(userRepo)
@@ -161,7 +174,7 @@ func main() {
 	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
 	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)
 	clusterSvc := application.NewClusterService(registry, clusterRepo, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
-	agentSvc := application.NewAgentService(clusterRepo, hub, registry)
+	agentSvc := application.NewAgentService(clusterRepo, hub, registry, agentCA, hubPublic)
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
@@ -173,6 +186,11 @@ func main() {
 		if created {
 			log.Info("bootstrapped initial admin account", "email", adminEmail)
 		}
+	}
+
+	// ─── Agent hub mTLS listener (opt-in) ────────────────────────────────────
+	if addr := os.Getenv("AGENT_HUB_ADDR"); addr != "" {
+		startAgentHub(addr, agentCA, agentSvc, hub, log)
 	}
 
 	// ─── HTTP server ────────────────────────────────────────────────────────
@@ -253,6 +271,90 @@ func buildRegistry(ctx context.Context, env string, log *slog.Logger, clusters p
 	_ = probe.Close()
 	log.Info("connected to Docker Swarm orchestrator")
 	return orchestrator.NewRegistry(clusters, hub)
+}
+
+// startAgentHub runs the mutual-TLS listener that agents dial out to. Client
+// certs are verified against the internal CA; the agent's identity is the cert
+// common name (cluster id) and the serial gates revocation. On /agent/connect
+// the connection is hijacked and handed to the hub as a reverse tunnel.
+func startAgentHub(addr string, ca *agentca.CA, svc *application.AgentService, hub *agenthub.Hub, log *slog.Logger) {
+	hosts := []string{"localhost", "127.0.0.1"}
+	if h := os.Getenv("AGENT_HUB_HOSTNAME"); h != "" {
+		hosts = append(hosts, h)
+	}
+	serverCert, err := ca.IssueServerTLS(hosts, 365*24*time.Hour)
+	if err != nil {
+		log.Error("agent hub: issue server cert", "err", err)
+		os.Exit(1)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/agent/connect", func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+			http.Error(w, "client certificate required", http.StatusUnauthorized)
+			return
+		}
+		peer := r.TLS.PeerCertificates[0]
+		clusterID, err := uuid.Parse(peer.Subject.CommonName)
+		if err != nil {
+			http.Error(w, "bad certificate subject", http.StatusUnauthorized)
+			return
+		}
+		agentID, err := svc.AuthorizeTunnel(r.Context(), clusterID, peer.SerialNumber.String(), agentNodeFromQuery(r))
+		if err != nil {
+			http.Error(w, "certificate rejected", http.StatusUnauthorized)
+			return
+		}
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "hijack unsupported", http.StatusInternalServerError)
+			return
+		}
+		conn, _, err := hj.Hijack()
+		if err != nil {
+			return
+		}
+		if _, err := io.WriteString(conn, "HTTP/1.1 101 Switching Protocols\r\nUpgrade: hivemind-tunnel\r\nConnection: Upgrade\r\n\r\n"); err != nil {
+			_ = conn.Close()
+			return
+		}
+		log.Info("agent tunnel attached (mTLS)", "agent_id", agentID)
+		if err := hub.Attach(agentID, conn); err != nil {
+			log.Warn("agent tunnel ended", "agent_id", agentID, "err", err)
+		}
+		_ = conn.Close()
+	})
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{serverCert},
+			ClientCAs:    ca.Pool(),
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+			MinVersion:   tls.VersionTLS12,
+			NextProtos:   []string{"http/1.1"}, // disable h2 so we can hijack
+		},
+	}
+	go func() {
+		log.Info("agent hub (mTLS) listening", "addr", addr)
+		if err := srv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("agent hub listener error", "err", err)
+		}
+	}()
+}
+
+// agentNodeFromQuery reads the node identity the agent passes on the connect URL.
+func agentNodeFromQuery(r *http.Request) ports.AgentNode {
+	q := r.URL.Query()
+	return ports.AgentNode{
+		NodeID:        q.Get("node_id"),
+		Hostname:      q.Get("hostname"),
+		Role:          q.Get("role"),
+		IsManager:     q.Get("is_manager") == "true",
+		IsLeader:      q.Get("is_leader") == "true",
+		EngineVersion: q.Get("engine_version"),
+	}
 }
 
 // buildCipher selects the at-rest encryption strategy for sensitive values
