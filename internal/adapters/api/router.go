@@ -39,6 +39,9 @@ type Dependencies struct {
 	AgentHub    *agenthub.Hub
 	Registry    ports.OrchestratorRegistry
 	AuditLog    ports.AuditLogRepository
+	// BaseURL is the canonical external URL (HIVEMIND_BASE_URL) used to render
+	// agent install/deploy commands.
+	BaseURL string
 }
 
 // NewRouter builds the Gin engine with health endpoints and the /api/v1 group.
@@ -87,7 +90,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
 	handler.NewSnapshotHandler(deps.Snapshots).Register(protected)
 	handler.NewClusterHandler(deps.Cluster).Register(protected)
-	handler.NewAgentHandler(deps.Agent, deps.AgentHub).Register(public, protected)
+	handler.NewAgentHandler(deps.Agent, deps.AgentHub, deps.BaseURL).Register(public, protected)
 
 	// Interactive exec (web terminal). Authenticated via a `token` query
 	// parameter since browsers can't set headers on a WebSocket. The Admin-only

@@ -55,6 +55,8 @@ type EnrollClusterResponse struct {
 	ClusterName string `json:"cluster_name"`
 	Token       string `json:"token"`
 	Command     string `json:"command"`
+	// InstallCommand is the one-liner to paste on a manager (curl … | sh).
+	InstallCommand string `json:"install_command"`
 	// mTLS material (empty in token/dev mode).
 	HubAddr    string `json:"hub_addr,omitempty"`
 	ClientCert string `json:"client_cert,omitempty"`

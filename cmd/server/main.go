@@ -225,6 +225,7 @@ func main() {
 		AgentHub:    hub,
 		Registry:    registry,
 		AuditLog:    auditRepo,
+		BaseURL:     os.Getenv("HIVEMIND_BASE_URL"),
 	})
 
 	port := os.Getenv("PORT")
