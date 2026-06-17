@@ -44,6 +44,7 @@ func Migrate(db *gorm.DB) error {
 		&secretModel{}:  "idx_secrets_name",
 		&configModel{}:  "idx_configs_name",
 		&volumeModel{}:  "idx_volumes_name",
+		&hiveModel{}:    "idx_hives_name",
 	}
 	for model, idx := range legacyNameIndexes {
 		if db.Migrator().HasIndex(model, idx) {
@@ -60,7 +61,7 @@ func Migrate(db *gorm.DB) error {
 // and the rows resolve explicitly instead of relying on the NULL→default
 // fallback. Idempotent: rows already scoped to a cluster are untouched.
 func BackfillClusterID(db *gorm.DB, defaultClusterID string) error {
-	tables := []string{"services", "networks", "secrets", "configs", "volumes"}
+	tables := []string{"services", "networks", "secrets", "configs", "volumes", "hives"}
 	for _, t := range tables {
 		if err := db.Exec(
 			"UPDATE "+t+" SET cluster_id = ? WHERE cluster_id IS NULL", defaultClusterID,

@@ -28,6 +28,7 @@ type AssignHiveRequest struct {
 
 type HiveResponse struct {
 	ID           string    `json:"id"`
+	ClusterID    string    `json:"cluster_id,omitempty"`
 	Name         string    `json:"name"`
 	Description  string    `json:"description"`
 	Color        string    `json:"color"`

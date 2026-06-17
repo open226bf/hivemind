@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/orange/hivemind/internal/adapters/api/dto"
+	"github.com/orange/hivemind/internal/adapters/api/middleware"
 	"github.com/orange/hivemind/internal/ports"
 	"github.com/orange/hivemind/pkg/pagination"
 )
@@ -43,29 +44,18 @@ func clusterIDString(id uuid.UUID) string {
 	return id.String()
 }
 
-// queryCluster reads the optional `cluster_id` query parameter for list
-// filtering. Absent or malformed → zero UUID (no filter / all clusters).
-func queryCluster(c *gin.Context) uuid.UUID {
-	id, err := uuid.Parse(c.Query("cluster_id"))
-	if err != nil {
-		return uuid.Nil
+// currentCluster returns the active cluster resolved by middleware.ClusterContext
+// (from the X-Hivemind-Cluster header, falling back to the `cluster_id` query).
+// It is the single source of cluster scope for both list and create handlers, so
+// the active cluster selected in the UI drives every request without per-call
+// plumbing. Absent or malformed → zero UUID (default cluster / no filter).
+func currentCluster(c *gin.Context) uuid.UUID {
+	if v, ok := c.Get(middleware.ClusterContextKey); ok {
+		if id, ok := v.(uuid.UUID); ok {
+			return id
+		}
 	}
-	return id
-}
-
-// parseOptionalCluster parses an optional cluster id supplied in a request body
-// field. An empty value maps to the zero UUID (the default cluster). It writes a
-// 400 and returns false on a malformed id.
-func parseOptionalCluster(c *gin.Context, raw string) (uuid.UUID, bool) {
-	if raw == "" {
-		return uuid.Nil, true
-	}
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid cluster: must be a valid UUID")
-		return uuid.Nil, false
-	}
-	return id, true
+	return uuid.Nil
 }
 
 // parsePage reads the `page` and `size` query parameters and returns a
@@ -86,17 +76,7 @@ func resolveOrchestrator(c *gin.Context, registry ports.OrchestratorRegistry) (p
 		return nil, false
 	}
 
-	clusterID := uuid.Nil
-	if raw := c.Query("cluster_id"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid cluster_id: must be a valid UUID")
-			return nil, false
-		}
-		clusterID = id
-	}
-
-	orch, err := registry.For(c.Request.Context(), clusterID)
+	orch, err := registry.For(c.Request.Context(), currentCluster(c))
 	if err != nil || orch == nil {
 		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, "cluster orchestrator unavailable")
 		return nil, false

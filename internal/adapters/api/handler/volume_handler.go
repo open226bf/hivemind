@@ -59,7 +59,7 @@ func (h *VolumeHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/volumes [get]
 func (h *VolumeHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), queryCluster(c), page)
+	items, total, err := h.svc.List(c.Request.Context(), currentCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list volumes")
 		return
@@ -98,10 +98,7 @@ func (h *VolumeHandler) Create(c *gin.Context) {
 		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
 		return
 	}
-	clusterID, ok := parseOptionalCluster(c, req.Cluster)
-	if !ok {
-		return
-	}
+	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
 	v, err := h.svc.Create(c.Request.Context(), application.CreateVolumeInput{Name: req.Name, Driver: req.Driver, Cluster: clusterID})
 	if err != nil {
 		h.writeVolumeError(c, err)

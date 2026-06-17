@@ -176,7 +176,8 @@ func (envVarModel) TableName() string { return "env_vars" }
 
 type hiveModel struct {
 	ID          string    `gorm:"type:uuid;primaryKey;column:id"`
-	Name        string    `gorm:"uniqueIndex;not null;column:name"`
+	ClusterID   *string   `gorm:"type:uuid;uniqueIndex:idx_hives_cluster_name,priority:1;column:cluster_id"`
+	Name        string    `gorm:"uniqueIndex:idx_hives_cluster_name,priority:2;not null;column:name"`
 	Description string    `gorm:"column:description"`
 	Color       string    `gorm:"column:color"`
 	CreatedAt   time.Time `gorm:"column:created_at;autoCreateTime:false"`

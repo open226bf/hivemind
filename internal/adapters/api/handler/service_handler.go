@@ -75,7 +75,7 @@ func (h *ServiceHandler) List(c *gin.Context) {
 		}
 		filter.HiveID = &id
 	}
-	if cid := queryCluster(c); cid != uuid.Nil {
+	if cid := currentCluster(c); cid != uuid.Nil {
 		filter.ClusterID = &cid
 	}
 
@@ -130,15 +130,7 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 		hiveID = id
 	}
 
-	clusterID := uuid.Nil
-	if req.Cluster != "" {
-		id, err := uuid.Parse(req.Cluster)
-		if err != nil {
-			dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid cluster_id")
-			return
-		}
-		clusterID = id
-	}
+	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
 
 	in := application.CreateServiceInput{
 		Name:        req.Name,

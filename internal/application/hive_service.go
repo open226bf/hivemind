@@ -34,8 +34,8 @@ type HiveSummary struct {
 	ServiceCount int64
 }
 
-func (s *HiveService) Create(ctx context.Context, in SaveHiveInput) (*hive.Hive, error) {
-	h, err := hive.New(in.Name, in.Description, in.Color)
+func (s *HiveService) Create(ctx context.Context, clusterID uuid.UUID, in SaveHiveInput) (*hive.Hive, error) {
+	h, err := hive.New(clusterID, in.Name, in.Description, in.Color)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +49,9 @@ func (s *HiveService) Get(ctx context.Context, id uuid.UUID) (*hive.Hive, error)
 	return s.hives.FindByID(ctx, id)
 }
 
-// List returns every hive together with its service count.
-func (s *HiveService) List(ctx context.Context, page pagination.Page) ([]HiveSummary, int64, error) {
-	hives, total, err := s.hives.List(ctx, page)
+// List returns every hive in the cluster together with its service count.
+func (s *HiveService) List(ctx context.Context, clusterID uuid.UUID, page pagination.Page) ([]HiveSummary, int64, error) {
+	hives, total, err := s.hives.List(ctx, clusterID, page)
 	if err != nil {
 		return nil, 0, err
 	}

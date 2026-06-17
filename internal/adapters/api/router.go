@@ -77,6 +77,9 @@ func NewRouter(deps Dependencies) *gin.Engine {
 		protected.Use(middleware.AuditForbidden(deps.AuditLog))
 	}
 	protected.Use(middleware.Auth(deps.Tokens))
+	// Resolve the active cluster (X-Hivemind-Cluster header) once per request so
+	// every handler scopes reads and writes to the cluster selected in the UI.
+	protected.Use(middleware.ClusterContext())
 
 	handler.NewAuthHandler(deps.Auth).Register(public, protected)
 	handler.NewUserHandler(deps.Users).Register(protected)
