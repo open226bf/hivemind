@@ -87,6 +87,14 @@ type Orchestrator interface {
 	ClusterInfo(ctx context.Context) (*ClusterInfo, error)
 }
 
+// AgentCertIssuer signs client certificates for enrolled agents (their cluster
+// id is the common name) and exposes the CA certificate the agent needs to trust
+// the hub. Backed by the internal agent CA.
+type AgentCertIssuer interface {
+	IssueClient(commonName string, ttl time.Duration) (certPEM, keyPEM []byte, serial string, err error)
+	CertPEM() []byte // the CA certificate (safe to hand to the agent)
+}
+
 // AgentHub manages the reverse-tunnel sessions opened by Hivemind agents (the
 // "agent" connection mode). An agent deployed on a cluster dials out to the hub,
 // so the cluster needs no inbound exposure. The registry uses the hub to obtain

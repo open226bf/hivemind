@@ -11,6 +11,7 @@ import (
 func Migrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		&clusterModel{},
+		&agentCAModel{},
 		&userModel{},
 		&hiveModel{},
 		&serviceModel{},

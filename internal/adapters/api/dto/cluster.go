@@ -47,12 +47,19 @@ type ClusterResponse struct {
 }
 
 // EnrollClusterResponse returns the one-time enrollment token plus a ready-to-run
-// deploy command for the agent stack. The token is shown only once.
+// deploy command for the agent stack. The token and TLS material are shown only
+// once. When the CA is configured, the mTLS fields carry the agent client
+// certificate (the production path).
 type EnrollClusterResponse struct {
 	ClusterID   string `json:"cluster_id"`
 	ClusterName string `json:"cluster_name"`
 	Token       string `json:"token"`
 	Command     string `json:"command"`
+	// mTLS material (empty in token/dev mode).
+	HubAddr    string `json:"hub_addr,omitempty"`
+	ClientCert string `json:"client_cert,omitempty"`
+	ClientKey  string `json:"client_key,omitempty"`
+	CACert     string `json:"ca_cert,omitempty"`
 }
 
 // ─── Agent handshake (agent-facing) ───────────────────────────────────────────

@@ -29,7 +29,7 @@ func newAgentSvc(t *testing.T) (*application.AgentService, *fakeClusterRepo, *fa
 	require.NoError(t, err)
 	require.NoError(t, clusters.Save(context.Background(), c))
 	presence := newFakePresence()
-	return application.NewAgentService(clusters, presence, nil), clusters, presence, c
+	return application.NewAgentService(clusters, presence, nil, nil, ""), clusters, presence, c
 }
 
 func TestAgentEnrollThenRegisterConsumesToken(t *testing.T) {

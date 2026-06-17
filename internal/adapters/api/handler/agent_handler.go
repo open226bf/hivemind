@@ -113,6 +113,10 @@ func (h *AgentHandler) Enroll(c *gin.Context) {
 		ClusterName: enr.ClusterName,
 		Token:       enr.Token,
 		Command:     deployCommand(c, enr.Token),
+		HubAddr:     enr.HubAddr,
+		ClientCert:  enr.ClientCertPEM,
+		ClientKey:   enr.ClientKeyPEM,
+		CACert:      enr.CACertPEM,
 	})
 }
 
