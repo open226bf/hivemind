@@ -173,8 +173,20 @@ func main() {
 	templateSvc := application.NewTemplateService(templateRepo, serviceSvc, networkSvc)
 	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
 	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)
-	clusterSvc := application.NewClusterService(registry, clusterRepo, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
+	clusterSvc := application.NewClusterService(registry, clusterRepo, hub, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
 	agentSvc := application.NewAgentService(clusterRepo, hub, registry, agentCA, hubPublic)
+
+	// Periodically reconcile agent presence so cluster status flips to offline
+	// when a tunnel drops (and back to online when it returns).
+	go func() {
+		t := time.NewTicker(15 * time.Second)
+		defer t.Stop()
+		for range t.C {
+			if err := agentSvc.ReconcilePresence(context.Background()); err != nil {
+				log.Warn("reconcile agent presence", "err", err)
+			}
+		}
+	}()
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {

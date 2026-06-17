@@ -11,6 +11,7 @@ import (
 	"github.com/orange/hivemind/internal/domain/cluster"
 	"github.com/orange/hivemind/internal/ports"
 	"github.com/orange/hivemind/pkg/domainerrors"
+	"github.com/orange/hivemind/pkg/pagination"
 )
 
 // clientCertTTL is how long an issued agent client certificate is valid.
@@ -200,6 +201,34 @@ func (s *AgentService) Register(ctx context.Context, in RegisterInput) (*Registr
 	agentID := uuid.NewString()
 	c.BindAgent(agentID)
 	return s.bindSeen(ctx, c, agentID, in.Node, true)
+}
+
+// ReconcilePresence aligns each agent cluster's persisted status with the live
+// presence (live tunnel or fresh heartbeat). Run periodically so a cluster flips
+// to "offline" when its agent drops, and back to "online" when it returns.
+func (s *AgentService) ReconcilePresence(ctx context.Context) error {
+	clusters, _, err := s.clusters.List(ctx, pagination.Page{Number: 1, Size: 1000})
+	if err != nil {
+		return err
+	}
+	for _, c := range clusters {
+		if c.ConnectionMode != cluster.ModeAgent || c.AgentID == "" {
+			continue
+		}
+		online := s.presence.Online(c.AgentID)
+		switch {
+		case online && c.AgentStatus != cluster.AgentOnline:
+			c.MarkAgentSeen()
+		case !online && c.AgentStatus == cluster.AgentOnline:
+			c.MarkAgentOffline()
+		default:
+			continue
+		}
+		if err := s.clusters.Update(ctx, c); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Bound reports whether an agent id maps to an enrolled cluster — used to

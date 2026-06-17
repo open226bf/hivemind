@@ -162,6 +162,19 @@ func (h *Hub) Online(agentID string) bool {
 	return ok && time.Since(p.LastSeen) <= h.offlineAfter
 }
 
+// ConnectedNodeIDs returns the Swarm node ids with a live tunnel for an agent.
+func (h *Hub) ConnectedNodeIDs(agentID string) map[string]bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := make(map[string]bool)
+	for nodeID, ns := range h.sessions[agentID] {
+		if !ns.session.IsClosed() && nodeID != "" {
+			out[nodeID] = true
+		}
+	}
+	return out
+}
+
 // Presence returns the last reported node for an agent.
 func (h *Hub) Presence(agentID string) (NodePresence, bool) {
 	h.mu.RLock()

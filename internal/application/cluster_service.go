@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/orange/hivemind/internal/domain/cluster"
 	"github.com/orange/hivemind/internal/domain/deployment"
 	"github.com/orange/hivemind/internal/domain/service"
 	"github.com/orange/hivemind/internal/ports"
@@ -17,6 +18,7 @@ import (
 type ClusterService struct {
 	registry    ports.OrchestratorRegistry
 	clusters    ports.ClusterRepository
+	agentHub    ports.AgentHub // optional; enriches per-node tunnel status for agent clusters
 	services    ports.ServiceRepository
 	deployments ports.DeploymentRepository
 	networks    ports.NetworkRepository
@@ -27,6 +29,7 @@ type ClusterService struct {
 func NewClusterService(
 	registry ports.OrchestratorRegistry,
 	clusters ports.ClusterRepository,
+	agentHub ports.AgentHub,
 	services ports.ServiceRepository,
 	deployments ports.DeploymentRepository,
 	networks ports.NetworkRepository,
@@ -36,6 +39,7 @@ func NewClusterService(
 	return &ClusterService{
 		registry:    registry,
 		clusters:    clusters,
+		agentHub:    agentHub,
 		services:    services,
 		deployments: deployments,
 		networks:    networks,
@@ -100,12 +104,33 @@ func (s *ClusterService) Overview(ctx context.Context) (*Overview, error) {
 // OverviewForCluster is the dashboard snapshot scoped to a specific cluster's
 // node health. The catalog and activity counts remain platform-wide.
 func (s *ClusterService) OverviewForCluster(ctx context.Context, clusterID uuid.UUID) (*Overview, error) {
-	return s.overview(ctx, func(ctx context.Context) (ports.Orchestrator, error) {
+	ov, err := s.overview(ctx, func(ctx context.Context) (ports.Orchestrator, error) {
 		if s.registry == nil {
 			return nil, ErrOrchestratorUnavailable
 		}
 		return s.registry.For(ctx, clusterID)
 	})
+	if err != nil {
+		return nil, err
+	}
+	s.markAgentNodes(ctx, clusterID, ov)
+	return ov, nil
+}
+
+// markAgentNodes flags, for an agent-mode cluster, which nodes currently have a
+// live agent tunnel (matched by Swarm node id). No-op otherwise.
+func (s *ClusterService) markAgentNodes(ctx context.Context, clusterID uuid.UUID, ov *Overview) {
+	if s.agentHub == nil || len(ov.Nodes) == 0 {
+		return
+	}
+	c, err := s.clusters.FindByID(ctx, clusterID)
+	if err != nil || c.ConnectionMode != cluster.ModeAgent || c.AgentID == "" {
+		return
+	}
+	connected := s.agentHub.ConnectedNodeIDs(c.AgentID)
+	for i := range ov.Nodes {
+		ov.Nodes[i].AgentConnected = connected[ov.Nodes[i].ID]
+	}
 }
 
 func (s *ClusterService) defaultOrchestrator(ctx context.Context) (ports.Orchestrator, error) {

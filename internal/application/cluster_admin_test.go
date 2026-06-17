@@ -95,7 +95,7 @@ func (r *fakeClusterRepo) ClearDefault(_ context.Context) error {
 
 func newClusterSvc(clusters *fakeClusterRepo, services *fakeServiceRepo) *application.ClusterService {
 	reg := orchestrator.NewStaticRegistry(orchestrator.NewStubOrchestrator())
-	return application.NewClusterService(reg, clusters, services,
+	return application.NewClusterService(reg, clusters, nil, services,
 		newFakeDeploymentRepo(), newFakeNetworkRepo(), newFakeSecretRepo(), newFakeConfigRepo())
 }
 
