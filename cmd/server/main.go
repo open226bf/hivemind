@@ -175,7 +175,7 @@ func main() {
 	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
 	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)
 	clusterSvc := application.NewClusterService(registry, clusterRepo, hub, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
-	agentSvc := application.NewAgentService(clusterRepo, hub, registry, agentCA, hubPublic)
+	agentSvc := application.NewAgentService(clusterRepo, hub, registry, agentCA, hubPublic, os.Getenv("AGENT_IMAGE"))
 
 	// Periodically reconcile agent presence so cluster status flips to offline
 	// when a tunnel drops (and back to online when it returns).
