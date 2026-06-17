@@ -152,6 +152,7 @@ func (r *ClusterRepository) toModel(c *cluster.Cluster) (*clusterModel, error) {
 		ID:                  c.ID.String(),
 		Name:                c.Name,
 		Type:                string(c.Type),
+		ConnectionMode:      string(c.ConnectionMode),
 		Endpoint:            c.Endpoint,
 		IsDefault:           c.IsDefault,
 		Status:              string(c.Status),
@@ -159,6 +160,10 @@ func (r *ClusterRepository) toModel(c *cluster.Cluster) (*clusterModel, error) {
 		EncryptedCACert:     ca,
 		EncryptedClientCert: crt,
 		EncryptedClientKey:  key,
+		AgentID:             c.AgentID,
+		AgentStatus:         string(c.AgentStatus),
+		AgentLastSeen:       c.AgentLastSeen,
+		EnrollmentTokenHash: c.EnrollmentTokenHash,
 		CreatedAt:           c.CreatedAt,
 		UpdatedAt:           c.UpdatedAt,
 	}, nil
@@ -178,17 +183,26 @@ func (r *ClusterRepository) toDomain(m *clusterModel) (*cluster.Cluster, error) 
 	if err != nil {
 		return nil, fmt.Errorf("decrypt client key: %w", err)
 	}
+	mode := cluster.ConnectionMode(m.ConnectionMode)
+	if mode == "" {
+		mode = cluster.ModeDirect // legacy rows predate the column
+	}
 	return &cluster.Cluster{
-		ID:        id,
-		Name:      m.Name,
-		Type:      cluster.Type(m.Type),
-		Endpoint:  m.Endpoint,
-		IsDefault: m.IsDefault,
-		Status:    cluster.Status(m.Status),
-		Labels:    labelsToMap(m.Labels),
-		TLS:       cluster.TLS{CACert: ca, ClientCert: crt, ClientKey: key},
-		CreatedAt: m.CreatedAt,
-		UpdatedAt: m.UpdatedAt,
+		ID:                  id,
+		Name:                m.Name,
+		Type:                cluster.Type(m.Type),
+		ConnectionMode:      mode,
+		Endpoint:            m.Endpoint,
+		IsDefault:           m.IsDefault,
+		Status:              cluster.Status(m.Status),
+		Labels:              labelsToMap(m.Labels),
+		TLS:                 cluster.TLS{CACert: ca, ClientCert: crt, ClientKey: key},
+		AgentID:             m.AgentID,
+		AgentStatus:         cluster.AgentStatus(m.AgentStatus),
+		AgentLastSeen:       m.AgentLastSeen,
+		EnrollmentTokenHash: m.EnrollmentTokenHash,
+		CreatedAt:           m.CreatedAt,
+		UpdatedAt:           m.UpdatedAt,
 	}, nil
 }
 

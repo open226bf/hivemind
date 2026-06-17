@@ -67,6 +67,7 @@ type clusterModel struct {
 	ID                  string      `gorm:"type:uuid;primaryKey;column:id"`
 	Name                string      `gorm:"uniqueIndex;not null;column:name"`
 	Type                string      `gorm:"not null;column:type"`
+	ConnectionMode      string      `gorm:"column:connection_mode;default:direct"`
 	Endpoint            string      `gorm:"column:endpoint"`
 	IsDefault           bool        `gorm:"index;column:is_default"`
 	Status              string      `gorm:"column:status"`
@@ -74,6 +75,10 @@ type clusterModel struct {
 	EncryptedCACert     string      `gorm:"type:text;column:encrypted_ca_cert"`
 	EncryptedClientCert string      `gorm:"type:text;column:encrypted_client_cert"`
 	EncryptedClientKey  string      `gorm:"type:text;column:encrypted_client_key"`
+	AgentID             string      `gorm:"column:agent_id"`
+	AgentStatus         string      `gorm:"column:agent_status"`
+	AgentLastSeen       *time.Time  `gorm:"column:agent_last_seen"`
+	EnrollmentTokenHash string      `gorm:"column:enrollment_token_hash"`
 	CreatedAt           time.Time   `gorm:"column:created_at;autoCreateTime:false"`
 	UpdatedAt           time.Time   `gorm:"column:updated_at;autoUpdateTime:false"`
 }

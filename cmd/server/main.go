@@ -247,7 +247,9 @@ func buildRegistry(ctx context.Context, env string, log *slog.Logger, clusters p
 	}
 	_ = probe.Close()
 	log.Info("connected to Docker Swarm orchestrator")
-	return orchestrator.NewRegistry(clusters)
+	// hub is nil for now: agent-mode clusters resolve to an explicit error until
+	// the agent hub is wired; direct-mode clusters are unaffected.
+	return orchestrator.NewRegistry(clusters, nil)
 }
 
 // buildCipher selects the at-rest encryption strategy for sensitive values
