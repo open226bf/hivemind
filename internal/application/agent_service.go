@@ -77,10 +77,10 @@ func (s *AgentService) Enroll(ctx context.Context, clusterID uuid.UUID) (*Enroll
 
 	out := &Enrollment{ClusterID: c.ID, ClusterName: c.Name, Token: token}
 
-	// When the CA is configured, also issue a client certificate. The agent then
-	// authenticates the tunnel with mTLS; the cluster id is the certificate CN
-	// and the agent id, and the serial gates revocation.
-	if s.certs != nil {
+	// Issue a client certificate only when the mTLS hub is actually reachable
+	// (CA present AND an advertised hub address). Otherwise the agent would get
+	// an empty HIVEMIND_HUB_ADDR and fail — fall back to token mode instead.
+	if s.mtlsEnabled() {
 		certPEM, keyPEM, serial, err := s.certs.IssueClient(c.ID.String(), clientCertTTL)
 		if err != nil {
 			return nil, fmt.Errorf("issue client cert: %w", err)
@@ -117,7 +117,7 @@ func (s *AgentService) InstallScript(ctx context.Context, token, serverURL strin
 		return "", ErrInvalidEnrollment
 	}
 
-	if s.certs != nil {
+	if s.mtlsEnabled() {
 		certPEM, keyPEM, serial, err := s.certs.IssueClient(c.ID.String(), clientCertTTL)
 		if err != nil {
 			return "", fmt.Errorf("issue client cert: %w", err)
@@ -132,6 +132,12 @@ func (s *AgentService) InstallScript(ctx context.Context, token, serverURL strin
 	}
 
 	return renderTokenInstall(s.image(), serverURL, token), nil
+}
+
+// mtlsEnabled reports whether mutual-TLS agent enrollment is usable: a CA to
+// sign client certs AND an advertised hub address for the agent to dial.
+func (s *AgentService) mtlsEnabled() bool {
+	return s.certs != nil && s.hubAddr != ""
 }
 
 // secretRev derives a short, Docker-secret-name-safe revision from the cert
