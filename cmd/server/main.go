@@ -300,7 +300,8 @@ func startAgentHub(addr string, ca *agentca.CA, svc *application.AgentService, h
 			http.Error(w, "bad certificate subject", http.StatusUnauthorized)
 			return
 		}
-		agentID, err := svc.AuthorizeTunnel(r.Context(), clusterID, peer.SerialNumber.String(), agentNodeFromQuery(r))
+		node := agentNodeFromQuery(r)
+		agentID, err := svc.AuthorizeTunnel(r.Context(), clusterID, peer.SerialNumber.String(), node)
 		if err != nil {
 			http.Error(w, "certificate rejected", http.StatusUnauthorized)
 			return
@@ -318,8 +319,8 @@ func startAgentHub(addr string, ca *agentca.CA, svc *application.AgentService, h
 			_ = conn.Close()
 			return
 		}
-		log.Info("agent tunnel attached (mTLS)", "agent_id", agentID)
-		if err := hub.Attach(agentID, conn); err != nil {
+		log.Info("agent tunnel attached (mTLS)", "agent_id", agentID, "node", node.NodeID, "role", node.Role)
+		if err := hub.Attach(agentID, node.NodeID, node, conn); err != nil {
 			log.Warn("agent tunnel ended", "agent_id", agentID, "err", err)
 		}
 		_ = conn.Close()
