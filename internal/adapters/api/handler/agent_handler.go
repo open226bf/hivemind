@@ -122,7 +122,7 @@ func (h *AgentHandler) Enroll(c *gin.Context) {
 		ClusterID:      enr.ClusterID.String(),
 		ClusterName:    enr.ClusterName,
 		Token:          enr.Token,
-		Command:        h.deployCommand(c, enr.Token),
+		Command:        h.deployCommand(c, enr.Token, enr.AgentID),
 		InstallCommand: h.installCommand(c, enr.Token),
 		HubAddr:        enr.HubAddr,
 		ClientCert:     enr.ClientCertPEM,
@@ -221,10 +221,10 @@ func toAgentNode(n dto.AgentNodeDTO) ports.AgentNode {
 // deployCommand renders the one-liner to deploy the agent stack on the target
 // cluster. The server URL comes from AGENT_PUBLIC_URL, falling back to the
 // request's scheme+host.
-func (h *AgentHandler) deployCommand(c *gin.Context, token string) string {
+func (h *AgentHandler) deployCommand(c *gin.Context, token, agentID string) string {
 	return fmt.Sprintf(
-		"HIVEMIND_SERVER=%s HIVEMIND_ENROLL_TOKEN=%s docker stack deploy -c hivemind-agent.yml hivemind-agent",
-		h.serverBaseURL(c), token,
+		"HIVEMIND_SERVER=%s HIVEMIND_ENROLL_TOKEN=%s HIVEMIND_AGENT_ID=%s docker stack deploy -c hivemind-agent.yml hivemind-agent",
+		h.serverBaseURL(c), token, agentID,
 	)
 }
 

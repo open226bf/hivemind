@@ -67,7 +67,7 @@ func TestGenerateEnrollment_RequiresAgentMode(t *testing.T) {
 	assert.ErrorIs(t, err, cluster.ErrNotAgentMode)
 }
 
-func TestEnrollmentMatchesThenBindConsumes(t *testing.T) {
+func TestEnrollmentMatchesAndBindKeepsToken(t *testing.T) {
 	c, _ := cluster.New("edge", cluster.TypeSwarm, "")
 	c.UseAgentMode()
 
@@ -87,8 +87,10 @@ func TestEnrollmentMatchesThenBindConsumes(t *testing.T) {
 	c.BindAgent("agent-123")
 	assert.Equal(t, "agent-123", c.AgentID)
 	assert.Equal(t, cluster.AgentOnline, c.AgentStatus)
-	assert.Empty(t, c.EnrollmentTokenHash, "bind must consume the one-time token")
+	assert.NotEmpty(t, c.EnrollmentTokenHash, "bind keeps the reusable token")
 
-	_, err = c.MatchEnrollment(token)
-	assert.ErrorIs(t, err, cluster.ErrNoEnrollment)
+	// The token stays valid (reusable): another node / a restart can re-register.
+	ok, err = c.MatchEnrollment(token)
+	require.NoError(t, err)
+	assert.True(t, ok)
 }
