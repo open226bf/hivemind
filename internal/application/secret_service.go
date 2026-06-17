@@ -29,6 +29,8 @@ type CreateSecretInput struct {
 	TargetPath string
 	Value      []byte
 	CreatedBy  uuid.UUID
+	// Cluster is the target cluster id. Empty selects the default cluster.
+	Cluster uuid.UUID
 }
 
 // ServiceSecret pairs an attached secret with the mount path chosen for a
@@ -44,6 +46,7 @@ func (s *SecretService) Create(ctx context.Context, in CreateSecretInput) (*secr
 	if err != nil {
 		return nil, err
 	}
+	sec.ClusterID = in.Cluster
 	if err := s.secrets.Save(ctx, sec, ver, in.Value); err != nil {
 		return nil, err
 	}
@@ -92,12 +95,16 @@ func (s *SecretService) Delete(ctx context.Context, id uuid.UUID) error {
 // AttachToService links a secret to a service at the given mount path. If
 // targetPath is empty, the secret's default target path is used.
 func (s *SecretService) AttachToService(ctx context.Context, serviceID, secretID uuid.UUID, targetPath string) error {
-	if _, err := s.services.FindByID(ctx, serviceID); err != nil {
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
 		return err
 	}
 	sec, err := s.secrets.FindByID(ctx, secretID)
 	if err != nil {
 		return err
+	}
+	if sec.ClusterID != svc.ClusterID {
+		return ErrClusterMismatch
 	}
 	if targetPath == "" {
 		targetPath = sec.TargetPath

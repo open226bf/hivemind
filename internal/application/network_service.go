@@ -29,6 +29,8 @@ type CreateNetworkInput struct {
 	Subnet     string
 	Attachable bool
 	External   bool
+	// Cluster is the target cluster id. Empty selects the default cluster.
+	Cluster uuid.UUID
 }
 
 // Create registers a new overlay network definition. It is not created on Swarm
@@ -38,6 +40,7 @@ func (s *NetworkService) Create(ctx context.Context, in CreateNetworkInput) (*ne
 	if err != nil {
 		return nil, err
 	}
+	n.ClusterID = in.Cluster
 	n.Subnet = in.Subnet
 	n.Attachable = in.Attachable
 	n.External = in.External
@@ -74,11 +77,16 @@ func (s *NetworkService) Delete(ctx context.Context, id uuid.UUID) error {
 // AttachToService links a network to a service. Both must exist; attaching an
 // already-attached network surfaces as a conflict.
 func (s *NetworkService) AttachToService(ctx context.Context, serviceID, networkID uuid.UUID) error {
-	if _, err := s.services.FindByID(ctx, serviceID); err != nil {
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
 		return err
 	}
-	if _, err := s.networks.FindByID(ctx, networkID); err != nil {
+	n, err := s.networks.FindByID(ctx, networkID)
+	if err != nil {
 		return err
+	}
+	if n.ClusterID != svc.ClusterID {
+		return ErrClusterMismatch
 	}
 	return s.services.AttachNetwork(ctx, serviceID, networkID)
 }

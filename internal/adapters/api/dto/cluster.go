@@ -1,5 +1,56 @@
 package dto
 
+import "time"
+
+// ─── Cluster management ───────────────────────────────────────────────────────
+
+// CreateClusterRequest registers a new orchestration target. Endpoint is the
+// Docker daemon address (e.g. "tcp://10.0.0.10:2376"); empty uses the server's
+// ambient Docker environment. TLS material is write-only.
+type CreateClusterRequest struct {
+	Name       string            `json:"name"     binding:"required" example:"prod-eu"`
+	Type       string            `json:"type"     example:"swarm"`
+	Endpoint   string            `json:"endpoint" example:"tcp://10.0.0.10:2376"`
+	Labels     map[string]string `json:"labels"`
+	CACert     string            `json:"ca_cert"`
+	ClientCert string            `json:"client_cert"`
+	ClientKey  string            `json:"client_key"`
+}
+
+// UpdateClusterRequest patches a cluster. Omitted fields are left unchanged.
+// Supplying any TLS field replaces the whole TLS material.
+type UpdateClusterRequest struct {
+	Name       *string           `json:"name"`
+	Endpoint   *string           `json:"endpoint"`
+	Labels     map[string]string `json:"labels"`
+	CACert     *string           `json:"ca_cert"`
+	ClientCert *string           `json:"client_cert"`
+	ClientKey  *string           `json:"client_key"`
+}
+
+// ClusterResponse is the canonical cluster representation. TLS material is never
+// returned; tls_enabled signals whether mutual TLS is configured.
+type ClusterResponse struct {
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	Type       string            `json:"type"`
+	Endpoint   string            `json:"endpoint,omitempty"`
+	IsDefault  bool              `json:"is_default"`
+	Status     string            `json:"status"`
+	Labels     map[string]string `json:"labels,omitempty"`
+	TLSEnabled bool              `json:"tls_enabled"`
+	CreatedAt  time.Time         `json:"created_at"`
+	UpdatedAt  time.Time         `json:"updated_at"`
+}
+
+// ClusterListResponse wraps a paginated list of clusters.
+type ClusterListResponse struct {
+	Items []ClusterResponse `json:"items"`
+	Total int64             `json:"total"`
+	Page  int               `json:"page"`
+	Size  int               `json:"size"`
+}
+
 // ClusterOverviewResponse is the aggregated dashboard payload returned by
 // GET /cluster/overview.
 type ClusterOverviewResponse struct {

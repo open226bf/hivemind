@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/open226bf/hivemind/internal/domain/auditlog"
+	"github.com/open226bf/hivemind/internal/domain/cluster"
 	"github.com/open226bf/hivemind/internal/domain/config"
 	"github.com/open226bf/hivemind/internal/domain/deployment"
 	"github.com/open226bf/hivemind/internal/domain/hive"
@@ -17,6 +18,23 @@ import (
 	"github.com/open226bf/hivemind/internal/domain/volume"
 	"github.com/open226bf/hivemind/pkg/pagination"
 )
+
+// ─── Cluster ─────────────────────────────────────────────────────────────────
+
+type ClusterRepository interface {
+	Save(ctx context.Context, c *cluster.Cluster) error
+	FindByID(ctx context.Context, id uuid.UUID) (*cluster.Cluster, error)
+	FindByName(ctx context.Context, name string) (*cluster.Cluster, error)
+	// FindDefault returns the cluster flagged as default (ErrNotFound if none
+	// has been seeded yet).
+	FindDefault(ctx context.Context) (*cluster.Cluster, error)
+	List(ctx context.Context, p pagination.Page) ([]*cluster.Cluster, int64, error)
+	Update(ctx context.Context, c *cluster.Cluster) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	// ClearDefault unsets the default flag on every cluster — used to enforce a
+	// single default when promoting another one.
+	ClearDefault(ctx context.Context) error
+}
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +92,10 @@ type ServiceRepository interface {
 	// CountServicesByHive counts the services assigned to a hive — used to refuse
 	// deletion of a non-empty hive (project).
 	CountServicesByHive(ctx context.Context, hiveID uuid.UUID) (int64, error)
+
+	// CountServicesByCluster counts the services targeting a cluster — used to
+	// refuse deletion of a non-empty cluster.
+	CountServicesByCluster(ctx context.Context, clusterID uuid.UUID) (int64, error)
 }
 
 type ServiceFilter struct {

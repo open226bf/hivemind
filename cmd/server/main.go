@@ -104,6 +104,7 @@ func main() {
 		log.Warn("AES_KEY not set — secret and env values are stored UNENCRYPTED; set a 32-byte base64 key in production")
 	}
 
+	clusterRepo := persistence.NewClusterRepository(db, cipher)
 	userRepo := persistence.NewUserRepository(db)
 	hiveRepo := persistence.NewHiveRepository(db)
 	serviceRepo := persistence.NewServiceRepository(db, cipher)
@@ -123,22 +124,32 @@ func main() {
 		log.Warn("marked orphaned deployments as failed", "count", n)
 	}
 
-	// ─── Orchestrator ────────────────────────────────────────────────────────
-	orch := buildOrchestrator(context.Background(), env, log)
+	// ─── Bootstrap default cluster ───────────────────────────────────────────
+	// Seed the default cluster (ambient Docker env) so the orchestrator registry
+	// can resolve it and pre-existing resources (zero ClusterID) target it.
+	if created, err := application.EnsureDefaultCluster(context.Background(), clusterRepo, os.Getenv("DEFAULT_CLUSTER_NAME")); err != nil {
+		log.Error("bootstrap default cluster", "err", err)
+		os.Exit(1)
+	} else if created {
+		log.Info("bootstrapped default cluster")
+	}
+
+	// ─── Orchestrator registry ───────────────────────────────────────────────
+	registry := buildRegistry(context.Background(), env, log, clusterRepo)
 
 	// ─── Use cases ──────────────────────────────────────────────────────────
 	authSvc := application.NewAuthService(userRepo, tokens, clock.System{})
 	userSvc := application.NewUserService(userRepo)
-	serviceSvc := application.NewServiceService(serviceRepo, orch)
+	serviceSvc := application.NewServiceService(serviceRepo, registry)
 	hiveSvc := application.NewHiveService(hiveRepo, serviceRepo)
 	networkSvc := application.NewNetworkService(networkRepo, serviceRepo)
 	volumeSvc := application.NewVolumeService(volumeRepo, serviceRepo)
 	secretSvc := application.NewSecretService(secretRepo, serviceRepo)
 	configSvc := application.NewConfigService(configRepo, serviceRepo)
 	templateSvc := application.NewTemplateService(templateRepo, serviceSvc, networkSvc)
-	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, orch, nil)
+	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
 	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)
-	clusterSvc := application.NewClusterService(orch, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
+	clusterSvc := application.NewClusterService(registry, clusterRepo, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
@@ -154,22 +165,22 @@ func main() {
 
 	// ─── HTTP server ────────────────────────────────────────────────────────
 	r := api.NewRouter(api.Dependencies{
-		DB:           db,
-		Tokens:       tokens,
-		Auth:         authSvc,
-		Users:        userSvc,
-		Services:     serviceSvc,
-		Hives:        hiveSvc,
-		Networks:     networkSvc,
-		Volumes:      volumeSvc,
-		Secrets:      secretSvc,
-		Configs:      configSvc,
-		Templates:    templateSvc,
-		Deployments:  deploymentSvc,
-		Snapshots:    snapshotSvc,
-		Cluster:      clusterSvc,
-		Orchestrator: orch,
-		AuditLog:     auditRepo,
+		DB:          db,
+		Tokens:      tokens,
+		Auth:        authSvc,
+		Users:       userSvc,
+		Services:    serviceSvc,
+		Hives:       hiveSvc,
+		Networks:    networkSvc,
+		Volumes:     volumeSvc,
+		Secrets:     secretSvc,
+		Configs:     configSvc,
+		Templates:   templateSvc,
+		Deployments: deploymentSvc,
+		Snapshots:   snapshotSvc,
+		Cluster:     clusterSvc,
+		Registry:    registry,
+		AuditLog:    auditRepo,
 	})
 
 	port := os.Getenv("PORT")
@@ -206,25 +217,28 @@ func main() {
 	log.Info("hivemind stopped")
 }
 
-// buildOrchestrator selects the deployment backend. ORCHESTRATOR=stub forces
-// the simulated orchestrator (useful for local dev without Docker). Otherwise
-// it connects to Docker Swarm; a connection failure is fatal in production but
-// falls back to the stub elsewhere.
-func buildOrchestrator(ctx context.Context, env string, log *slog.Logger) ports.Orchestrator {
+// buildRegistry selects how cluster orchestrators are resolved. ORCHESTRATOR=stub
+// forces a static registry over the simulated orchestrator (local dev without
+// Docker). Otherwise it returns a cluster-backed registry that lazily connects
+// to each cluster's daemon. A probe of the ambient Docker environment keeps the
+// previous ergonomics: a connection failure is fatal in production but falls
+// back to the stub elsewhere, so `go run` works without a live Swarm.
+func buildRegistry(ctx context.Context, env string, log *slog.Logger, clusters ports.ClusterRepository) ports.OrchestratorRegistry {
 	if os.Getenv("ORCHESTRATOR") == "stub" {
-		return orchestrator.NewStubOrchestrator()
+		return orchestrator.NewStaticRegistry(orchestrator.NewStubOrchestrator())
 	}
-	swarm, err := orchestrator.NewSwarmOrchestrator(ctx)
+	probe, err := orchestrator.NewSwarmOrchestrator(ctx)
 	if err != nil {
 		if env == "production" {
 			log.Error("cannot connect to Docker Swarm", "err", err)
 			os.Exit(1)
 		}
 		log.Warn("Docker unavailable — falling back to STUB orchestrator (set ORCHESTRATOR=stub to silence)", "err", err)
-		return orchestrator.NewStubOrchestrator()
+		return orchestrator.NewStaticRegistry(orchestrator.NewStubOrchestrator())
 	}
+	_ = probe.Close()
 	log.Info("connected to Docker Swarm orchestrator")
-	return swarm
+	return orchestrator.NewRegistry(clusters)
 }
 
 // buildCipher selects the at-rest encryption strategy for sensitive values

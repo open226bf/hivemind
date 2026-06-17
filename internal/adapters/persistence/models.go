@@ -5,7 +5,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+// clusterIDColumn renders a cluster id for storage: the zero UUID (meaning "the
+// default cluster") is persisted as an empty string so legacy rows and
+// default-targeted resources share the same representation.
+func clusterIDColumn(id uuid.UUID) string {
+	if id == uuid.Nil {
+		return ""
+	}
+	return id.String()
+}
+
+// parseClusterID parses a stored cluster id; empty/invalid values map to the
+// zero UUID (the default cluster).
+func parseClusterID(s string) uuid.UUID {
+	id, _ := uuid.Parse(s)
+	return id
+}
 
 // stringSlice serialises []string as a JSON text column.
 type stringSlice []string
@@ -35,6 +54,28 @@ func (s *stringSlice) Scan(value any) error {
 	return json.Unmarshal(b, s)
 }
 
+// ─── Cluster ────────────────────────────────────────────────────────────────
+
+// clusterModel persists an orchestration target. The TLS material columns hold
+// AES-256-GCM ciphertext (via Cipher), so private keys are never at rest in
+// plaintext; they are decrypted only when building a connection.
+type clusterModel struct {
+	ID                  string      `gorm:"type:uuid;primaryKey;column:id"`
+	Name                string      `gorm:"uniqueIndex;not null;column:name"`
+	Type                string      `gorm:"not null;column:type"`
+	Endpoint            string      `gorm:"column:endpoint"`
+	IsDefault           bool        `gorm:"index;column:is_default"`
+	Status              string      `gorm:"column:status"`
+	Labels              stringSlice `gorm:"type:text;column:labels"` // "key=value" entries
+	EncryptedCACert     string      `gorm:"type:text;column:encrypted_ca_cert"`
+	EncryptedClientCert string      `gorm:"type:text;column:encrypted_client_cert"`
+	EncryptedClientKey  string      `gorm:"type:text;column:encrypted_client_key"`
+	CreatedAt           time.Time   `gorm:"column:created_at;autoCreateTime:false"`
+	UpdatedAt           time.Time   `gorm:"column:updated_at;autoUpdateTime:false"`
+}
+
+func (clusterModel) TableName() string { return "clusters" }
+
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 type userModel struct {
@@ -55,8 +96,9 @@ func (userModel) TableName() string { return "users" }
 
 type serviceModel struct {
 	ID          string      `gorm:"type:uuid;primaryKey;column:id"`
+	ClusterID   string      `gorm:"type:uuid;uniqueIndex:idx_services_cluster_name,priority:1;column:cluster_id"`
 	HiveID      *string     `gorm:"type:uuid;index;column:hive_id"`
-	Name        string      `gorm:"uniqueIndex;not null;column:name"`
+	Name        string      `gorm:"uniqueIndex:idx_services_cluster_name,priority:2;not null;column:name"`
 	Description string      `gorm:"column:description"`
 	Image       string      `gorm:"not null;column:image"`
 	Tag         string      `gorm:"column:tag"`
@@ -117,7 +159,8 @@ func (hiveModel) TableName() string { return "hives" }
 
 type volumeModel struct {
 	ID        string    `gorm:"type:uuid;primaryKey;column:id"`
-	Name      string    `gorm:"uniqueIndex;not null;column:name"`
+	ClusterID string    `gorm:"type:uuid;uniqueIndex:idx_volumes_cluster_name,priority:1;column:cluster_id"`
+	Name      string    `gorm:"uniqueIndex:idx_volumes_cluster_name,priority:2;not null;column:name"`
 	Driver    string    `gorm:"column:driver"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime:false"`
 }
@@ -142,7 +185,8 @@ func (serviceMountModel) TableName() string { return "service_mounts" }
 
 type networkModel struct {
 	ID         string    `gorm:"type:uuid;primaryKey;column:id"`
-	Name       string    `gorm:"uniqueIndex;not null;column:name"`
+	ClusterID  string    `gorm:"type:uuid;uniqueIndex:idx_networks_cluster_name,priority:1;column:cluster_id"`
+	Name       string    `gorm:"uniqueIndex:idx_networks_cluster_name,priority:2;not null;column:name"`
 	Driver     string    `gorm:"column:driver"`
 	Scope      string    `gorm:"column:scope"`
 	Subnet     string    `gorm:"column:subnet"`
@@ -167,7 +211,8 @@ func (serviceNetworkModel) TableName() string { return "service_networks" }
 
 type secretModel struct {
 	ID             string    `gorm:"type:uuid;primaryKey;column:id"`
-	Name           string    `gorm:"uniqueIndex;not null;column:name"`
+	ClusterID      string    `gorm:"type:uuid;uniqueIndex:idx_secrets_cluster_name,priority:1;column:cluster_id"`
+	Name           string    `gorm:"uniqueIndex:idx_secrets_cluster_name,priority:2;not null;column:name"`
 	CurrentVersion int       `gorm:"column:current_version"`
 	TargetPath     string    `gorm:"column:target_path"`
 	Checksum       string    `gorm:"column:checksum"`
@@ -209,7 +254,8 @@ func (serviceSecretModel) TableName() string { return "service_secrets" }
 
 type configModel struct {
 	ID             string    `gorm:"type:uuid;primaryKey;column:id"`
-	Name           string    `gorm:"uniqueIndex;not null;column:name"`
+	ClusterID      string    `gorm:"type:uuid;uniqueIndex:idx_configs_cluster_name,priority:1;column:cluster_id"`
+	Name           string    `gorm:"uniqueIndex:idx_configs_cluster_name,priority:2;not null;column:name"`
 	TargetPath     string    `gorm:"column:target_path"`
 	CurrentVersion int       `gorm:"column:current_version"`
 	CreatedAt      time.Time `gorm:"column:created_at;autoCreateTime:false"`

@@ -36,15 +36,15 @@ const defaultConvergenceTimeout = 2 * time.Minute
 // records the outcome. The Orchestrator and Notifier are kept behind ports so
 // the engine itself is unit-testable without Docker.
 type DeploymentService struct {
-	services     ports.ServiceRepository
-	deployments  ports.DeploymentRepository
-	networks     ports.NetworkRepository
-	secrets      ports.SecretRepository
-	configs      ports.ConfigRepository
-	orchestrator ports.Orchestrator
-	notifier     ports.Notifier // optional
-	timeout      time.Duration
-	stateCache   *stateCache
+	services    ports.ServiceRepository
+	deployments ports.DeploymentRepository
+	networks    ports.NetworkRepository
+	secrets     ports.SecretRepository
+	configs     ports.ConfigRepository
+	registry    ports.OrchestratorRegistry
+	notifier    ports.Notifier // optional
+	timeout     time.Duration
+	stateCache  *stateCache
 }
 
 func NewDeploymentService(
@@ -53,20 +53,34 @@ func NewDeploymentService(
 	networks ports.NetworkRepository,
 	secrets ports.SecretRepository,
 	configs ports.ConfigRepository,
-	orchestrator ports.Orchestrator,
+	registry ports.OrchestratorRegistry,
 	notifier ports.Notifier,
 ) *DeploymentService {
 	return &DeploymentService{
-		services:     services,
-		deployments:  deployments,
-		networks:     networks,
-		secrets:      secrets,
-		configs:      configs,
-		orchestrator: orchestrator,
-		notifier:     notifier,
-		timeout:      defaultConvergenceTimeout,
-		stateCache:   newStateCache(serviceStateTTL),
+		services:    services,
+		deployments: deployments,
+		networks:    networks,
+		secrets:     secrets,
+		configs:     configs,
+		registry:    registry,
+		notifier:    notifier,
+		timeout:     defaultConvergenceTimeout,
+		stateCache:  newStateCache(serviceStateTTL),
 	}
+}
+
+// orchFor resolves the orchestrator for a service's cluster, mapping any
+// resolution failure (no registry, unknown/unreachable cluster) to
+// ErrOrchestratorUnavailable so callers keep their existing error handling.
+func (s *DeploymentService) orchFor(ctx context.Context, svc *service.Service) (ports.Orchestrator, error) {
+	if s.registry == nil {
+		return nil, ErrOrchestratorUnavailable
+	}
+	orch, err := s.registry.For(ctx, svc.ClusterID)
+	if err != nil || orch == nil {
+		return nil, ErrOrchestratorUnavailable
+	}
+	return orch, nil
 }
 
 type BeginDeploymentInput struct {
@@ -90,7 +104,7 @@ type DeployOptions struct {
 // that already has a deployment in flight. It does NOT run the engine — call
 // Execute (or DeployAsync) to apply it.
 func (s *DeploymentService) Begin(ctx context.Context, in BeginDeploymentInput) (*deployment.Deployment, error) {
-	if s.orchestrator == nil {
+	if s.registry == nil {
 		return nil, ErrOrchestratorUnavailable
 	}
 
@@ -198,7 +212,7 @@ func (s *DeploymentService) ListForService(ctx context.Context, serviceID uuid.U
 // ran `docker service rm`), the persisted status is reconciled to "removed"
 // and the response is flagged ExternallyRemoved so the UI can surface it.
 func (s *DeploymentService) ServiceState(ctx context.Context, serviceID uuid.UUID) (*ports.ServiceState, error) {
-	if s.orchestrator == nil {
+	if s.registry == nil {
 		return nil, ErrOrchestratorUnavailable
 	}
 	svc, err := s.services.FindByID(ctx, serviceID)
@@ -212,7 +226,11 @@ func (s *DeploymentService) ServiceState(ctx context.Context, serviceID uuid.UUI
 		return cached, nil
 	}
 
-	state, err := s.orchestrator.GetServiceState(ctx, svc.SwarmServiceID)
+	orch, err := s.orchFor(ctx, svc)
+	if err != nil {
+		return nil, err
+	}
+	state, err := orch.GetServiceState(ctx, svc.SwarmServiceID)
 	if err != nil {
 		if errors.Is(err, ports.ErrSwarmServiceNotFound) {
 			drift := s.reconcileExternalRemoval(ctx, svc)
@@ -247,7 +265,7 @@ func (s *DeploymentService) reconcileExternalRemoval(ctx context.Context, svc *s
 // a service that is already removed/draft is a no-op success. A service with
 // a deployment in progress is rejected so we do not race the engine.
 func (s *DeploymentService) Undeploy(ctx context.Context, serviceID uuid.UUID) (*service.Service, error) {
-	if s.orchestrator == nil {
+	if s.registry == nil {
 		return nil, ErrOrchestratorUnavailable
 	}
 	svc, err := s.services.FindByID(ctx, serviceID)
@@ -264,7 +282,11 @@ func (s *DeploymentService) Undeploy(ctx context.Context, serviceID uuid.UUID) (
 	}
 
 	if svc.SwarmServiceID != "" {
-		if err := s.orchestrator.RemoveService(ctx, svc.SwarmServiceID); err != nil {
+		orch, err := s.orchFor(ctx, svc)
+		if err != nil {
+			return nil, err
+		}
+		if err := orch.RemoveService(ctx, svc.SwarmServiceID); err != nil {
 			return nil, fmt.Errorf("remove swarm service: %w", err)
 		}
 		s.stateCache.invalidate(svc.SwarmServiceID)
@@ -283,7 +305,7 @@ func (s *DeploymentService) Undeploy(ctx context.Context, serviceID uuid.UUID) (
 // (F-V2-01). The caller owns the returned reader and must Close it. A service
 // that was never deployed yields ErrServiceNotDeployed.
 func (s *DeploymentService) ServiceLogs(ctx context.Context, serviceID uuid.UUID, opts ports.LogOptions) (io.ReadCloser, error) {
-	if s.orchestrator == nil {
+	if s.registry == nil {
 		return nil, ErrOrchestratorUnavailable
 	}
 	svc, err := s.services.FindByID(ctx, serviceID)
@@ -293,14 +315,18 @@ func (s *DeploymentService) ServiceLogs(ctx context.Context, serviceID uuid.UUID
 	if svc.SwarmServiceID == "" {
 		return nil, ErrServiceNotDeployed
 	}
-	return s.orchestrator.ServiceLogs(ctx, svc.SwarmServiceID, opts)
+	orch, err := s.orchFor(ctx, svc)
+	if err != nil {
+		return nil, err
+	}
+	return orch.ServiceLogs(ctx, svc.SwarmServiceID, opts)
 }
 
 // ExecContainer opens an interactive exec session in one of the service's
 // containers (web terminal). The containerID is validated against the service's
 // live tasks so a caller cannot exec into an unrelated container.
 func (s *DeploymentService) ExecContainer(ctx context.Context, serviceID uuid.UUID, containerID string, opts ports.ExecOptions) (ports.ExecStream, error) {
-	if s.orchestrator == nil {
+	if s.registry == nil {
 		return nil, ErrOrchestratorUnavailable
 	}
 	svc, err := s.services.FindByID(ctx, serviceID)
@@ -311,7 +337,11 @@ func (s *DeploymentService) ExecContainer(ctx context.Context, serviceID uuid.UU
 		return nil, ErrServiceNotDeployed
 	}
 
-	state, err := s.orchestrator.GetServiceState(ctx, svc.SwarmServiceID)
+	orch, err := s.orchFor(ctx, svc)
+	if err != nil {
+		return nil, err
+	}
+	state, err := orch.GetServiceState(ctx, svc.SwarmServiceID)
 	if err != nil {
 		return nil, err
 	}
@@ -326,19 +356,24 @@ func (s *DeploymentService) ExecContainer(ctx context.Context, serviceID uuid.UU
 		return nil, ErrContainerNotInService
 	}
 
-	return s.orchestrator.ExecContainer(ctx, containerID, opts)
+	return orch.ExecContainer(ctx, containerID, opts)
 }
 
 // ─── Engine internals ─────────────────────────────────────────────────────────
 
 func (s *DeploymentService) reconcile(ctx context.Context, svc *service.Service, opts DeployOptions) error {
-	spec, err := s.buildSpec(ctx, svc)
+	orch, err := s.orchFor(ctx, svc)
+	if err != nil {
+		return err
+	}
+
+	spec, err := s.buildSpec(ctx, orch, svc)
 	if err != nil {
 		return err
 	}
 
 	if svc.SwarmServiceID == "" {
-		id, err := s.orchestrator.DeployService(ctx, spec)
+		id, err := orch.DeployService(ctx, spec)
 		if err != nil {
 			return fmt.Errorf("deploy service: %w", err)
 		}
@@ -353,18 +388,18 @@ func (s *DeploymentService) reconcile(ctx context.Context, svc *service.Service,
 			Force:         opts.Force,
 			QueryRegistry: opts.Repull,
 		}
-		if err := s.orchestrator.UpdateService(ctx, svc.SwarmServiceID, spec, updateOpts); err != nil {
+		if err := orch.UpdateService(ctx, svc.SwarmServiceID, spec, updateOpts); err != nil {
 			return fmt.Errorf("update service: %w", err)
 		}
 	}
 
-	if err := s.orchestrator.WaitConvergence(ctx, svc.SwarmServiceID, s.timeout); err != nil {
+	if err := orch.WaitConvergence(ctx, svc.SwarmServiceID, s.timeout); err != nil {
 		return fmt.Errorf("await convergence: %w", err)
 	}
 	return nil
 }
 
-func (s *DeploymentService) buildSpec(ctx context.Context, svc *service.Service) (ports.ServiceSpec, error) {
+func (s *DeploymentService) buildSpec(ctx context.Context, orch ports.Orchestrator, svc *service.Service) (ports.ServiceSpec, error) {
 	spec := ports.ServiceSpec{
 		Name:       svc.Name,
 		Image:      svc.FullImage(),
@@ -413,7 +448,7 @@ func (s *DeploymentService) buildSpec(ctx context.Context, svc *service.Service)
 		if err != nil {
 			return spec, err
 		}
-		swarmID, err := s.orchestrator.CreateNetwork(ctx, n.Name, ports.CreateNetworkOptions{
+		swarmID, err := orch.CreateNetwork(ctx, n.Name, ports.CreateNetworkOptions{
 			Attachable: n.Attachable,
 			Subnet:     n.Subnet,
 		})
@@ -438,7 +473,7 @@ func (s *DeploymentService) buildSpec(ctx context.Context, svc *service.Service)
 			return spec, err
 		}
 		swarmName := sec.SwarmSecretName()
-		swarmID, err := s.orchestrator.CreateSecret(ctx, swarmName, value)
+		swarmID, err := orch.CreateSecret(ctx, swarmName, value)
 		if err != nil {
 			return spec, fmt.Errorf("ensure secret %q: %w", sec.Name, err)
 		}
@@ -464,7 +499,7 @@ func (s *DeploymentService) buildSpec(ctx context.Context, svc *service.Service)
 			return spec, err
 		}
 		swarmName := fmt.Sprintf("%s_v%d", cfg.Name, cfg.CurrentVersion)
-		swarmID, err := s.orchestrator.CreateConfig(ctx, swarmName, content)
+		swarmID, err := orch.CreateConfig(ctx, swarmName, content)
 		if err != nil {
 			return spec, fmt.Errorf("ensure config %q: %w", cfg.Name, err)
 		}

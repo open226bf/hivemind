@@ -19,6 +19,8 @@ type CreateServiceRequest struct {
 	Placement    *PlacementDTO    `json:"placement"`
 	UpdateConfig *UpdateConfigDTO `json:"update_config"`
 	Hive         string           `json:"hive"`
+	// Cluster is the target cluster id. Empty selects the default cluster.
+	Cluster string `json:"cluster"`
 }
 
 // UpdateServiceRequest is the body for PUT /services/:id.
@@ -71,6 +73,7 @@ type UpdateConfigDTO struct {
 // ServiceResponse is the canonical service representation returned by all endpoints.
 type ServiceResponse struct {
 	ID             string          `json:"id"`
+	ClusterID      string          `json:"cluster_id,omitempty"`
 	HiveID         string          `json:"hive_id,omitempty"`
 	Name           string          `json:"name"`
 	Description    string          `json:"description"`

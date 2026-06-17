@@ -210,6 +210,15 @@ func (r *fakeServiceRepo) CountServicesByHive(_ context.Context, hiveID uuid.UUI
 	}
 	return n, nil
 }
+func (r *fakeServiceRepo) CountServicesByCluster(_ context.Context, clusterID uuid.UUID) (int64, error) {
+	var n int64
+	for _, s := range r.byID {
+		if s.ClusterID == clusterID {
+			n++
+		}
+	}
+	return n, nil
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -438,7 +447,7 @@ func TestServiceSetResources_ExceedsClusterCapacity(t *testing.T) {
 	s := mkService(t, "my-service")
 	repo.add(s)
 	// Stub cluster's largest node has 8 cores / 16 GiB.
-	svc := application.NewServiceService(repo, orchestrator.NewStubOrchestrator())
+	svc := application.NewServiceService(repo, orchestrator.NewStaticRegistry(orchestrator.NewStubOrchestrator()))
 
 	_, err := svc.SetResources(context.Background(), s.ID, service.Resources{
 		CPUReservation: 10000, // no node can satisfy this
@@ -455,7 +464,7 @@ func TestServiceSetResources_WithinClusterCapacity(t *testing.T) {
 	repo := newFakeServiceRepo()
 	s := mkService(t, "my-service")
 	repo.add(s)
-	svc := application.NewServiceService(repo, orchestrator.NewStubOrchestrator())
+	svc := application.NewServiceService(repo, orchestrator.NewStaticRegistry(orchestrator.NewStubOrchestrator()))
 
 	_, err := svc.SetResources(context.Background(), s.ID, service.Resources{
 		CPUReservation: 4,

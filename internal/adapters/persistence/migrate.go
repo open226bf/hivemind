@@ -10,6 +10,7 @@ import (
 // Replace with a proper migration tool (goose, golang-migrate) before production.
 func Migrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
+		&clusterModel{},
 		&userModel{},
 		&hiveModel{},
 		&serviceModel{},
@@ -30,6 +31,25 @@ func Migrate(db *gorm.DB) error {
 		&auditLogModel{},
 	); err != nil {
 		return fmt.Errorf("auto migrate: %w", err)
+	}
+
+	// Multi-cluster made resource names unique per cluster, not globally. On a
+	// database created before that change, the old single-column unique index on
+	// `name` survives AutoMigrate and would still enforce global uniqueness, so
+	// drop it explicitly. Idempotent: only dropped when present.
+	legacyNameIndexes := map[any]string{
+		&serviceModel{}: "idx_services_name",
+		&networkModel{}: "idx_networks_name",
+		&secretModel{}:  "idx_secrets_name",
+		&configModel{}:  "idx_configs_name",
+		&volumeModel{}:  "idx_volumes_name",
+	}
+	for model, idx := range legacyNameIndexes {
+		if db.Migrator().HasIndex(model, idx) {
+			if err := db.Migrator().DropIndex(model, idx); err != nil {
+				return fmt.Errorf("drop legacy index %s: %w", idx, err)
+			}
+		}
 	}
 	return nil
 }

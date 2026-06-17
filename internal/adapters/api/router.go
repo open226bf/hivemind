@@ -20,22 +20,22 @@ import (
 )
 
 type Dependencies struct {
-	DB           *gorm.DB
-	Tokens       ports.TokenService
-	Auth         *application.AuthService
-	Users        *application.UserService
-	Services     *application.ServiceService
-	Hives        *application.HiveService
-	Networks     *application.NetworkService
-	Volumes      *application.VolumeService
-	Secrets      *application.SecretService
-	Configs      *application.ConfigService
-	Templates    *application.TemplateService
-	Deployments  *application.DeploymentService
-	Snapshots    *application.SnapshotService
-	Cluster      *application.ClusterService
-	Orchestrator ports.Orchestrator
-	AuditLog     ports.AuditLogRepository
+	DB          *gorm.DB
+	Tokens      ports.TokenService
+	Auth        *application.AuthService
+	Users       *application.UserService
+	Services    *application.ServiceService
+	Hives       *application.HiveService
+	Networks    *application.NetworkService
+	Volumes     *application.VolumeService
+	Secrets     *application.SecretService
+	Configs     *application.ConfigService
+	Templates   *application.TemplateService
+	Deployments *application.DeploymentService
+	Snapshots   *application.SnapshotService
+	Cluster     *application.ClusterService
+	Registry    ports.OrchestratorRegistry
+	AuditLog    ports.AuditLogRepository
 }
 
 // NewRouter builds the Gin engine with health endpoints and the /api/v1 group.
@@ -76,8 +76,8 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewUserHandler(deps.Users).Register(protected)
 	handler.NewServiceHandler(deps.Services).Register(protected)
 	handler.NewHiveHandler(deps.Hives).Register(protected)
-	handler.NewNetworkHandler(deps.Networks, deps.Orchestrator).Register(protected)
-	handler.NewVolumeHandler(deps.Volumes, deps.Orchestrator, deps.AuditLog).Register(protected)
+	handler.NewNetworkHandler(deps.Networks, deps.Registry).Register(protected)
+	handler.NewVolumeHandler(deps.Volumes, deps.Registry, deps.AuditLog).Register(protected)
 	handler.NewSecretHandler(deps.Secrets).Register(protected)
 	handler.NewConfigHandler(deps.Configs).Register(protected)
 	handler.NewTemplateHandler(deps.Templates).Register(protected)

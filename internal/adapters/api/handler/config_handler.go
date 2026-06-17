@@ -104,12 +104,17 @@ func (h *ConfigHandler) Create(c *gin.Context) {
 		return
 	}
 
+	clusterID, ok := parseOptionalCluster(c, req.Cluster)
+	if !ok {
+		return
+	}
 	cfg, err := h.svc.Create(c.Request.Context(), application.CreateConfigInput{
 		Name:       req.Name,
 		TargetPath: req.TargetPath,
 		Content:    []byte(req.Content),
 		Comment:    req.Comment,
 		CreatedBy:  claims.UserID,
+		Cluster:    clusterID,
 	})
 	if err != nil {
 		h.writeConfigError(c, err)
@@ -453,7 +458,7 @@ func (h *ConfigHandler) writeConfigError(c *gin.Context, err error) {
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, err.Error())
 	case errors.Is(err, domainerrors.ErrNotFound):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, config.ErrConfigInUse):
+	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, config.ErrConfigInUse), errors.Is(err, application.ErrClusterMismatch):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, config.ErrInvalidName),
 		errors.Is(err, config.ErrContentTooLarge),
@@ -468,6 +473,7 @@ func (h *ConfigHandler) writeConfigError(c *gin.Context, err error) {
 func toConfigResponse(c *config.Config) dto.ConfigResponse {
 	return dto.ConfigResponse{
 		ID:             c.ID.String(),
+		ClusterID:      clusterIDString(c.ClusterID),
 		Name:           c.Name,
 		TargetPath:     c.TargetPath,
 		CurrentVersion: c.CurrentVersion,

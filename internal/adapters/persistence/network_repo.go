@@ -83,6 +83,7 @@ func (r *NetworkRepository) IsAttachedToService(ctx context.Context, id uuid.UUI
 func networkToModel(n *network.Network) *networkModel {
 	return &networkModel{
 		ID:         n.ID.String(),
+		ClusterID:  clusterIDColumn(n.ClusterID),
 		Name:       n.Name,
 		Driver:     n.Driver,
 		Scope:      n.Scope,
@@ -98,6 +99,7 @@ func networkToDomain(m *networkModel) *network.Network {
 	id, _ := uuid.Parse(m.ID)
 	return &network.Network{
 		ID:         id,
+		ClusterID:  parseClusterID(m.ClusterID),
 		Name:       m.Name,
 		Driver:     m.Driver,
 		Scope:      m.Scope,

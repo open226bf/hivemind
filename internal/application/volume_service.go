@@ -29,6 +29,8 @@ func NewVolumeService(volumes ports.VolumeRepository, services ports.ServiceRepo
 type CreateVolumeInput struct {
 	Name   string
 	Driver string
+	// Cluster is the target cluster id. Empty selects the default cluster.
+	Cluster uuid.UUID
 }
 
 // Create registers a named volume. Like networks, it is materialised on Swarm
@@ -38,6 +40,7 @@ func (s *VolumeService) Create(ctx context.Context, in CreateVolumeInput) (*volu
 	if err != nil {
 		return nil, err
 	}
+	v.ClusterID = in.Cluster
 	if err := s.volumes.Save(ctx, v); err != nil {
 		return nil, err
 	}

@@ -155,6 +155,7 @@ func (r *SecretRepository) IsAttachedToService(ctx context.Context, id uuid.UUID
 func secretToModel(s *secret.Secret) *secretModel {
 	return &secretModel{
 		ID:             s.ID.String(),
+		ClusterID:      clusterIDColumn(s.ClusterID),
 		Name:           s.Name,
 		CurrentVersion: s.CurrentVersion,
 		TargetPath:     s.TargetPath,
@@ -181,6 +182,7 @@ func secretToDomain(m *secretModel) *secret.Secret {
 	createdBy, _ := uuid.Parse(m.CreatedBy)
 	return &secret.Secret{
 		ID:             id,
+		ClusterID:      parseClusterID(m.ClusterID),
 		Name:           m.Name,
 		CurrentVersion: m.CurrentVersion,
 		TargetPath:     m.TargetPath,

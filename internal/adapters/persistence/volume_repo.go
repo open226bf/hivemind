@@ -86,6 +86,7 @@ func (r *VolumeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func volumeToModel(v *volume.Volume) *volumeModel {
 	return &volumeModel{
 		ID:        v.ID.String(),
+		ClusterID: clusterIDColumn(v.ClusterID),
 		Name:      v.Name,
 		Driver:    v.Driver,
 		CreatedAt: v.CreatedAt,
@@ -96,6 +97,7 @@ func volumeToDomain(m *volumeModel) *volume.Volume {
 	id, _ := uuid.Parse(m.ID)
 	return &volume.Volume{
 		ID:        id,
+		ClusterID: parseClusterID(m.ClusterID),
 		Name:      m.Name,
 		Driver:    m.Driver,
 		CreatedAt: m.CreatedAt,

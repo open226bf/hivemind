@@ -87,6 +87,21 @@ type Orchestrator interface {
 	ClusterInfo(ctx context.Context) (*ClusterInfo, error)
 }
 
+// OrchestratorRegistry resolves a cluster id to a live Orchestrator. It is the
+// single place that knows the platform is multi-cluster: every application
+// service holds a registry instead of a single orchestrator and resolves the
+// backend from the resource's ClusterID. The zero UUID resolves to the default
+// cluster, which keeps pre-multi-cluster resources (and tests) working without a
+// backfill.
+type OrchestratorRegistry interface {
+	For(ctx context.Context, clusterID uuid.UUID) (Orchestrator, error)
+	Default(ctx context.Context) (Orchestrator, error)
+	// Invalidate drops (and closes) any cached connection for a cluster, so the
+	// next For rebuilds it. Call after a cluster's endpoint changes or it is
+	// removed.
+	Invalidate(clusterID uuid.UUID)
+}
+
 // ClusterInfo is a snapshot of the orchestration cluster's nodes.
 type ClusterInfo struct {
 	Nodes []NodeInfo
