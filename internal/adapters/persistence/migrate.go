@@ -20,6 +20,7 @@ func Migrate(db *gorm.DB) error {
 		&serviceNetworkModel{},
 		&volumeModel{},
 		&serviceMountModel{},
+		&servicePortModel{},
 		&templateModel{},
 		&secretModel{},
 		&secretVersionModel{},

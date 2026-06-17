@@ -204,7 +204,16 @@ type ServiceSpec struct {
 	Secrets      []SecretAttachment
 	Configs      []ConfigAttachment
 	Mounts       []MountSpec
+	Ports        []PortSpec
 	Labels       map[string]string
+}
+
+// PortSpec is one published-port mapping applied to a service's endpoint.
+type PortSpec struct {
+	TargetPort    uint32 // container port
+	PublishedPort uint32 // host/ingress port (0 = auto-assigned)
+	Protocol      string // tcp | udp | sctp
+	Mode          string // ingress | host
 }
 
 // MountSpec is one filesystem mount applied to a service's tasks (F-V2-06).

@@ -324,6 +324,31 @@ func (s *ServiceService) GetEnvVars(ctx context.Context, serviceID uuid.UUID) ([
 	return s.services.GetEnvVars(ctx, serviceID)
 }
 
+// SetPorts atomically replaces the published-port set of a service. The list is
+// authoritative — omitted ports are removed. Validation normalises defaults
+// (protocol→tcp, mode→ingress) and rejects duplicate published-port/protocol
+// pairs. Applied at the next deploy.
+func (s *ServiceService) SetPorts(ctx context.Context, serviceID uuid.UUID, pts []service.Port) ([]service.Port, error) {
+	if _, err := s.services.FindByID(ctx, serviceID); err != nil {
+		return nil, err
+	}
+	if err := service.ValidatePorts(pts); err != nil {
+		return nil, err
+	}
+	if err := s.services.SetPorts(ctx, serviceID, pts); err != nil {
+		return nil, err
+	}
+	return pts, nil
+}
+
+// GetPorts returns the published-port mappings of a service.
+func (s *ServiceService) GetPorts(ctx context.Context, serviceID uuid.UUID) ([]service.Port, error) {
+	if _, err := s.services.FindByID(ctx, serviceID); err != nil {
+		return nil, err
+	}
+	return s.services.GetPorts(ctx, serviceID)
+}
+
 // Delete removes a service. If it is currently deployed and an Orchestrator
 // is wired, the Swarm service is removed first. Without an Orchestrator,
 // deleting a deployed service returns ErrServiceDeployed.

@@ -27,6 +27,7 @@ type fakeServiceRepo struct {
 	secrets  map[uuid.UUID][]ports.ServiceSecretAttachment
 	configs  map[uuid.UUID][]ports.ServiceConfigAttachment
 	mounts   map[uuid.UUID][]volume.Mount
+	ports    map[uuid.UUID][]service.Port
 }
 
 func newFakeServiceRepo() *fakeServiceRepo {
@@ -189,6 +190,16 @@ func (r *fakeServiceRepo) SetMounts(_ context.Context, serviceID uuid.UUID, moun
 }
 func (r *fakeServiceRepo) GetMounts(_ context.Context, serviceID uuid.UUID) ([]volume.Mount, error) {
 	return r.mounts[serviceID], nil
+}
+func (r *fakeServiceRepo) SetPorts(_ context.Context, serviceID uuid.UUID, p []service.Port) error {
+	if r.ports == nil {
+		r.ports = map[uuid.UUID][]service.Port{}
+	}
+	r.ports[serviceID] = p
+	return nil
+}
+func (r *fakeServiceRepo) GetPorts(_ context.Context, serviceID uuid.UUID) ([]service.Port, error) {
+	return r.ports[serviceID], nil
 }
 func (r *fakeServiceRepo) CountMountsByVolumeName(_ context.Context, name string) (int64, error) {
 	var n int64
