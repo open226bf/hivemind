@@ -53,3 +53,19 @@ func Migrate(db *gorm.DB) error {
 	}
 	return nil
 }
+
+// BackfillClusterID assigns the default cluster to every resource that predates
+// multi-cluster (cluster_id IS NULL), so the (cluster_id, name) uniqueness holds
+// and the rows resolve explicitly instead of relying on the NULL→default
+// fallback. Idempotent: rows already scoped to a cluster are untouched.
+func BackfillClusterID(db *gorm.DB, defaultClusterID string) error {
+	tables := []string{"services", "networks", "secrets", "configs", "volumes"}
+	for _, t := range tables {
+		if err := db.Exec(
+			"UPDATE "+t+" SET cluster_id = ? WHERE cluster_id IS NULL", defaultClusterID,
+		).Error; err != nil {
+			return fmt.Errorf("backfill cluster_id on %s: %w", t, err)
+		}
+	}
+	return nil
+}
