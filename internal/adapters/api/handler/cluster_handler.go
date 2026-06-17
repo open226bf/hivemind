@@ -119,17 +119,18 @@ func toOverviewResponse(ov *application.Overview) dto.ClusterOverviewResponse {
 	}
 	for i, n := range ov.Nodes {
 		resp.Nodes[i] = dto.NodeDTO{
-			ID:            n.ID,
-			Hostname:      n.Hostname,
-			Role:          n.Role,
-			Leader:        n.Leader,
-			Availability:  n.Availability,
-			State:         n.State,
-			Addr:          n.Addr,
-			EngineVersion: n.EngineVersion,
-			Cpus:          n.CPUs,
-			MemoryBytes:   n.MemoryBytes,
-			Platform:      n.Platform,
+			ID:             n.ID,
+			Hostname:       n.Hostname,
+			Role:           n.Role,
+			Leader:         n.Leader,
+			Availability:   n.Availability,
+			State:          n.State,
+			Addr:           n.Addr,
+			EngineVersion:  n.EngineVersion,
+			Cpus:           n.CPUs,
+			MemoryBytes:    n.MemoryBytes,
+			Platform:       n.Platform,
+			AgentConnected: n.AgentConnected,
 		}
 	}
 	return resp

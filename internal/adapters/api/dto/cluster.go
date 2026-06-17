@@ -139,6 +139,8 @@ type NodeDTO struct {
 	Cpus          float64 `json:"cpus"`
 	MemoryBytes   int64   `json:"memory_bytes"`
 	Platform      string  `json:"platform"`
+	// AgentConnected is true (agent clusters only) when the node has a live tunnel.
+	AgentConnected bool `json:"agent_connected"`
 }
 
 // ServiceSummaryDTO breaks the service catalog down by status.

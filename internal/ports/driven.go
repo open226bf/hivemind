@@ -106,6 +106,9 @@ type AgentHub interface {
 	Orchestrator(ctx context.Context, agentID string) (Orchestrator, error)
 	// Online reports whether the agent currently holds a live session.
 	Online(agentID string) bool
+	// ConnectedNodeIDs returns the set of Swarm node ids that currently have a
+	// live agent tunnel, used to flag per-node tunnel health on the dashboard.
+	ConnectedNodeIDs(agentID string) map[string]bool
 }
 
 // AgentNode is a node identity reported by an agent task (transport-neutral).
@@ -159,6 +162,9 @@ type NodeInfo struct {
 	CPUs          float64 // logical cores (NanoCPUs / 1e9)
 	MemoryBytes   int64   // total memory reported by the node
 	Platform      string  // "os/arch", e.g. "linux/x86_64"
+	// AgentConnected is true (agent-mode clusters only) when this node currently
+	// has a live agent tunnel. Always false for direct clusters.
+	AgentConnected bool
 }
 
 // CreateNetworkOptions controls overlay network creation on Swarm.
