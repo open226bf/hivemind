@@ -52,6 +52,7 @@ func NewAgentService(clusters ports.ClusterRepository, presence ports.AgentPrese
 type Enrollment struct {
 	ClusterID   uuid.UUID
 	ClusterName string
+	AgentID     string // stable agent identity to bake into the deployment
 	Token       string // plaintext, shown once
 	// mTLS material (empty when the CA is not configured — token/dev mode).
 	HubAddr       string
@@ -75,7 +76,12 @@ func (s *AgentService) Enroll(ctx context.Context, clusterID uuid.UUID) (*Enroll
 		return nil, err
 	}
 
-	out := &Enrollment{ClusterID: c.ID, ClusterName: c.Name, Token: token}
+	// Assign a stable agent identity up front (the cluster id), baked into the
+	// generated deployment as HIVEMIND_AGENT_ID. Every agent task reconnects with
+	// it, so restarts and extra nodes never need to re-consume the token.
+	c.AgentID = c.ID.String()
+
+	out := &Enrollment{ClusterID: c.ID, ClusterName: c.Name, AgentID: c.AgentID, Token: token}
 
 	// Issue a client certificate only when the mTLS hub is actually reachable
 	// (CA present AND an advertised hub address). Otherwise the agent would get
@@ -85,7 +91,6 @@ func (s *AgentService) Enroll(ctx context.Context, clusterID uuid.UUID) (*Enroll
 		if err != nil {
 			return nil, fmt.Errorf("issue client cert: %w", err)
 		}
-		c.AgentID = c.ID.String()
 		c.AgentCertSerial = serial
 		out.HubAddr = s.hubAddr
 		out.ClientCertPEM = string(certPEM)
@@ -131,7 +136,15 @@ func (s *AgentService) InstallScript(ctx context.Context, token, serverURL strin
 		return renderMTLSInstall(s.image(), s.hubAddr, string(certPEM), string(keyPEM), string(s.certs.CertPEM()), secretRev(serial)), nil
 	}
 
-	return renderTokenInstall(s.image(), serverURL, token), nil
+	// Token mode: ensure a stable agent id is baked in (covers clusters enrolled
+	// before this became the default) so the agent reconnects without re-enrolling.
+	if c.AgentID == "" {
+		c.AgentID = c.ID.String()
+		if err := s.clusters.Update(ctx, c); err != nil {
+			return "", err
+		}
+	}
+	return renderTokenInstall(s.image(), serverURL, token, c.AgentID), nil
 }
 
 // mtlsEnabled reports whether mutual-TLS agent enrollment is usable: a CA to
@@ -197,19 +210,23 @@ type Registration struct {
 // Register enrolls a new agent (consuming the token) or re-identifies an existing
 // one (by agent id), recording presence either way.
 func (s *AgentService) Register(ctx context.Context, in RegisterInput) (*Registration, error) {
-	// Reconnection: known agent id, no token needed.
+	// Reconnection: the agent presents its stable agent id (baked into the
+	// deployment at enrollment). It is the same credential the data-plane tunnel
+	// authorises on, and the token is never consumed, so this path works across
+	// restarts and for every node of a global agent service.
 	if in.AgentID != "" {
 		c, err := s.clusters.FindByAgentID(ctx, in.AgentID)
-		if err != nil {
-			if errors.Is(err, domainerrors.ErrNotFound) {
-				return nil, ErrAgentNotRegistered
-			}
+		if err == nil {
+			return s.bindSeen(ctx, c, in.AgentID, in.Node, false)
+		}
+		if !errors.Is(err, domainerrors.ErrNotFound) {
 			return nil, err
 		}
-		return s.bindSeen(ctx, c, in.AgentID, in.Node, false)
+		// Unknown agent id: fall through to token enrollment below.
 	}
 
-	// First enrollment: resolve the cluster by the token hash, then verify.
+	// Enrollment by token: resolve the cluster by token hash, verify, then bind a
+	// stable agent id (the cluster id). The token is kept (reusable / revocable).
 	if in.EnrollToken == "" {
 		return nil, ErrInvalidEnrollment
 	}
@@ -224,7 +241,7 @@ func (s *AgentService) Register(ctx context.Context, in RegisterInput) (*Registr
 	if err != nil || !ok {
 		return nil, ErrInvalidEnrollment
 	}
-	agentID := uuid.NewString()
+	agentID := c.ID.String()
 	c.BindAgent(agentID)
 	return s.bindSeen(ctx, c, agentID, in.Node, true)
 }
@@ -358,6 +375,7 @@ services:
     environment:
       HIVEMIND_SERVER: "${HIVEMIND_SERVER}"
       HIVEMIND_ENROLL_TOKEN: "${HIVEMIND_ENROLL_TOKEN}"
+      HIVEMIND_AGENT_ID: "${HIVEMIND_AGENT_ID}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 `, image)
@@ -388,13 +406,13 @@ echo "Done — the agent will dial Hivemind over mTLS."
 `, certPEM, rev, keyPEM, rev, caPEM, rev, composeMTLS(image, rev), hubAddr)
 }
 
-func renderTokenInstall(image, serverURL, token string) string {
+func renderTokenInstall(image, serverURL, token, agentID string) string {
 	return fmt.Sprintf(`#!/bin/sh
 set -e
 echo "Installing Hivemind agent…"
 cat > /tmp/hivemind-agent.yml <<'YML'
 %sYML
-HIVEMIND_SERVER='%s' HIVEMIND_ENROLL_TOKEN='%s' docker stack deploy -c /tmp/hivemind-agent.yml hivemind-agent
+HIVEMIND_SERVER='%s' HIVEMIND_ENROLL_TOKEN='%s' HIVEMIND_AGENT_ID='%s' docker stack deploy -c /tmp/hivemind-agent.yml hivemind-agent
 echo "Done — the agent will dial %s."
-`, composeToken(image), serverURL, token, serverURL)
+`, composeToken(image), serverURL, token, agentID, serverURL)
 }

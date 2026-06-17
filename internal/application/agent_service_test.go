@@ -32,7 +32,7 @@ func newAgentSvc(t *testing.T) (*application.AgentService, *fakeClusterRepo, *fa
 	return application.NewAgentService(clusters, presence, nil, nil, "", ""), clusters, presence, c
 }
 
-func TestAgentEnrollThenRegisterConsumesToken(t *testing.T) {
+func TestAgentEnrollThenRegisterReusableToken(t *testing.T) {
 	svc, clusters, presence, c := newAgentSvc(t)
 
 	enr, err := svc.Enroll(context.Background(), c.ID)
@@ -49,12 +49,15 @@ func TestAgentEnrollThenRegisterConsumesToken(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotEmpty(t, reg.AgentID)
+	assert.Equal(t, c.ID.String(), reg.AgentID, "agent id is the stable cluster id")
 	assert.Equal(t, c.ID, reg.ClusterID)
 	assert.True(t, presence.Online(reg.AgentID))
 
-	// The one-time token is consumed: a second register with it fails.
-	_, err = svc.Register(context.Background(), application.RegisterInput{EnrollToken: enr.Token})
-	assert.ErrorIs(t, err, application.ErrInvalidEnrollment)
+	// The token is reusable (not consumed): a second register with it succeeds
+	// and resolves to the same stable agent id — so extra nodes and restarts work.
+	again, err := svc.Register(context.Background(), application.RegisterInput{EnrollToken: enr.Token})
+	require.NoError(t, err)
+	assert.Equal(t, reg.AgentID, again.AgentID)
 }
 
 func TestAgentRegister_BadToken(t *testing.T) {

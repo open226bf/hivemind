@@ -240,10 +240,12 @@ func (c *Cluster) MatchEnrollment(token string) (bool, error) {
 	return subtle.ConstantTimeCompare(want, got) == 1, nil
 }
 
-// BindAgent links an enrolled agent and consumes the one-time token.
+// BindAgent links an enrolled agent. The enrollment token is intentionally kept
+// (reusable, revocable) so the agent can re-register after a restart and every
+// node of a global agent service can authenticate with the same token. Rotate or
+// clear it via GenerateEnrollment / UseDirectMode to revoke.
 func (c *Cluster) BindAgent(agentID string) {
 	c.AgentID = agentID
-	c.EnrollmentTokenHash = "" // consumed
 	c.AgentStatus = AgentOnline
 	now := time.Now().UTC()
 	c.AgentLastSeen = &now
