@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -31,10 +32,13 @@ const tunnelProto = "hivemind-tunnel"
 type AgentHandler struct {
 	svc *application.AgentService
 	hub *agenthub.Hub
+	// baseURL is the canonical externally reachable URL of this server
+	// (HIVEMIND_BASE_URL). Empty falls back to AGENT_PUBLIC_URL then the request.
+	baseURL string
 }
 
-func NewAgentHandler(svc *application.AgentService, hub *agenthub.Hub) *AgentHandler {
-	return &AgentHandler{svc: svc, hub: hub}
+func NewAgentHandler(svc *application.AgentService, hub *agenthub.Hub, baseURL string) *AgentHandler {
+	return &AgentHandler{svc: svc, hub: hub, baseURL: baseURL}
 }
 
 // Register wires the agent routes.
@@ -115,14 +119,15 @@ func (h *AgentHandler) Enroll(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, dto.EnrollClusterResponse{
-		ClusterID:   enr.ClusterID.String(),
-		ClusterName: enr.ClusterName,
-		Token:       enr.Token,
-		Command:     deployCommand(c, enr.Token),
-		HubAddr:     enr.HubAddr,
-		ClientCert:  enr.ClientCertPEM,
-		ClientKey:   enr.ClientKeyPEM,
-		CACert:      enr.CACertPEM,
+		ClusterID:      enr.ClusterID.String(),
+		ClusterName:    enr.ClusterName,
+		Token:          enr.Token,
+		Command:        h.deployCommand(c, enr.Token),
+		InstallCommand: h.installCommand(c, enr.Token),
+		HubAddr:        enr.HubAddr,
+		ClientCert:     enr.ClientCertPEM,
+		ClientKey:      enr.ClientKeyPEM,
+		CACert:         enr.CACertPEM,
 	})
 }
 
@@ -137,7 +142,7 @@ func (h *AgentHandler) Enroll(c *gin.Context) {
 //	@Failure		401		{object}	dto.ErrorResponse
 //	@Router			/agent/install [get]
 func (h *AgentHandler) Install(c *gin.Context) {
-	script, err := h.svc.InstallScript(c.Request.Context(), c.Query("token"), serverBaseURL(c))
+	script, err := h.svc.InstallScript(c.Request.Context(), c.Query("token"), h.serverBaseURL(c))
 	if err != nil {
 		c.String(http.StatusUnauthorized, "# invalid or expired enrollment token\n")
 		return
@@ -216,19 +221,27 @@ func toAgentNode(n dto.AgentNodeDTO) ports.AgentNode {
 // deployCommand renders the one-liner to deploy the agent stack on the target
 // cluster. The server URL comes from AGENT_PUBLIC_URL, falling back to the
 // request's scheme+host.
-func deployCommand(c *gin.Context, token string) string {
-	server := serverBaseURL(c)
+func (h *AgentHandler) deployCommand(c *gin.Context, token string) string {
 	return fmt.Sprintf(
 		"HIVEMIND_SERVER=%s HIVEMIND_ENROLL_TOKEN=%s docker stack deploy -c hivemind-agent.yml hivemind-agent",
-		server, token,
+		h.serverBaseURL(c), token,
 	)
 }
 
-// serverBaseURL is the externally reachable base URL of this server, from
-// AGENT_PUBLIC_URL or derived from the request.
-func serverBaseURL(c *gin.Context) string {
+// installCommand is the one-liner to paste on a manager: it downloads and runs
+// the install script (token-authenticated).
+func (h *AgentHandler) installCommand(c *gin.Context, token string) string {
+	return fmt.Sprintf(`curl -fsSL "%s/api/v1/agent/install?token=%s" | sh`, h.serverBaseURL(c), token)
+}
+
+// serverBaseURL is the externally reachable base URL of this server:
+// HIVEMIND_BASE_URL (config), else AGENT_PUBLIC_URL, else derived from the request.
+func (h *AgentHandler) serverBaseURL(c *gin.Context) string {
+	if h.baseURL != "" {
+		return strings.TrimRight(h.baseURL, "/")
+	}
 	if v := os.Getenv("AGENT_PUBLIC_URL"); v != "" {
-		return v
+		return strings.TrimRight(v, "/")
 	}
 	scheme := "https"
 	if c.Request.TLS == nil {
