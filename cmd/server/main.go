@@ -192,6 +192,7 @@ func main() {
 		Snapshots:   snapshotSvc,
 		Cluster:     clusterSvc,
 		Agent:       agentSvc,
+		AgentHub:    hub,
 		Registry:    registry,
 		AuditLog:    auditRepo,
 	})

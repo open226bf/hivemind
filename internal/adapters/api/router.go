@@ -9,6 +9,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
 
+	"github.com/orange/hivemind/internal/adapters/agenthub"
 	"github.com/orange/hivemind/internal/adapters/api/handler"
 	"github.com/orange/hivemind/internal/adapters/api/middleware"
 	"github.com/orange/hivemind/internal/application"
@@ -35,6 +36,7 @@ type Dependencies struct {
 	Snapshots   *application.SnapshotService
 	Cluster     *application.ClusterService
 	Agent       *application.AgentService
+	AgentHub    *agenthub.Hub
 	Registry    ports.OrchestratorRegistry
 	AuditLog    ports.AuditLogRepository
 }
@@ -85,7 +87,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
 	handler.NewSnapshotHandler(deps.Snapshots).Register(protected)
 	handler.NewClusterHandler(deps.Cluster).Register(protected)
-	handler.NewAgentHandler(deps.Agent).Register(public, protected)
+	handler.NewAgentHandler(deps.Agent, deps.AgentHub).Register(public, protected)
 
 	// Interactive exec (web terminal). Authenticated via a `token` query
 	// parameter since browsers can't set headers on a WebSocket. The Admin-only

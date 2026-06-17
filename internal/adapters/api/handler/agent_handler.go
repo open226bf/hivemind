@@ -3,11 +3,14 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/orange/hivemind/internal/adapters/agenthub"
 	"github.com/orange/hivemind/internal/adapters/api/dto"
 	"github.com/orange/hivemind/internal/adapters/api/middleware"
 	"github.com/orange/hivemind/internal/application"
@@ -17,15 +20,21 @@ import (
 	"github.com/orange/hivemind/pkg/domainerrors"
 )
 
-// AgentHandler exposes the agent handshake: admin-only enrollment (protected)
-// and the agent-facing register/heartbeat endpoints (public — the agent
-// authenticates with its enrollment token or agent id, not a JWT).
+// tunnelProto is the Upgrade token the agent and server agree on for the
+// reverse tunnel.
+const tunnelProto = "hivemind-tunnel"
+
+// AgentHandler exposes the agent handshake: admin-only enrollment (protected),
+// the agent-facing register/heartbeat endpoints and the reverse-tunnel connect
+// endpoint (public — the agent authenticates with its enrollment token or agent
+// id, not a JWT).
 type AgentHandler struct {
 	svc *application.AgentService
+	hub *agenthub.Hub
 }
 
-func NewAgentHandler(svc *application.AgentService) *AgentHandler {
-	return &AgentHandler{svc: svc}
+func NewAgentHandler(svc *application.AgentService, hub *agenthub.Hub) *AgentHandler {
+	return &AgentHandler{svc: svc, hub: hub}
 }
 
 // Register wires the agent routes.
@@ -33,8 +42,49 @@ func (h *AgentHandler) Register(public, protected *gin.RouterGroup) {
 	a := public.Group("/agent")
 	a.POST("/register", h.AgentRegister)
 	a.POST("/heartbeat", h.AgentHeartbeat)
+	a.GET("/connect", h.Connect)
 
 	protected.POST("/clusters/:id/enroll", middleware.RequireRole(user.RoleAdmin), h.Enroll)
+}
+
+// Connect upgrades the request to the raw reverse tunnel: the agent dials out,
+// the server hijacks the connection and hands it to the hub, which multiplexes
+// Docker API calls over it. Authentication is the bound agent id (the tunnel is
+// only useful for an already-enrolled agent).
+func (h *AgentHandler) Connect(c *gin.Context) {
+	agentID := c.Query("agent_id")
+	if h.hub == nil || !h.svc.Bound(c.Request.Context(), agentID) {
+		dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "unknown agent")
+		return
+	}
+	if c.GetHeader("Upgrade") != tunnelProto {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "expected tunnel upgrade")
+		return
+	}
+
+	hj, ok := c.Writer.(http.Hijacker)
+	if !ok {
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "connection hijack unsupported")
+		return
+	}
+	conn, _, err := hj.Hijack()
+	if err != nil {
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "connection hijack failed")
+		return
+	}
+	if _, err := io.WriteString(conn,
+		"HTTP/1.1 101 Switching Protocols\r\nUpgrade: "+tunnelProto+"\r\nConnection: Upgrade\r\n\r\n"); err != nil {
+		_ = conn.Close()
+		return
+	}
+
+	slog.Info("agent tunnel attached", "agent_id", agentID)
+	if err := h.hub.Attach(agentID, conn); err != nil {
+		slog.Warn("agent tunnel ended", "agent_id", agentID, "err", err)
+	} else {
+		slog.Info("agent tunnel closed", "agent_id", agentID)
+	}
+	_ = conn.Close()
 }
 
 // Enroll godoc

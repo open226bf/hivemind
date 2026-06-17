@@ -111,6 +111,16 @@ func (s *AgentService) Register(ctx context.Context, in RegisterInput) (*Registr
 	return s.bindSeen(ctx, c, agentID, in.Node, true)
 }
 
+// Bound reports whether an agent id maps to an enrolled cluster — used to
+// authenticate a tunnel connection before attaching it.
+func (s *AgentService) Bound(ctx context.Context, agentID string) bool {
+	if agentID == "" {
+		return false
+	}
+	_, err := s.clusters.FindByAgentID(ctx, agentID)
+	return err == nil
+}
+
 // Heartbeat records liveness from an enrolled agent.
 func (s *AgentService) Heartbeat(ctx context.Context, agentID string, node ports.AgentNode) error {
 	c, err := s.clusters.FindByAgentID(ctx, agentID)
