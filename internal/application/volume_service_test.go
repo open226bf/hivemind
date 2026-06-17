@@ -46,7 +46,7 @@ func (r *fakeVolumeRepo) FindByName(_ context.Context, name string) (*volume.Vol
 	}
 	return nil, domainerrors.ErrNotFound
 }
-func (r *fakeVolumeRepo) List(_ context.Context, _ pagination.Page) ([]*volume.Volume, int64, error) {
+func (r *fakeVolumeRepo) List(_ context.Context, _ uuid.UUID, _ pagination.Page) ([]*volume.Volume, int64, error) {
 	out := make([]*volume.Volume, 0, len(r.byID))
 	for _, v := range r.byID {
 		out = append(out, v)

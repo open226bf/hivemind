@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // clusterIDColumn renders a cluster id for storage. The zero UUID (meaning "the
@@ -28,6 +29,14 @@ func parseClusterID(s *string) uuid.UUID {
 	}
 	id, _ := uuid.Parse(*s)
 	return id
+}
+
+// scopeCluster adds a cluster_id filter to a query when id is non-zero.
+func scopeCluster(q *gorm.DB, id uuid.UUID) *gorm.DB {
+	if id == uuid.Nil {
+		return q
+	}
+	return q.Where("cluster_id = ?", id.String())
 }
 
 // stringSlice serialises []string as a JSON text column.

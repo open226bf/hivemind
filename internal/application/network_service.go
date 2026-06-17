@@ -55,8 +55,8 @@ func (s *NetworkService) Get(ctx context.Context, id uuid.UUID) (*network.Networ
 	return s.networks.FindByID(ctx, id)
 }
 
-func (s *NetworkService) List(ctx context.Context, page pagination.Page) ([]*network.Network, int64, error) {
-	return s.networks.List(ctx, page)
+func (s *NetworkService) List(ctx context.Context, clusterID uuid.UUID, page pagination.Page) ([]*network.Network, int64, error) {
+	return s.networks.List(ctx, clusterID, page)
 }
 
 // Delete removes a network, refusing if it is still attached to any service.

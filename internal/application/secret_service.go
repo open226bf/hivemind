@@ -57,8 +57,8 @@ func (s *SecretService) Get(ctx context.Context, id uuid.UUID) (*secret.Secret, 
 	return s.secrets.FindByID(ctx, id)
 }
 
-func (s *SecretService) List(ctx context.Context, page pagination.Page) ([]*secret.Secret, int64, error) {
-	return s.secrets.List(ctx, page)
+func (s *SecretService) List(ctx context.Context, clusterID uuid.UUID, page pagination.Page) ([]*secret.Secret, int64, error) {
+	return s.secrets.List(ctx, clusterID, page)
 }
 
 // Rotate stores a new encrypted version and bumps the current version counter.

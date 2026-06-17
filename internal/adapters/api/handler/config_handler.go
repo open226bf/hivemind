@@ -57,7 +57,7 @@ func (h *ConfigHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/configs [get]
 func (h *ConfigHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), page)
+	items, total, err := h.svc.List(c.Request.Context(), queryCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list configs")
 		return

@@ -75,6 +75,9 @@ func (h *ServiceHandler) List(c *gin.Context) {
 		}
 		filter.HiveID = &id
 	}
+	if cid := queryCluster(c); cid != uuid.Nil {
+		filter.ClusterID = &cid
+	}
 
 	items, total, err := h.svc.List(c.Request.Context(), filter, page)
 	if err != nil {

@@ -43,6 +43,16 @@ func clusterIDString(id uuid.UUID) string {
 	return id.String()
 }
 
+// queryCluster reads the optional `cluster_id` query parameter for list
+// filtering. Absent or malformed → zero UUID (no filter / all clusters).
+func queryCluster(c *gin.Context) uuid.UUID {
+	id, err := uuid.Parse(c.Query("cluster_id"))
+	if err != nil {
+		return uuid.Nil
+	}
+	return id
+}
+
 // parseOptionalCluster parses an optional cluster id supplied in a request body
 // field. An empty value maps to the zero UUID (the default cluster). It writes a
 // 400 and returns false on a malformed id.

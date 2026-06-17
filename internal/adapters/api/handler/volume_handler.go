@@ -59,7 +59,7 @@ func (h *VolumeHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/volumes [get]
 func (h *VolumeHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), page)
+	items, total, err := h.svc.List(c.Request.Context(), queryCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list volumes")
 		return

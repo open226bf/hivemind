@@ -46,7 +46,7 @@ func (r *fakeNetworkRepo) FindByID(_ context.Context, id uuid.UUID) (*network.Ne
 	return nil, domainerrors.ErrNotFound
 }
 
-func (r *fakeNetworkRepo) List(_ context.Context, _ pagination.Page) ([]*network.Network, int64, error) {
+func (r *fakeNetworkRepo) List(_ context.Context, _ uuid.UUID, _ pagination.Page) ([]*network.Network, int64, error) {
 	out := make([]*network.Network, 0, len(r.byID))
 	for _, n := range r.byID {
 		out = append(out, n)
