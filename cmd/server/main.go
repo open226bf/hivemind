@@ -44,6 +44,7 @@ import (
 	"github.com/orange/hivemind/internal/adapters/agenthub"
 	"github.com/orange/hivemind/internal/adapters/api"
 	"github.com/orange/hivemind/internal/adapters/auth"
+	"github.com/orange/hivemind/internal/adapters/notify"
 	"github.com/orange/hivemind/internal/adapters/orchestrator"
 	"github.com/orange/hivemind/internal/adapters/persistence"
 	"github.com/orange/hivemind/internal/application"
@@ -161,6 +162,9 @@ func main() {
 	// Telemetry collectors reuse each cluster's already-resolved orchestrator
 	// connection (no second Docker client per cluster).
 	collectorRegistry := orchestrator.NewCollectorRegistry(registry)
+	// Event-driven alert engine: evaluates each cluster's health and fires/resolves
+	// alerts through the router (logs by default). Its loop is started below.
+	alertEngine := application.NewAlertEngine(collectorRegistry, clusterRepo, notify.NewLogAlertRouter(log), log)
 
 	// Internal CA: signs agent client certs (enrollment) and the hub server cert.
 	agentCA, err := persistence.NewAgentCARepository(db, cipher).LoadOrCreate(context.Background())
@@ -197,6 +201,9 @@ func main() {
 			}
 		}
 	}()
+
+	// Evaluate cluster health and fire/resolve alerts on a loop.
+	go alertEngine.Run(context.Background(), 20*time.Second)
 
 	// ─── Bootstrap admin (F-MVP-01) ─────────────────────────────────────────
 	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
@@ -235,6 +242,7 @@ func main() {
 		AgentHub:      hub,
 		Registry:      registry,
 		Collectors:    collectorRegistry,
+		Alerts:        alertEngine,
 		AuditLog:      auditRepo,
 		WSTickets:     wsTickets,
 		StreamTickets: streamTickets,
