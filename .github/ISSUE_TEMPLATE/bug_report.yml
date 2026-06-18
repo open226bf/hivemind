@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for the report! Please do **not** file security issues here — see
-        [SECURITY.md](https://github.com/open226/hivemind/blob/main/SECURITY.md).
+        [SECURITY.md](https://github.com/open226bf/hivemind/blob/main/SECURITY.md).
   - type: dropdown
     id: component
     attributes:

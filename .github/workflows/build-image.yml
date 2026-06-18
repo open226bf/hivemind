@@ -25,7 +25,7 @@ jobs:
       - name: Checkout frontend (public)
         uses: actions/checkout@v4
         with:
-          repository: open226/hivemind-gui
+          repository: open226bf/hivemind-gui
           ref: main
           path: gui
 

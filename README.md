@@ -4,8 +4,8 @@
 
 **Self-service deployment & supervision control plane for Docker Swarm — multi-cluster, agent-ready, single binary.**
 
-[![CI](https://github.com/open226/hivemind/actions/workflows/ci.yml/badge.svg)](https://github.com/open226/hivemind/actions/workflows/ci.yml)
-[![Image](https://github.com/open226/hivemind/actions/workflows/build-image.yml/badge.svg)](https://github.com/open226/hivemind/actions/workflows/build-image.yml)
+[![CI](https://github.com/open226bf/hivemind/actions/workflows/ci.yml/badge.svg)](https://github.com/open226bf/hivemind/actions/workflows/ci.yml)
+[![Image](https://github.com/open226bf/hivemind/actions/workflows/build-image.yml/badge.svg)](https://github.com/open226bf/hivemind/actions/workflows/build-image.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/orange/hivemind)](https://goreportcard.com/report/github.com/orange/hivemind)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.25-00ADD8.svg)](go.mod)
@@ -33,9 +33,9 @@ Hivemind is three repositories that ship as one product:
 
 | Repo | What | Stack |
 |------|------|-------|
-| [`hivemind`](https://github.com/open226/hivemind) | Control plane (API + embedded UI) | Go 1.25, Gin, GORM/Postgres, hexagonal |
-| [`hivemind-agent`](https://github.com/open226/hivemind-agent) | Reverse-tunnel agent (one task per node) | Go 1.25, yamux |
-| [`hivemind-gui`](https://github.com/open226/hivemind-gui) | Web console | Angular 21, PrimeNG |
+| [`hivemind`](https://github.com/open226bf/hivemind) | Control plane (API + embedded UI) | Go 1.25, Gin, GORM/Postgres, hexagonal |
+| [`hivemind-agent`](https://github.com/open226bf/hivemind-agent) | Reverse-tunnel agent (one task per node) | Go 1.25, yamux |
+| [`hivemind-gui`](https://github.com/open226bf/hivemind-gui) | Web console | Angular 21, PrimeNG |
 
 ```
                             ┌──────────────────────────────┐
@@ -55,7 +55,7 @@ Hivemind is three repositories that ship as one product:
                                               └──────────────────────────┘
 ```
 
-The backend follows a **hexagonal** layout: `internal/domain` (pure business rules), `internal/ports` (interfaces), `internal/application` (use cases), `internal/adapters` (HTTP, persistence, orchestrator, auth). See the [documentation](https://github.com/open226/hivemind-doc) for the full design.
+The backend follows a **hexagonal** layout: `internal/domain` (pure business rules), `internal/ports` (interfaces), `internal/application` (use cases), `internal/adapters` (HTTP, persistence, orchestrator, auth). See the [documentation](https://github.com/open226bf/hivemind-doc) for the full design.
 
 ## Quick start
 
