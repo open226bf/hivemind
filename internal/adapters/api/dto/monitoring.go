@@ -44,3 +44,23 @@ type ClusterHealthResponse struct {
 	MetricsCoverage string               `json:"metrics_coverage"`
 	Nodes           []NodeHealthResponse `json:"nodes"`
 }
+
+// AlertResponse is a firing alert produced by the event-driven alert engine.
+type AlertResponse struct {
+	ID          string    `json:"id"`
+	Severity    string    `json:"severity"` // ok | warning | critical | unknown
+	Kind        string    `json:"kind"`     // task_failed | crash_loop | node_unreachable | …
+	ClusterID   string    `json:"cluster_id,omitempty"`
+	ServiceID   string    `json:"service_id,omitempty"`
+	NodeID      string    `json:"node_id,omitempty"`
+	ContainerID string    `json:"container_id,omitempty"`
+	Summary     string    `json:"summary"`
+	Detail      string    `json:"detail,omitempty"`
+	FiredAt     time.Time `json:"fired_at"`
+}
+
+// AlertListResponse wraps the currently-firing alerts.
+type AlertListResponse struct {
+	Items []AlertResponse `json:"items"`
+	Total int             `json:"total"`
+}

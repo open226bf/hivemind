@@ -7,6 +7,7 @@ import (
 
 	"github.com/open226bf/hivemind/internal/adapters/api/dto"
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
+	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/monitoring"
 	"github.com/open226bf/hivemind/internal/domain/user"
 	"github.com/open226bf/hivemind/internal/ports"
@@ -17,16 +18,18 @@ import (
 // the network/volume handlers resolve the orchestrator.
 type MonitoringHandler struct {
 	collectors ports.TelemetryCollectorRegistry
+	alerts     *application.AlertEngine
 }
 
-func NewMonitoringHandler(collectors ports.TelemetryCollectorRegistry) *MonitoringHandler {
-	return &MonitoringHandler{collectors: collectors}
+func NewMonitoringHandler(collectors ports.TelemetryCollectorRegistry, alerts *application.AlertEngine) *MonitoringHandler {
+	return &MonitoringHandler{collectors: collectors, alerts: alerts}
 }
 
 // Register wires the monitoring routes (read-only, Viewer and up).
 func (h *MonitoringHandler) Register(protected *gin.RouterGroup) {
 	m := protected.Group("/monitoring")
 	m.GET("/health", middleware.RequireRole(user.RoleViewer), h.ClusterHealth)
+	m.GET("/alerts", middleware.RequireRole(user.RoleViewer), h.Alerts)
 }
 
 // ClusterHealth godoc
@@ -52,6 +55,48 @@ func (h *MonitoringHandler) ClusterHealth(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, toClusterHealthResponse(snap, col.Capabilities()))
+}
+
+// Alerts godoc
+//
+//	@Summary		Active alerts
+//	@Description	The alerts currently firing across clusters, produced by the event-driven alert engine (failed/crash-looping containers, unreachable nodes).
+//	@Tags			monitoring
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{object}	dto.AlertListResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Router			/monitoring/alerts [get]
+func (h *MonitoringHandler) Alerts(c *gin.Context) {
+	var alerts []monitoring.Alert
+	if h.alerts != nil {
+		alerts = h.alerts.ActiveAlerts()
+	}
+	resp := dto.AlertListResponse{Items: make([]dto.AlertResponse, len(alerts)), Total: len(alerts)}
+	for i, a := range alerts {
+		resp.Items[i] = toAlertResponse(a)
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func toAlertResponse(a monitoring.Alert) dto.AlertResponse {
+	svc := ""
+	if a.ServiceID != nil {
+		svc = a.ServiceID.String()
+	}
+	return dto.AlertResponse{
+		ID:          a.ID.String(),
+		Severity:    string(a.Severity),
+		Kind:        a.Labels["kind"],
+		ClusterID:   clusterIDString(a.ClusterID),
+		ServiceID:   svc,
+		NodeID:      a.NodeID,
+		ContainerID: a.ContainerID,
+		Summary:     a.Summary,
+		Detail:      a.Detail,
+		FiredAt:     a.FiredAt,
+	}
 }
 
 func toClusterHealthResponse(h *monitoring.ClusterHealth, caps ports.CollectorCapabilities) dto.ClusterHealthResponse {

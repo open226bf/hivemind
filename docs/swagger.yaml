@@ -66,6 +66,40 @@ definitions:
       cluster_name:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AlertListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AlertResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AlertResponse:
+    properties:
+      cluster_id:
+        type: string
+      container_id:
+        type: string
+      detail:
+        type: string
+      fired_at:
+        type: string
+      id:
+        type: string
+      kind:
+        description: task_failed | crash_loop | node_unreachable | …
+        type: string
+      node_id:
+        type: string
+      service_id:
+        type: string
+      severity:
+        description: ok | warning | critical | unknown
+        type: string
+      summary:
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.AssignHiveRequest:
     properties:
       hive_id:
@@ -2472,6 +2506,30 @@ paths:
       summary: List a hive's services
       tags:
       - hives
+  /monitoring/alerts:
+    get:
+      description: The alerts currently firing across clusters, produced by the event-driven
+        alert engine (failed/crash-looping containers, unreachable nodes).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AlertListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Active alerts
+      tags:
+      - monitoring
   /monitoring/health:
     get:
       description: 'Per-node health snapshot of the active cluster: every task/container

@@ -42,6 +42,7 @@ type Dependencies struct {
 	AgentHub    *agenthub.Hub
 	Registry    ports.OrchestratorRegistry
 	Collectors  ports.TelemetryCollectorRegistry
+	Alerts      *application.AlertEngine
 	AuditLog    ports.AuditLogRepository
 	// WSTickets mints single-use tickets that authenticate the exec WebSocket
 	// upgrade without putting the access token in the URL.
@@ -106,7 +107,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewSnapshotHandler(deps.Snapshots).Register(protected)
 	handler.NewClusterHandler(deps.Cluster).Register(protected)
 	handler.NewAgentHandler(deps.Agent, deps.AgentHub, deps.BaseURL).Register(public, protected)
-	handler.NewMonitoringHandler(deps.Collectors).Register(protected)
+	handler.NewMonitoringHandler(deps.Collectors, deps.Alerts).Register(protected)
 
 	// Interactive exec (web terminal). An interactive shell is the most powerful
 	// supervision capability (arbitrary code execution inside the container,
