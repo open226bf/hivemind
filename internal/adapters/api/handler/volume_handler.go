@@ -98,7 +98,7 @@ func (h *VolumeHandler) Create(c *gin.Context) {
 		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
 		return
 	}
-	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
+	clusterID := writeCluster(c) // default cluster when none is selected (never NULL)
 	v, err := h.svc.Create(c.Request.Context(), application.CreateVolumeInput{Name: req.Name, Driver: req.Driver, Cluster: clusterID})
 	if err != nil {
 		h.writeVolumeError(c, err)

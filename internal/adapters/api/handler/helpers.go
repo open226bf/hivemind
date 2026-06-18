@@ -58,6 +58,21 @@ func currentCluster(c *gin.Context) uuid.UUID {
 	return uuid.Nil
 }
 
+// writeCluster returns the cluster a newly created resource should attach to:
+// the active cluster, or the platform default when none is selected (resolved by
+// middleware.ClusterContext). Unlike currentCluster it avoids the zero UUID, so
+// creates never persist a NULL cluster_id — keeping the resource visible when
+// that cluster is later selected and subject to per-cluster name uniqueness. It
+// falls back to currentCluster if the write scope was not set (non-write route).
+func writeCluster(c *gin.Context) uuid.UUID {
+	if v, ok := c.Get(middleware.ClusterWriteContextKey); ok {
+		if id, ok := v.(uuid.UUID); ok && id != uuid.Nil {
+			return id
+		}
+	}
+	return currentCluster(c)
+}
+
 // parsePage reads the `page` and `size` query parameters and returns a
 // validated Page. Defaults: page=1, size=20, max size=100.
 func parsePage(c *gin.Context) pagination.Page {

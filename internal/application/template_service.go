@@ -82,6 +82,9 @@ type InstantiateInput struct {
 	TagOverride       *string
 	ReplicasOverride  *uint64
 	ResourcesOverride *service.Resources
+	// Cluster is the orchestration target for the instantiated service. The zero
+	// value selects the default cluster.
+	Cluster uuid.UUID
 }
 
 // Instantiate creates a new service from a template, applying allowed overrides.
@@ -102,6 +105,7 @@ func (s *TemplateService) Instantiate(ctx context.Context, templateID uuid.UUID,
 		Replicas:    spec.Replicas,
 		Resources:   spec.Resources,
 		Placement:   spec.Placement,
+		Cluster:     in.Cluster,
 	}
 	uc := spec.UpdateConfig
 	create.UpdateConfig = &uc

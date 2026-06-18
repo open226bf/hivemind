@@ -104,7 +104,7 @@ func (h *ConfigHandler) Create(c *gin.Context) {
 		return
 	}
 
-	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
+	clusterID := writeCluster(c) // default cluster when none is selected (never NULL)
 	cfg, err := h.svc.Create(c.Request.Context(), application.CreateConfigInput{
 		Name:       req.Name,
 		TargetPath: req.TargetPath,

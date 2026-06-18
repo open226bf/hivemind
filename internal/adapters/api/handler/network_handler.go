@@ -97,7 +97,7 @@ func (h *NetworkHandler) Create(c *gin.Context) {
 		return
 	}
 
-	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
+	clusterID := writeCluster(c) // default cluster when none is selected (never NULL)
 	n, err := h.svc.Create(c.Request.Context(), application.CreateNetworkInput{
 		Name:       req.Name,
 		Subnet:     req.Subnet,

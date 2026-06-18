@@ -99,6 +99,9 @@ func main() {
 		log.Warn("using ephemeral JWT signing key — tokens will not survive a restart; set JWT_PRIVATE_KEY_PATH in production")
 	}
 	tokens := auth.NewTokenService(auth.Config{PrivateKey: privKey, Issuer: "hivemind"})
+	// Single-use tickets authenticate the exec WebSocket upgrade (browsers can't
+	// set headers on a WebSocket; this keeps the access token out of the URL).
+	wsTickets := auth.NewTicketStore(30 * time.Second)
 
 	// ─── Repositories ───────────────────────────────────────────────────────
 	cipher, err := buildCipher(os.Getenv("AES_KEY"))
@@ -226,6 +229,7 @@ func main() {
 		AgentHub:    hub,
 		Registry:    registry,
 		AuditLog:    auditRepo,
+		WSTickets:   wsTickets,
 		BaseURL:     os.Getenv("HIVEMIND_BASE_URL"),
 	})
 

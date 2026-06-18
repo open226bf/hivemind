@@ -101,7 +101,7 @@ func (h *SecretHandler) Create(c *gin.Context) {
 		return
 	}
 
-	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
+	clusterID := writeCluster(c) // default cluster when none is selected (never NULL)
 	sec, err := h.svc.Create(c.Request.Context(), application.CreateSecretInput{
 		Name:       req.Name,
 		TargetPath: req.TargetPath,
