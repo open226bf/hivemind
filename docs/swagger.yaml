@@ -22,6 +22,50 @@ definitions:
     - comment
     - content
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AgentHeartbeatRequest:
+    properties:
+      agent_id:
+        type: string
+      node:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO'
+    required:
+    - agent_id
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO:
+    properties:
+      engine_version:
+        type: string
+      hostname:
+        type: string
+      is_leader:
+        type: boolean
+      is_manager:
+        type: boolean
+      node_id:
+        type: string
+      role:
+        type: string
+      swarm_id:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterRequest:
+    properties:
+      agent_id:
+        type: string
+      enroll_token:
+        type: string
+      node:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO'
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterResponse:
+    properties:
+      agent_id:
+        type: string
+      cluster_id:
+        type: string
+      cluster_name:
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.AssignHiveRequest:
     properties:
       hive_id:
@@ -67,6 +111,23 @@ definitions:
       secrets:
         type: integer
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ClusterHealthResponse:
+    properties:
+      cluster_id:
+        type: string
+      metrics_coverage:
+        description: |-
+          MetricsCoverage reports whether per-container metrics for this cluster are
+          cluster-wide ("cluster", agent mode) or limited to the connected node
+          ("connected-node", direct mode) — so the UI can set expectations.
+        type: string
+      nodes:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeHealthResponse'
+        type: array
+      observed_at:
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ClusterListResponse:
     properties:
       items:
@@ -97,6 +158,12 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse:
     properties:
+      agent_last_seen:
+        type: string
+      agent_status:
+        type: string
+      connection_mode:
+        type: string
       created_at:
         type: string
       endpoint:
@@ -195,6 +262,32 @@ definitions:
       version:
         type: integer
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ContainerHealthResponse:
+    properties:
+      container_id:
+        type: string
+      exit_code:
+        type: integer
+      reason:
+        type: string
+      restarts:
+        type: integer
+      service_id:
+        type: string
+      service_name:
+        type: string
+      since:
+        type: string
+      slot:
+        type: integer
+      state:
+        type: string
+      task_id:
+        type: string
+      verdict:
+        description: ok | warning | critical | unknown
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateClusterRequest:
     properties:
       ca_cert:
@@ -221,9 +314,6 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateConfigRequest:
     properties:
-      cluster:
-        description: Cluster is the target cluster id. Empty selects the default cluster.
-        type: string
       comment:
         example: initial version
         type: string
@@ -257,9 +347,6 @@ definitions:
       attachable:
         example: true
         type: boolean
-      cluster:
-        description: Cluster is the target cluster id. Empty selects the default cluster.
-        type: string
       external:
         example: false
         type: boolean
@@ -274,9 +361,6 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateSecretRequest:
     properties:
-      cluster:
-        description: Cluster is the target cluster id. Empty selects the default cluster.
-        type: string
       name:
         example: db_password
         type: string
@@ -291,9 +375,6 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateServiceRequest:
     properties:
-      cluster:
-        description: Cluster is the target cluster id. Empty selects the default cluster.
-        type: string
       command:
         items:
           type: string
@@ -364,9 +445,6 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateVolumeRequest:
     properties:
-      cluster:
-        description: Cluster is the target cluster id. Empty selects the default cluster.
-        type: string
       driver:
         example: local
         type: string
@@ -423,6 +501,30 @@ definitions:
       text:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.EnrollClusterResponse:
+    properties:
+      ca_cert:
+        type: string
+      client_cert:
+        type: string
+      client_key:
+        type: string
+      cluster_id:
+        type: string
+      cluster_name:
+        type: string
+      command:
+        type: string
+      hub_addr:
+        description: mTLS material (empty in token/dev mode).
+        type: string
+      install_command:
+        description: InstallCommand is the one-liner to paste on a manager (curl …
+          | sh).
+        type: string
+      token:
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.EnvVarDTO:
     properties:
       is_secret:
@@ -477,6 +579,8 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse:
     properties:
+      cluster_id:
+        type: string
       color:
         type: string
       created_at:
@@ -603,6 +707,10 @@ definitions:
     properties:
       addr:
         type: string
+      agent_connected:
+        description: AgentConnected is true (agent clusters only) when the node has
+          a live tunnel.
+        type: boolean
       availability:
         type: string
       cpus:
@@ -624,6 +732,32 @@ definitions:
       state:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.NodeHealthResponse:
+    properties:
+      containers:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ContainerHealthResponse'
+        type: array
+      critical:
+        type: integer
+      hostname:
+        type: string
+      node_id:
+        type: string
+      ok:
+        type: integer
+      reachable:
+        type: boolean
+      role:
+        type: string
+      tunnel_up:
+        type: boolean
+      warning:
+        type: integer
+      worst:
+        description: highest severity among containers
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO:
     properties:
       constraints:
@@ -640,6 +774,28 @@ definitions:
         - node.labels.zone
         items:
           type: string
+        type: array
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.PortDTO:
+    properties:
+      mode:
+        description: ingress | host (default ingress)
+        type: string
+      protocol:
+        description: tcp | udp | sctp (default tcp)
+        type: string
+      published_port:
+        description: host/ingress port (0 = auto)
+        type: integer
+      target_port:
+        description: container port (1–65535)
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse:
+    properties:
+      ports:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortDTO'
         type: array
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.RefreshRequest:
@@ -845,6 +1001,13 @@ definitions:
       mounts:
         items:
           $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountDTO'
+        type: array
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SetPortsRequest:
+    properties:
+      ports:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortDTO'
         type: array
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.SnapshotConfigRef:
@@ -1285,6 +1448,77 @@ info:
   title: Hivemind API
   version: "1.0"
 paths:
+  /agent/heartbeat:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Heartbeat
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentHeartbeatRequest'
+      responses:
+        "204":
+          description: no content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      summary: Agent liveness heartbeat
+      tags:
+      - agent
+  /agent/install:
+    get:
+      description: Returns a self-contained shell script to run on a cluster manager
+        (creates secrets, writes the compose and runs docker stack deploy). Authenticated
+        by the enrollment token.
+      parameters:
+      - description: Enrollment token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: shell script
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      summary: Agent install script
+      tags:
+      - agent
+  /agent/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Agent registration
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      summary: Agent enrollment / reconnection
+      tags:
+      - agent
   /auth/login:
     post:
       consumes:
@@ -1557,6 +1791,33 @@ paths:
       summary: Promote a cluster to default
       tags:
       - cluster
+  /clusters/{id}/enroll:
+    post:
+      description: Switches the cluster to agent connection mode (if needed) and returns
+        a one-time enrollment token plus a ready-to-run deploy command. The token
+        is shown only once.
+      parameters:
+      - description: Cluster ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnrollClusterResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Issue an agent enrollment token
+      tags:
+      - clusters
   /clusters/{id}/overview:
     get:
       description: Same payload as /cluster/overview but with node health scoped to
@@ -2205,6 +2466,35 @@ paths:
       summary: List a hive's services
       tags:
       - hives
+  /monitoring/health:
+    get:
+      description: 'Per-node health snapshot of the active cluster: every task/container
+        with a normalised verdict (ok/warning/critical), grouped by node, plus a rollup.
+        Cluster-wide in both connection modes.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterHealthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "503":
+          description: cluster telemetry unavailable
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cluster health (per-node container health)
+      tags:
+      - monitoring
   /networks:
     get:
       parameters:
@@ -3049,8 +3339,10 @@ paths:
       description: 'Upgrades to a WebSocket and attaches an interactive TTY exec session
         to one of the service''s containers. Client→server text messages are tagged
         by a leading byte: ''0''=stdin data, ''1''=JSON resize {cols,rows}. Server→client
-        messages are raw terminal output. Authenticate with ?token=<access_token>
-        (WebSocket cannot carry an Authorization header). Requires the Admin role.'
+        messages are raw terminal output. Authenticate with ?ticket=<id> from POST
+        /services/{id}/exec/ticket (WebSocket cannot carry an Authorization header;
+        the ticket avoids putting the access token in the URL). Requires the Admin
+        role.'
       parameters:
       - description: Service ID (UUID)
         in: path
@@ -3062,9 +3354,9 @@ paths:
         name: container
         required: true
         type: string
-      - description: Access token
+      - description: Single-use exec ticket
         in: query
-        name: token
+        name: ticket
         required: true
         type: string
       - description: Shell command (default /bin/sh)
@@ -3093,6 +3385,37 @@ paths:
           schema:
             $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
       summary: Interactive container shell (WebSocket, Admin)
+      tags:
+      - supervision
+  /services/{id}/exec/ticket:
+    post:
+      description: Exchanges the bearer token for a short-lived, single-use ticket
+        bound to the caller and this service. The web terminal then opens the exec
+        WebSocket with ?ticket=<id> instead of putting the access token in the URL
+        (browsers cannot set headers on a WebSocket, and URLs leak into logs).
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ticket and expires_in (seconds)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mint a single-use exec ticket (Admin)
       tags:
       - supervision
   /services/{id}/hive:
@@ -3425,6 +3748,71 @@ paths:
       summary: Set a service's placement
       tags:
       - services
+  /services/{id}/ports:
+    get:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List a service's published ports
+      tags:
+      - services
+    put:
+      consumes:
+      - application/json
+      description: Atomically replaces the full set of published ports. The submitted
+        list is authoritative — omitted ports are removed. Applied at the next deploy.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Full published-port set
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SetPortsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse'
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid port
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace a service's published ports
+      tags:
+      - services
   /services/{id}/resources:
     put:
       consumes:
@@ -3705,6 +4093,61 @@ paths:
       security:
       - BearerAuth: []
       summary: Live status of a service (F-MVP-10)
+      tags:
+      - supervision
+  /services/{id}/status/stream:
+    get:
+      description: Server-Sent Events stream of the service's live state ({status,
+        tasks}). Emits a `status` event whenever the state changes, plus heartbeat
+        comments. Authenticate with ?ticket=<id> from POST /services/{id}/status/stream-ticket.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Single-use stream ticket
+        in: query
+        name: ticket
+        required: true
+        type: string
+      responses:
+        "200":
+          description: text/event-stream
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      summary: Stream a service's live state (SSE)
+      tags:
+      - supervision
+  /services/{id}/status/stream-ticket:
+    post:
+      description: EventSource cannot send an Authorization header, so the client
+        exchanges its bearer token (this request is header-authenticated) for a short-lived,
+        single-use ticket and opens GET /services/{id}/status/stream?ticket=<id> with
+        it — keeping the access token out of the URL.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: ticket and expires_in (seconds)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mint a single-use status-stream ticket (Viewer)
       tags:
       - supervision
   /services/{id}/tasks:
