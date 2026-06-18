@@ -60,11 +60,18 @@ type ContainerHealth struct {
 // TunnelUp is set only in agent mode (per-node reverse-tunnel liveness, from
 // AgentHub.ConnectedNodeIDs); nil means "not applicable" (agentless cluster).
 type NodeHealth struct {
-	NodeID     string
-	Hostname   string
-	Role       string // "manager" | "worker"
-	Reachable  bool
-	TunnelUp   *bool
+	NodeID    string
+	Hostname  string
+	Role      string // "manager" | "worker"
+	Reachable bool
+	TunnelUp  *bool
+
+	// Capacity advertised by the node — total resources, not live usage. Usage
+	// metrics arrive in phase 2 (agent) / phase 3 (direct exporter); these come
+	// for free from the node list. CPUs is whole cores, MemoryBytes is total RAM.
+	CPUs        float64
+	MemoryBytes uint64
+
 	Containers []ContainerHealth
 
 	// Rollup counts over Containers, by verdict — lets the UI badge a node

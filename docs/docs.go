@@ -6292,11 +6292,19 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ContainerHealthResponse"
                     }
                 },
+                "cpus": {
+                    "description": "total cores (capacity, not usage)",
+                    "type": "number"
+                },
                 "critical": {
                     "type": "integer"
                 },
                 "hostname": {
                     "type": "string"
+                },
+                "memory_bytes": {
+                    "description": "total RAM (capacity, not usage)",
+                    "type": "integer"
                 },
                 "node_id": {
                     "type": "string"
