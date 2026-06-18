@@ -36,6 +36,8 @@ type CreateConfigInput struct {
 	Content    []byte
 	Comment    string
 	CreatedBy  uuid.UUID
+	// Cluster is the target cluster id. Empty selects the default cluster.
+	Cluster uuid.UUID
 }
 
 // ServiceConfig pairs an attached config with the mount path chosen for a
@@ -51,6 +53,7 @@ func (s *ConfigService) Create(ctx context.Context, in CreateConfigInput) (*conf
 	if err != nil {
 		return nil, err
 	}
+	cfg.ClusterID = in.Cluster
 	if err := s.configs.Save(ctx, cfg, ver); err != nil {
 		return nil, err
 	}
@@ -61,8 +64,8 @@ func (s *ConfigService) Get(ctx context.Context, id uuid.UUID) (*config.Config, 
 	return s.configs.FindByID(ctx, id)
 }
 
-func (s *ConfigService) List(ctx context.Context, page pagination.Page) ([]*config.Config, int64, error) {
-	return s.configs.List(ctx, page)
+func (s *ConfigService) List(ctx context.Context, clusterID uuid.UUID, page pagination.Page) ([]*config.Config, int64, error) {
+	return s.configs.List(ctx, clusterID, page)
 }
 
 // ListVersions returns the full version history (with content) of a config,
@@ -208,12 +211,16 @@ func (s *ConfigService) Delete(ctx context.Context, id uuid.UUID) error {
 // AttachToService links a config to a service at the given mount path. If
 // targetPath is empty, the config's default target path is used.
 func (s *ConfigService) AttachToService(ctx context.Context, serviceID, configID uuid.UUID, targetPath string) error {
-	if _, err := s.services.FindByID(ctx, serviceID); err != nil {
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
 		return err
 	}
 	cfg, err := s.configs.FindByID(ctx, configID)
 	if err != nil {
 		return err
+	}
+	if cfg.ClusterID != svc.ClusterID {
+		return ErrClusterMismatch
 	}
 	if targetPath == "" {
 		targetPath = cfg.TargetPath

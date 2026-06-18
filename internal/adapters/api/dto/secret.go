@@ -24,6 +24,7 @@ type AttachSecretRequest struct {
 // SecretResponse exposes secret metadata only — the value is never included.
 type SecretResponse struct {
 	ID             string    `json:"id"`
+	ClusterID      string    `json:"cluster_id,omitempty"`
 	Name           string    `json:"name"`
 	TargetPath     string    `json:"target_path"`
 	CurrentVersion int       `json:"current_version"`

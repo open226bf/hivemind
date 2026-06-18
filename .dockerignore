@@ -1,0 +1,28 @@
+# Keep the build context lean and deterministic.
+
+# VCS / editors / OS
+.git/
+.idea/
+.vscode/
+.DS_Store
+
+# Local backend build artifacts and secrets
+/bin/
+/tmp/
+hivemind
+hivemind-server
+*.test
+*.out
+coverage.*
+.env
+
+# Frontend: rebuilt inside the image — never ship local node_modules/build
+gui/node_modules/
+gui/dist/
+gui/.angular/
+gui/.git/
+
+# The embedded UI is filled from the frontend build stage; don't carry a
+# developer's local build into the context (keep only the placeholder).
+internal/adapters/api/web/dist/
+!internal/adapters/api/web/dist/index.html

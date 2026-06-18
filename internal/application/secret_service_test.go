@@ -51,7 +51,7 @@ func (r *fakeSecretRepo) FindByID(_ context.Context, id uuid.UUID) (*secret.Secr
 	return nil, domainerrors.ErrNotFound
 }
 
-func (r *fakeSecretRepo) List(_ context.Context, _ pagination.Page) ([]*secret.Secret, int64, error) {
+func (r *fakeSecretRepo) List(_ context.Context, _ uuid.UUID, _ pagination.Page) ([]*secret.Secret, int64, error) {
 	out := make([]*secret.Secret, 0, len(r.byID))
 	for _, ss := range r.byID {
 		out = append(out, ss.sec)

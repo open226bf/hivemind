@@ -39,11 +39,11 @@ func (r *NetworkRepository) FindByID(ctx context.Context, id uuid.UUID) (*networ
 	return networkToDomain(&m), nil
 }
 
-func (r *NetworkRepository) List(ctx context.Context, p pagination.Page) ([]*network.Network, int64, error) {
+func (r *NetworkRepository) List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*network.Network, int64, error) {
 	var models []networkModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&networkModel{})
+	q := scopeCluster(r.db.WithContext(ctx).Model(&networkModel{}), clusterID)
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count networks: %w", err)
 	}
@@ -83,6 +83,7 @@ func (r *NetworkRepository) IsAttachedToService(ctx context.Context, id uuid.UUI
 func networkToModel(n *network.Network) *networkModel {
 	return &networkModel{
 		ID:         n.ID.String(),
+		ClusterID:  clusterIDColumn(n.ClusterID),
 		Name:       n.Name,
 		Driver:     n.Driver,
 		Scope:      n.Scope,
@@ -98,6 +99,7 @@ func networkToDomain(m *networkModel) *network.Network {
 	id, _ := uuid.Parse(m.ID)
 	return &network.Network{
 		ID:         id,
+		ClusterID:  parseClusterID(m.ClusterID),
 		Name:       m.Name,
 		Driver:     m.Driver,
 		Scope:      m.Scope,

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/open226bf/hivemind/internal/domain/auditlog"
+	"github.com/open226bf/hivemind/internal/domain/cluster"
 	"github.com/open226bf/hivemind/internal/domain/config"
 	"github.com/open226bf/hivemind/internal/domain/deployment"
 	"github.com/open226bf/hivemind/internal/domain/hive"
@@ -17,6 +18,28 @@ import (
 	"github.com/open226bf/hivemind/internal/domain/volume"
 	"github.com/open226bf/hivemind/pkg/pagination"
 )
+
+// ─── Cluster ─────────────────────────────────────────────────────────────────
+
+type ClusterRepository interface {
+	Save(ctx context.Context, c *cluster.Cluster) error
+	FindByID(ctx context.Context, id uuid.UUID) (*cluster.Cluster, error)
+	FindByName(ctx context.Context, name string) (*cluster.Cluster, error)
+	// FindByAgentID resolves the cluster an enrolled agent is bound to.
+	FindByAgentID(ctx context.Context, agentID string) (*cluster.Cluster, error)
+	// FindByEnrollmentTokenHash resolves the cluster awaiting enrollment with the
+	// given token hash (used to enroll an agent that only knows the token).
+	FindByEnrollmentTokenHash(ctx context.Context, tokenHash string) (*cluster.Cluster, error)
+	// FindDefault returns the cluster flagged as default (ErrNotFound if none
+	// has been seeded yet).
+	FindDefault(ctx context.Context) (*cluster.Cluster, error)
+	List(ctx context.Context, p pagination.Page) ([]*cluster.Cluster, int64, error)
+	Update(ctx context.Context, c *cluster.Cluster) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	// ClearDefault unsets the default flag on every cluster — used to enforce a
+	// single default when promoting another one.
+	ClearDefault(ctx context.Context) error
+}
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +90,10 @@ type ServiceRepository interface {
 	// Mounts (atomic replacement, F-V2-06)
 	SetMounts(ctx context.Context, serviceID uuid.UUID, mounts []volume.Mount) error
 	GetMounts(ctx context.Context, serviceID uuid.UUID) ([]volume.Mount, error)
+
+	// Published ports (atomic replacement)
+	SetPorts(ctx context.Context, serviceID uuid.UUID, ports []service.Port) error
+	GetPorts(ctx context.Context, serviceID uuid.UUID) ([]service.Port, error)
 	// CountMountsByVolumeName returns how many service mounts reference a named
 	// volume — used to refuse deletion of an in-use volume.
 	CountMountsByVolumeName(ctx context.Context, name string) (int64, error)
@@ -74,6 +101,10 @@ type ServiceRepository interface {
 	// CountServicesByHive counts the services assigned to a hive — used to refuse
 	// deletion of a non-empty hive (project).
 	CountServicesByHive(ctx context.Context, hiveID uuid.UUID) (int64, error)
+
+	// CountServicesByCluster counts the services targeting a cluster — used to
+	// refuse deletion of a non-empty cluster.
+	CountServicesByCluster(ctx context.Context, clusterID uuid.UUID) (int64, error)
 }
 
 type ServiceFilter struct {
@@ -83,6 +114,8 @@ type ServiceFilter struct {
 	// returned; when Unassigned is true, only services without a hive.
 	HiveID     *uuid.UUID
 	Unassigned bool
+	// ClusterID filters by orchestration target. Nil = all clusters.
+	ClusterID *uuid.UUID
 }
 
 type ServiceSecretAttachment struct {
@@ -120,7 +153,7 @@ type SecretRepository interface {
 	// encrypted at rest by the adapter and never returned by any read method.
 	Save(ctx context.Context, s *secret.Secret, v *secret.SecretVersion, value []byte) error
 	FindByID(ctx context.Context, id uuid.UUID) (*secret.Secret, error)
-	List(ctx context.Context, p pagination.Page) ([]*secret.Secret, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*secret.Secret, int64, error)
 	// Update rotates a secret: bumps the parent record and stores the new
 	// encrypted version value.
 	Update(ctx context.Context, s *secret.Secret, newVersion *secret.SecretVersion, value []byte) error
@@ -137,7 +170,7 @@ type SecretRepository interface {
 type NetworkRepository interface {
 	Save(ctx context.Context, n *network.Network) error
 	FindByID(ctx context.Context, id uuid.UUID) (*network.Network, error)
-	List(ctx context.Context, p pagination.Page) ([]*network.Network, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*network.Network, int64, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
 }
@@ -148,7 +181,7 @@ type VolumeRepository interface {
 	Save(ctx context.Context, v *volume.Volume) error
 	FindByID(ctx context.Context, id uuid.UUID) (*volume.Volume, error)
 	FindByName(ctx context.Context, name string) (*volume.Volume, error)
-	List(ctx context.Context, p pagination.Page) ([]*volume.Volume, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*volume.Volume, int64, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
 
@@ -157,7 +190,7 @@ type VolumeRepository interface {
 type HiveRepository interface {
 	Save(ctx context.Context, h *hive.Hive) error
 	FindByID(ctx context.Context, id uuid.UUID) (*hive.Hive, error)
-	List(ctx context.Context, p pagination.Page) ([]*hive.Hive, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*hive.Hive, int64, error)
 	Update(ctx context.Context, h *hive.Hive) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -178,7 +211,7 @@ type ConfigRepository interface {
 	Save(ctx context.Context, c *config.Config, v *config.ConfigVersion) error
 	FindByID(ctx context.Context, id uuid.UUID) (*config.Config, error)
 	ListVersions(ctx context.Context, configID uuid.UUID) ([]*config.ConfigVersion, error)
-	List(ctx context.Context, p pagination.Page) ([]*config.Config, int64, error)
+	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*config.Config, int64, error)
 	Update(ctx context.Context, c *config.Config, newVersion *config.ConfigVersion) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)

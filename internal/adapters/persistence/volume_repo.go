@@ -51,11 +51,11 @@ func (r *VolumeRepository) FindByName(ctx context.Context, name string) (*volume
 	return volumeToDomain(&m), nil
 }
 
-func (r *VolumeRepository) List(ctx context.Context, p pagination.Page) ([]*volume.Volume, int64, error) {
+func (r *VolumeRepository) List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*volume.Volume, int64, error) {
 	var models []volumeModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&volumeModel{})
+	q := scopeCluster(r.db.WithContext(ctx).Model(&volumeModel{}), clusterID)
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count volumes: %w", err)
 	}
@@ -86,6 +86,7 @@ func (r *VolumeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func volumeToModel(v *volume.Volume) *volumeModel {
 	return &volumeModel{
 		ID:        v.ID.String(),
+		ClusterID: clusterIDColumn(v.ClusterID),
 		Name:      v.Name,
 		Driver:    v.Driver,
 		CreatedAt: v.CreatedAt,
@@ -96,6 +97,7 @@ func volumeToDomain(m *volumeModel) *volume.Volume {
 	id, _ := uuid.Parse(m.ID)
 	return &volume.Volume{
 		ID:        id,
+		ClusterID: parseClusterID(m.ClusterID),
 		Name:      m.Name,
 		Driver:    m.Driver,
 		CreatedAt: m.CreatedAt,

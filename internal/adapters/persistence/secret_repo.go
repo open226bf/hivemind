@@ -56,11 +56,11 @@ func (r *SecretRepository) FindByID(ctx context.Context, id uuid.UUID) (*secret.
 	return secretToDomain(&m), nil
 }
 
-func (r *SecretRepository) List(ctx context.Context, p pagination.Page) ([]*secret.Secret, int64, error) {
+func (r *SecretRepository) List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*secret.Secret, int64, error) {
 	var models []secretModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&secretModel{})
+	q := scopeCluster(r.db.WithContext(ctx).Model(&secretModel{}), clusterID)
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count secrets: %w", err)
 	}
@@ -155,6 +155,7 @@ func (r *SecretRepository) IsAttachedToService(ctx context.Context, id uuid.UUID
 func secretToModel(s *secret.Secret) *secretModel {
 	return &secretModel{
 		ID:             s.ID.String(),
+		ClusterID:      clusterIDColumn(s.ClusterID),
 		Name:           s.Name,
 		CurrentVersion: s.CurrentVersion,
 		TargetPath:     s.TargetPath,
@@ -181,6 +182,7 @@ func secretToDomain(m *secretModel) *secret.Secret {
 	createdBy, _ := uuid.Parse(m.CreatedBy)
 	return &secret.Secret{
 		ID:             id,
+		ClusterID:      parseClusterID(m.ClusterID),
 		Name:           m.Name,
 		CurrentVersion: m.CurrentVersion,
 		TargetPath:     m.TargetPath,

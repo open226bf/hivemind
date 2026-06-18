@@ -54,7 +54,7 @@ func (h *SecretHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/secrets [get]
 func (h *SecretHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), page)
+	items, total, err := h.svc.List(c.Request.Context(), currentCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list secrets")
 		return
@@ -101,11 +101,13 @@ func (h *SecretHandler) Create(c *gin.Context) {
 		return
 	}
 
+	clusterID := writeCluster(c) // default cluster when none is selected (never NULL)
 	sec, err := h.svc.Create(c.Request.Context(), application.CreateSecretInput{
 		Name:       req.Name,
 		TargetPath: req.TargetPath,
 		Value:      []byte(req.Value),
 		CreatedBy:  claims.UserID,
+		Cluster:    clusterID,
 	})
 	if err != nil {
 		h.writeSecretError(c, err)
@@ -305,7 +307,7 @@ func (h *SecretHandler) writeSecretError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, domainerrors.ErrNotFound):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, secret.ErrSecretInUse):
+	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, secret.ErrSecretInUse), errors.Is(err, application.ErrClusterMismatch):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, secret.ErrInvalidName), errors.Is(err, secret.ErrEmptyValue):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
@@ -317,6 +319,7 @@ func (h *SecretHandler) writeSecretError(c *gin.Context, err error) {
 func toSecretResponse(s *secret.Secret) dto.SecretResponse {
 	return dto.SecretResponse{
 		ID:             s.ID.String(),
+		ClusterID:      clusterIDString(s.ClusterID),
 		Name:           s.Name,
 		TargetPath:     s.TargetPath,
 		CurrentVersion: s.CurrentVersion,

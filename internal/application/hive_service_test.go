@@ -39,7 +39,7 @@ func (r *fakeHiveRepo) FindByID(_ context.Context, id uuid.UUID) (*hive.Hive, er
 	}
 	return nil, domainerrors.ErrNotFound
 }
-func (r *fakeHiveRepo) List(_ context.Context, _ pagination.Page) ([]*hive.Hive, int64, error) {
+func (r *fakeHiveRepo) List(_ context.Context, _ uuid.UUID, _ pagination.Page) ([]*hive.Hive, int64, error) {
 	out := make([]*hive.Hive, 0, len(r.byID))
 	for _, h := range r.byID {
 		out = append(out, h)
@@ -64,7 +64,7 @@ func (r *fakeHiveRepo) Delete(_ context.Context, id uuid.UUID) error {
 
 func TestHiveCreate_Success(t *testing.T) {
 	svc := application.NewHiveService(newFakeHiveRepo(), newFakeServiceRepo())
-	h, err := svc.Create(context.Background(), application.SaveHiveInput{Name: "Paiement", Color: "#1e88e5"})
+	h, err := svc.Create(context.Background(), uuid.Nil, application.SaveHiveInput{Name: "Paiement", Color: "#1e88e5"})
 	require.NoError(t, err)
 	assert.Equal(t, "Paiement", h.Name)
 }
@@ -74,7 +74,7 @@ func TestHiveMoveService_AssignAndUnassign(t *testing.T) {
 	svcRepo := newFakeServiceRepo()
 	svc := application.NewHiveService(hiveRepo, svcRepo)
 
-	h, _ := svc.Create(context.Background(), application.SaveHiveInput{Name: "Paiement"})
+	h, _ := svc.Create(context.Background(), uuid.Nil, application.SaveHiveInput{Name: "Paiement"})
 	s := mkService(t, "api")
 	svcRepo.add(s)
 
@@ -105,7 +105,7 @@ func TestHiveDelete_NonEmpty(t *testing.T) {
 	svcRepo := newFakeServiceRepo()
 	svc := application.NewHiveService(hiveRepo, svcRepo)
 
-	h, _ := svc.Create(context.Background(), application.SaveHiveInput{Name: "Paiement"})
+	h, _ := svc.Create(context.Background(), uuid.Nil, application.SaveHiveInput{Name: "Paiement"})
 	s := mkService(t, "api")
 	svcRepo.add(s)
 	_, err := svc.MoveService(context.Background(), s.ID, &h.ID)
@@ -120,7 +120,7 @@ func TestHiveList_WithCounts(t *testing.T) {
 	svcRepo := newFakeServiceRepo()
 	svc := application.NewHiveService(hiveRepo, svcRepo)
 
-	h, _ := svc.Create(context.Background(), application.SaveHiveInput{Name: "Paiement"})
+	h, _ := svc.Create(context.Background(), uuid.Nil, application.SaveHiveInput{Name: "Paiement"})
 	for _, name := range []string{"api", "worker"} {
 		s := mkService(t, name)
 		svcRepo.add(s)
@@ -128,7 +128,7 @@ func TestHiveList_WithCounts(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	summaries, total, err := svc.List(context.Background(), pagination.Page{Number: 1, Size: 10})
+	summaries, total, err := svc.List(context.Background(), uuid.Nil, pagination.Page{Number: 1, Size: 10})
 	require.NoError(t, err)
 	require.Equal(t, int64(1), total)
 	assert.Equal(t, int64(2), summaries[0].ServiceCount)
@@ -139,7 +139,7 @@ func TestHiveListServices(t *testing.T) {
 	svcRepo := newFakeServiceRepo()
 	svc := application.NewHiveService(hiveRepo, svcRepo)
 
-	h, _ := svc.Create(context.Background(), application.SaveHiveInput{Name: "Paiement"})
+	h, _ := svc.Create(context.Background(), uuid.Nil, application.SaveHiveInput{Name: "Paiement"})
 	in := mkService(t, "in-hive")
 	out := mkService(t, "out-hive")
 	svcRepo.add(in)

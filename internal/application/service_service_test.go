@@ -27,6 +27,7 @@ type fakeServiceRepo struct {
 	secrets  map[uuid.UUID][]ports.ServiceSecretAttachment
 	configs  map[uuid.UUID][]ports.ServiceConfigAttachment
 	mounts   map[uuid.UUID][]volume.Mount
+	ports    map[uuid.UUID][]service.Port
 }
 
 func newFakeServiceRepo() *fakeServiceRepo {
@@ -190,6 +191,16 @@ func (r *fakeServiceRepo) SetMounts(_ context.Context, serviceID uuid.UUID, moun
 func (r *fakeServiceRepo) GetMounts(_ context.Context, serviceID uuid.UUID) ([]volume.Mount, error) {
 	return r.mounts[serviceID], nil
 }
+func (r *fakeServiceRepo) SetPorts(_ context.Context, serviceID uuid.UUID, p []service.Port) error {
+	if r.ports == nil {
+		r.ports = map[uuid.UUID][]service.Port{}
+	}
+	r.ports[serviceID] = p
+	return nil
+}
+func (r *fakeServiceRepo) GetPorts(_ context.Context, serviceID uuid.UUID) ([]service.Port, error) {
+	return r.ports[serviceID], nil
+}
 func (r *fakeServiceRepo) CountMountsByVolumeName(_ context.Context, name string) (int64, error) {
 	var n int64
 	for _, ms := range r.mounts {
@@ -205,6 +216,15 @@ func (r *fakeServiceRepo) CountServicesByHive(_ context.Context, hiveID uuid.UUI
 	var n int64
 	for _, s := range r.byID {
 		if s.HiveID != nil && *s.HiveID == hiveID {
+			n++
+		}
+	}
+	return n, nil
+}
+func (r *fakeServiceRepo) CountServicesByCluster(_ context.Context, clusterID uuid.UUID) (int64, error) {
+	var n int64
+	for _, s := range r.byID {
+		if s.ClusterID == clusterID {
 			n++
 		}
 	}
@@ -438,7 +458,7 @@ func TestServiceSetResources_ExceedsClusterCapacity(t *testing.T) {
 	s := mkService(t, "my-service")
 	repo.add(s)
 	// Stub cluster's largest node has 8 cores / 16 GiB.
-	svc := application.NewServiceService(repo, orchestrator.NewStubOrchestrator())
+	svc := application.NewServiceService(repo, orchestrator.NewStaticRegistry(orchestrator.NewStubOrchestrator()))
 
 	_, err := svc.SetResources(context.Background(), s.ID, service.Resources{
 		CPUReservation: 10000, // no node can satisfy this
@@ -455,7 +475,7 @@ func TestServiceSetResources_WithinClusterCapacity(t *testing.T) {
 	repo := newFakeServiceRepo()
 	s := mkService(t, "my-service")
 	repo.add(s)
-	svc := application.NewServiceService(repo, orchestrator.NewStubOrchestrator())
+	svc := application.NewServiceService(repo, orchestrator.NewStaticRegistry(orchestrator.NewStubOrchestrator()))
 
 	_, err := svc.SetResources(context.Background(), s.ID, service.Resources{
 		CPUReservation: 4,

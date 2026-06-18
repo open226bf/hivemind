@@ -18,6 +18,7 @@ type AttachNetworkRequest struct {
 // NetworkResponse is the canonical network representation.
 type NetworkResponse struct {
 	ID         string    `json:"id"`
+	ClusterID  string    `json:"cluster_id,omitempty"`
 	Name       string    `json:"name"`
 	Driver     string    `json:"driver"`
 	Scope      string    `json:"scope"`

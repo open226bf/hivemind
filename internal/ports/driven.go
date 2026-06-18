@@ -87,6 +87,63 @@ type Orchestrator interface {
 	ClusterInfo(ctx context.Context) (*ClusterInfo, error)
 }
 
+// AgentCertIssuer signs client certificates for enrolled agents (their cluster
+// id is the common name) and exposes the CA certificate the agent needs to trust
+// the hub. Backed by the internal agent CA.
+type AgentCertIssuer interface {
+	IssueClient(commonName string, ttl time.Duration) (certPEM, keyPEM []byte, serial string, err error)
+	CertPEM() []byte // the CA certificate (safe to hand to the agent)
+}
+
+// AgentHub manages the reverse-tunnel sessions opened by Hivemind agents (the
+// "agent" connection mode). An agent deployed on a cluster dials out to the hub,
+// so the cluster needs no inbound exposure. The registry uses the hub to obtain
+// an Orchestrator transported over a cluster's agent tunnel.
+type AgentHub interface {
+	// Orchestrator returns an Orchestrator backed by the agent's tunnel, routing
+	// control-plane calls to a manager-resident agent task. Fails when the agent
+	// has no live session.
+	Orchestrator(ctx context.Context, agentID string) (Orchestrator, error)
+	// Online reports whether the agent currently holds a live session.
+	Online(agentID string) bool
+	// ConnectedNodeIDs returns the set of Swarm node ids that currently have a
+	// live agent tunnel, used to flag per-node tunnel health on the dashboard.
+	ConnectedNodeIDs(agentID string) map[string]bool
+}
+
+// AgentNode is a node identity reported by an agent task (transport-neutral).
+type AgentNode struct {
+	NodeID        string
+	Hostname      string
+	Role          string // "manager" | "worker"
+	IsManager     bool
+	IsLeader      bool
+	EngineVersion string
+}
+
+// AgentPresence records the liveness of agents from their heartbeats. It is the
+// write side of the agent hub used by the enrollment/heartbeat use case.
+type AgentPresence interface {
+	MarkSeen(agentID string, node AgentNode)
+	Forget(agentID string)
+	Online(agentID string) bool
+}
+
+// OrchestratorRegistry resolves a cluster id to a live Orchestrator. It is the
+// single place that knows the platform is multi-cluster: every application
+// service holds a registry instead of a single orchestrator and resolves the
+// backend from the resource's ClusterID. The zero UUID resolves to the default
+// cluster, which keeps pre-multi-cluster resources (and tests) working without a
+// backfill.
+type OrchestratorRegistry interface {
+	For(ctx context.Context, clusterID uuid.UUID) (Orchestrator, error)
+	Default(ctx context.Context) (Orchestrator, error)
+	// Invalidate drops (and closes) any cached connection for a cluster, so the
+	// next For rebuilds it. Call after a cluster's endpoint changes or it is
+	// removed.
+	Invalidate(clusterID uuid.UUID)
+}
+
 // ClusterInfo is a snapshot of the orchestration cluster's nodes.
 type ClusterInfo struct {
 	Nodes []NodeInfo
@@ -105,6 +162,9 @@ type NodeInfo struct {
 	CPUs          float64 // logical cores (NanoCPUs / 1e9)
 	MemoryBytes   int64   // total memory reported by the node
 	Platform      string  // "os/arch", e.g. "linux/x86_64"
+	// AgentConnected is true (agent-mode clusters only) when this node currently
+	// has a live agent tunnel. Always false for direct clusters.
+	AgentConnected bool
 }
 
 // CreateNetworkOptions controls overlay network creation on Swarm.
@@ -144,7 +204,16 @@ type ServiceSpec struct {
 	Secrets      []SecretAttachment
 	Configs      []ConfigAttachment
 	Mounts       []MountSpec
+	Ports        []PortSpec
 	Labels       map[string]string
+}
+
+// PortSpec is one published-port mapping applied to a service's endpoint.
+type PortSpec struct {
+	TargetPort    uint32 // container port
+	PublishedPort uint32 // host/ingress port (0 = auto-assigned)
+	Protocol      string // tcp | udp | sctp
+	Mode          string // ingress | host
 }
 
 // MountSpec is one filesystem mount applied to a service's tasks (F-V2-06).

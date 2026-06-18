@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/open226bf/hivemind/internal/domain/cluster"
 	"github.com/open226bf/hivemind/internal/domain/user"
 	"github.com/open226bf/hivemind/internal/ports"
 	"github.com/open226bf/hivemind/pkg/crypto"
@@ -38,6 +39,33 @@ func EnsureAdmin(ctx context.Context, users ports.UserRepository, email, passwor
 	}
 	if err := users.Save(ctx, admin); err != nil {
 		return false, fmt.Errorf("save admin: %w", err)
+	}
+	return true, nil
+}
+
+// EnsureDefaultCluster creates the seeded default cluster on first boot. It
+// targets the ambient Docker environment (empty endpoint), which is exactly how
+// the single-cluster deployment connected, so existing setups keep working and
+// resources with a zero ClusterID resolve here. Idempotent: if a default
+// cluster already exists it is a no-op. Returns created=true only when a new
+// cluster was inserted.
+func EnsureDefaultCluster(ctx context.Context, clusters ports.ClusterRepository, name string) (created bool, err error) {
+	if _, err := clusters.FindDefault(ctx); err == nil {
+		return false, nil // already seeded
+	} else if !errors.Is(err, domainerrors.ErrNotFound) {
+		return false, fmt.Errorf("lookup default cluster: %w", err)
+	}
+
+	if name == "" {
+		name = "default"
+	}
+	c, err := cluster.New(name, cluster.TypeSwarm, "")
+	if err != nil {
+		return false, err
+	}
+	c.IsDefault = true
+	if err := clusters.Save(ctx, c); err != nil {
+		return false, fmt.Errorf("save default cluster: %w", err)
 	}
 	return true, nil
 }
