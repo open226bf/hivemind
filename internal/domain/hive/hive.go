@@ -25,6 +25,7 @@ var colorRegex = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 // the UI; empty means "use the default".
 type Hive struct {
 	ID          uuid.UUID
+	ClusterID   uuid.UUID // cluster the hive belongs to; uuid.Nil = default cluster
 	Name        string
 	Description string
 	Color       string // optional "#RRGGBB"
@@ -32,7 +33,7 @@ type Hive struct {
 	UpdatedAt   time.Time
 }
 
-func New(name, description, color string) (*Hive, error) {
+func New(clusterID uuid.UUID, name, description, color string) (*Hive, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || len(name) > maxNameLen {
 		return nil, ErrInvalidName
@@ -43,6 +44,7 @@ func New(name, description, color string) (*Hive, error) {
 	now := time.Now().UTC()
 	return &Hive{
 		ID:          uuid.New(),
+		ClusterID:   clusterID,
 		Name:        name,
 		Description: description,
 		Color:       color,

@@ -39,11 +39,11 @@ func (r *HiveRepository) FindByID(ctx context.Context, id uuid.UUID) (*hive.Hive
 	return hiveToDomain(&m), nil
 }
 
-func (r *HiveRepository) List(ctx context.Context, p pagination.Page) ([]*hive.Hive, int64, error) {
+func (r *HiveRepository) List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*hive.Hive, int64, error) {
 	var models []hiveModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&hiveModel{})
+	q := scopeCluster(r.db.WithContext(ctx).Model(&hiveModel{}), clusterID)
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count hives: %w", err)
 	}
@@ -84,6 +84,7 @@ func (r *HiveRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func hiveToModel(h *hive.Hive) *hiveModel {
 	return &hiveModel{
 		ID:          h.ID.String(),
+		ClusterID:   clusterIDColumn(h.ClusterID),
 		Name:        h.Name,
 		Description: h.Description,
 		Color:       h.Color,
@@ -96,6 +97,7 @@ func hiveToDomain(m *hiveModel) *hive.Hive {
 	id, _ := uuid.Parse(m.ID)
 	return &hive.Hive{
 		ID:          id,
+		ClusterID:   parseClusterID(m.ClusterID),
 		Name:        m.Name,
 		Description: m.Description,
 		Color:       m.Color,

@@ -32,6 +32,7 @@ type AttachConfigRequest struct {
 // ConfigResponse exposes config metadata (no content).
 type ConfigResponse struct {
 	ID             string    `json:"id"`
+	ClusterID      string    `json:"cluster_id,omitempty"`
 	Name           string    `json:"name"`
 	TargetPath     string    `json:"target_path"`
 	CurrentVersion int       `json:"current_version"`

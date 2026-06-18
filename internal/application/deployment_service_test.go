@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/orange/hivemind/internal/adapters/orchestrator"
 	"github.com/orange/hivemind/internal/application"
 	"github.com/orange/hivemind/internal/domain/deployment"
 	"github.com/orange/hivemind/internal/domain/service"
@@ -193,7 +194,7 @@ func newDeploymentSvc(t *testing.T) (*application.DeploymentService, *fakeServic
 	cfgRepo := newFakeConfigRepo()
 	orch := &fakeOrchestrator{}
 	notif := &fakeNotifier{}
-	svc := application.NewDeploymentService(svcRepo, depRepo, netRepo, secRepo, cfgRepo, orch, notif)
+	svc := application.NewDeploymentService(svcRepo, depRepo, netRepo, secRepo, cfgRepo, orchestrator.NewStaticRegistry(orch), notif)
 	return svc, svcRepo, depRepo, orch, notif
 }
 

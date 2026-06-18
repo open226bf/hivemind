@@ -75,6 +75,9 @@ func (r *ServiceRepository) List(ctx context.Context, filter ports.ServiceFilter
 	} else if filter.HiveID != nil {
 		q = q.Where("hive_id = ?", filter.HiveID.String())
 	}
+	if filter.ClusterID != nil {
+		q = scopeCluster(q, *filter.ClusterID)
+	}
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count services: %w", err)
 	}
@@ -99,7 +102,7 @@ func (r *ServiceRepository) Update(ctx context.Context, s *service.Service) erro
 func (r *ServiceRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		sid := id.String()
-		for _, table := range []string{"env_vars", "service_networks", "service_secrets", "service_configs", "service_mounts"} {
+		for _, table := range []string{"env_vars", "service_networks", "service_secrets", "service_configs", "service_mounts", "service_ports"} {
 			if err := tx.Exec(fmt.Sprintf("DELETE FROM %s WHERE service_id = ?", table), sid).Error; err != nil {
 				return fmt.Errorf("delete %s: %w", table, err)
 			}
@@ -371,6 +374,52 @@ func (r *ServiceRepository) GetMounts(ctx context.Context, serviceID uuid.UUID) 
 	return out, nil
 }
 
+// ─── Published ports ──────────────────────────────────────────────────────────
+
+func (r *ServiceRepository) SetPorts(ctx context.Context, serviceID uuid.UUID, ports []service.Port) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("service_id = ?", serviceID.String()).Delete(&servicePortModel{}).Error; err != nil {
+			return fmt.Errorf("clear ports: %w", err)
+		}
+		if len(ports) == 0 {
+			return nil
+		}
+		models := make([]servicePortModel, 0, len(ports))
+		for i, p := range ports {
+			models = append(models, servicePortModel{
+				ID:            uuid.NewString(),
+				ServiceID:     serviceID.String(),
+				TargetPort:    p.TargetPort,
+				PublishedPort: p.PublishedPort,
+				Protocol:      p.Protocol,
+				Mode:          p.Mode,
+				Position:      i,
+			})
+		}
+		return tx.Create(&models).Error
+	})
+}
+
+func (r *ServiceRepository) GetPorts(ctx context.Context, serviceID uuid.UUID) ([]service.Port, error) {
+	var models []servicePortModel
+	if err := r.db.WithContext(ctx).
+		Where("service_id = ?", serviceID.String()).
+		Order("position ASC").
+		Find(&models).Error; err != nil {
+		return nil, fmt.Errorf("get ports: %w", err)
+	}
+	out := make([]service.Port, 0, len(models))
+	for _, m := range models {
+		out = append(out, service.Port{
+			TargetPort:    m.TargetPort,
+			PublishedPort: m.PublishedPort,
+			Protocol:      m.Protocol,
+			Mode:          m.Mode,
+		})
+	}
+	return out, nil
+}
+
 func (r *ServiceRepository) CountMountsByVolumeName(ctx context.Context, name string) (int64, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&serviceMountModel{}).
@@ -391,6 +440,16 @@ func (r *ServiceRepository) CountServicesByHive(ctx context.Context, hiveID uuid
 	return count, nil
 }
 
+func (r *ServiceRepository) CountServicesByCluster(ctx context.Context, clusterID uuid.UUID) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&serviceModel{}).
+		Where("cluster_id = ?", clusterID.String()).
+		Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("count services by cluster: %w", err)
+	}
+	return count, nil
+}
+
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 func serviceToModel(s *service.Service) *serviceModel {
@@ -401,6 +460,7 @@ func serviceToModel(s *service.Service) *serviceModel {
 	}
 	return &serviceModel{
 		ID:          s.ID.String(),
+		ClusterID:   clusterIDColumn(s.ClusterID),
 		HiveID:      hiveID,
 		Name:        s.Name,
 		Description: s.Description,
@@ -443,6 +503,7 @@ func serviceToDomain(m *serviceModel) *service.Service {
 	}
 	return &service.Service{
 		ID:          id,
+		ClusterID:   parseClusterID(m.ClusterID),
 		HiveID:      hiveID,
 		Name:        m.Name,
 		Description: m.Description,

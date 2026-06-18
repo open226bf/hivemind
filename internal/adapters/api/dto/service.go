@@ -71,6 +71,7 @@ type UpdateConfigDTO struct {
 // ServiceResponse is the canonical service representation returned by all endpoints.
 type ServiceResponse struct {
 	ID             string          `json:"id"`
+	ClusterID      string          `json:"cluster_id,omitempty"`
 	HiveID         string          `json:"hive_id,omitempty"`
 	Name           string          `json:"name"`
 	Description    string          `json:"description"`

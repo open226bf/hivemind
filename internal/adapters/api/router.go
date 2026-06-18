@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -9,8 +10,11 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
 
+	"github.com/orange/hivemind/internal/adapters/agenthub"
 	"github.com/orange/hivemind/internal/adapters/api/handler"
 	"github.com/orange/hivemind/internal/adapters/api/middleware"
+	"github.com/orange/hivemind/internal/adapters/api/web"
+	"github.com/orange/hivemind/internal/adapters/auth"
 	"github.com/orange/hivemind/internal/application"
 	"github.com/orange/hivemind/internal/domain/user"
 	"github.com/orange/hivemind/internal/ports"
@@ -20,22 +24,30 @@ import (
 )
 
 type Dependencies struct {
-	DB           *gorm.DB
-	Tokens       ports.TokenService
-	Auth         *application.AuthService
-	Users        *application.UserService
-	Services     *application.ServiceService
-	Hives        *application.HiveService
-	Networks     *application.NetworkService
-	Volumes      *application.VolumeService
-	Secrets      *application.SecretService
-	Configs      *application.ConfigService
-	Templates    *application.TemplateService
-	Deployments  *application.DeploymentService
-	Snapshots    *application.SnapshotService
-	Cluster      *application.ClusterService
-	Orchestrator ports.Orchestrator
-	AuditLog     ports.AuditLogRepository
+	DB          *gorm.DB
+	Tokens      ports.TokenService
+	Auth        *application.AuthService
+	Users       *application.UserService
+	Services    *application.ServiceService
+	Hives       *application.HiveService
+	Networks    *application.NetworkService
+	Volumes     *application.VolumeService
+	Secrets     *application.SecretService
+	Configs     *application.ConfigService
+	Templates   *application.TemplateService
+	Deployments *application.DeploymentService
+	Snapshots   *application.SnapshotService
+	Cluster     *application.ClusterService
+	Agent       *application.AgentService
+	AgentHub    *agenthub.Hub
+	Registry    ports.OrchestratorRegistry
+	AuditLog    ports.AuditLogRepository
+	// WSTickets mints single-use tickets that authenticate the exec WebSocket
+	// upgrade without putting the access token in the URL.
+	WSTickets *auth.TicketStore
+	// BaseURL is the canonical external URL (HIVEMIND_BASE_URL) used to render
+	// agent install/deploy commands.
+	BaseURL string
 }
 
 // NewRouter builds the Gin engine with health endpoints and the /api/v1 group.
@@ -71,27 +83,43 @@ func NewRouter(deps Dependencies) *gin.Engine {
 		protected.Use(middleware.AuditForbidden(deps.AuditLog))
 	}
 	protected.Use(middleware.Auth(deps.Tokens))
+	// Resolve the active cluster (X-Hivemind-Cluster header) once per request so
+	// every handler scopes reads and writes to the cluster selected in the UI.
+	// The cluster service resolves the default cluster for header-less writes.
+	protected.Use(middleware.ClusterContext(deps.Cluster))
 
 	handler.NewAuthHandler(deps.Auth).Register(public, protected)
 	handler.NewUserHandler(deps.Users).Register(protected)
 	handler.NewServiceHandler(deps.Services).Register(protected)
 	handler.NewHiveHandler(deps.Hives).Register(protected)
-	handler.NewNetworkHandler(deps.Networks, deps.Orchestrator).Register(protected)
-	handler.NewVolumeHandler(deps.Volumes, deps.Orchestrator, deps.AuditLog).Register(protected)
+	handler.NewNetworkHandler(deps.Networks, deps.Registry).Register(protected)
+	handler.NewVolumeHandler(deps.Volumes, deps.Registry, deps.AuditLog).Register(protected)
 	handler.NewSecretHandler(deps.Secrets).Register(protected)
 	handler.NewConfigHandler(deps.Configs).Register(protected)
 	handler.NewTemplateHandler(deps.Templates).Register(protected)
 	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
 	handler.NewSnapshotHandler(deps.Snapshots).Register(protected)
 	handler.NewClusterHandler(deps.Cluster).Register(protected)
+	handler.NewAgentHandler(deps.Agent, deps.AgentHub, deps.BaseURL).Register(public, protected)
 
-	// Interactive exec (web terminal). Authenticated via a `token` query
-	// parameter since browsers can't set headers on a WebSocket. The Admin-only
-	// restriction is temporarily lifted — any authenticated user may attach.
-	// TODO: re-enable middleware.RequireRole(user.RoleAdmin) for exec.
-	wsAuth := v1.Group("")
-	wsAuth.Use(middleware.AuthFromQuery(deps.Tokens), middleware.RequireRole(user.RoleViewer))
-	wsAuth.GET("/services/:id/exec", handler.NewExecHandler(deps.Deployments).Exec)
+	// Interactive exec (web terminal). An interactive shell is the most powerful
+	// supervision capability (arbitrary code execution inside the container,
+	// including any mounted secrets), so issuing a session is gated to Admin.
+	// Browsers can't set headers on a WebSocket, so instead of putting the access
+	// token in the URL the Admin mints a short-lived single-use ticket over a
+	// normal request, then opens the socket with ?ticket=<id>. The socket handler
+	// validates (and consumes) the ticket itself — no token/role middleware here.
+	exec := handler.NewExecHandler(deps.Deployments, deps.WSTickets)
+	protected.POST("/services/:id/exec/ticket", middleware.RequireRole(user.RoleAdmin), exec.IssueTicket)
+	v1.GET("/services/:id/exec", exec.Exec)
+
+	// ─── Embedded web UI ─────────────────────────────────────────────────────
+	// Serve the bundled Angular SPA from the same engine so one container exposes
+	// both the API and the UI. Registered last: it only handles routes no API
+	// handler matched (NoRoute), and keeps /api 404s as JSON.
+	if err := web.Register(r); err != nil {
+		slog.Error("register embedded web UI", "err", err)
+	}
 
 	return r
 }

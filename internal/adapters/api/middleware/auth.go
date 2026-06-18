@@ -37,31 +37,6 @@ func Auth(tokens ports.TokenService) gin.HandlerFunc {
 	}
 }
 
-// AuthFromQuery validates an access token passed as the `token` query parameter
-// and stores the claims like Auth does. Browsers cannot set an Authorization
-// header on WebSocket (or EventSource) connections, so query-param auth is the
-// pragmatic option for those routes. Use only where a header is impossible.
-func AuthFromQuery(tokens ports.TokenService) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		raw := c.Query("token")
-		if raw == "" {
-			dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "missing token query parameter")
-			return
-		}
-		claims, err := tokens.Parse(raw)
-		if err != nil {
-			dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "invalid or expired token")
-			return
-		}
-		if claims.TokenType != ports.TokenTypeAccess {
-			dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "access token required")
-			return
-		}
-		c.Set(claimsContextKey, claims)
-		c.Next()
-	}
-}
-
 // ClaimsFrom retrieves the authenticated claims set by the Auth middleware.
 func ClaimsFrom(c *gin.Context) (*ports.TokenClaims, bool) {
 	v, ok := c.Get(claimsContextKey)

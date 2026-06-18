@@ -27,6 +27,7 @@ type SetMountsRequest struct {
 
 type VolumeResponse struct {
 	ID        string    `json:"id"`
+	ClusterID string    `json:"cluster_id,omitempty"`
 	Name      string    `json:"name"`
 	Driver    string    `json:"driver"`
 	CreatedAt time.Time `json:"created_at"`

@@ -1,11 +1,13 @@
 package middleware_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -74,4 +76,48 @@ func TestRBAC_AdminAllowed(t *testing.T) {
 func TestRBAC_OperatorForbidden(t *testing.T) {
 	tokens, r := setup(t)
 	assert.Equal(t, http.StatusForbidden, do(r, "/admin", tokenFor(t, tokens, user.RoleOperator)).Code)
+}
+
+type fakeDefaults struct{ id uuid.UUID }
+
+func (f fakeDefaults) DefaultClusterID(context.Context) (uuid.UUID, error) { return f.id, nil }
+
+// clusterCtxResult runs ClusterContext for a request and returns the scope and
+// write cluster it stashed.
+func clusterCtxResult(method, header string, defaults middleware.DefaultClusterResolver) (scope, write uuid.UUID) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Handle(method, "/x", middleware.ClusterContext(defaults), func(c *gin.Context) {
+		scope = c.MustGet(middleware.ClusterContextKey).(uuid.UUID)
+		write = c.MustGet(middleware.ClusterWriteContextKey).(uuid.UUID)
+		c.Status(http.StatusOK)
+	})
+	req := httptest.NewRequest(method, "/x", nil)
+	if header != "" {
+		req.Header.Set(middleware.ClusterHeader, header)
+	}
+	r.ServeHTTP(httptest.NewRecorder(), req)
+	return scope, write
+}
+
+func TestClusterContext_HeaderScopesBoth(t *testing.T) {
+	sel := uuid.New()
+	def := fakeDefaults{id: uuid.New()}
+	scope, write := clusterCtxResult(http.MethodPost, sel.String(), def)
+	assert.Equal(t, sel, scope, "scope follows the header")
+	assert.Equal(t, sel, write, "write follows the header (default not consulted)")
+}
+
+func TestClusterContext_HeaderlessWriteFallsBackToDefault(t *testing.T) {
+	def := fakeDefaults{id: uuid.New()}
+	scope, write := clusterCtxResult(http.MethodPost, "", def)
+	assert.Equal(t, uuid.Nil, scope, "no header → scope is the zero UUID (lists aggregate all)")
+	assert.Equal(t, def.id, write, "no header on a write → resource lands on the default cluster, never NULL")
+}
+
+func TestClusterContext_HeaderlessReadStaysUnscoped(t *testing.T) {
+	def := fakeDefaults{id: uuid.New()}
+	scope, write := clusterCtxResult(http.MethodGet, "", def)
+	assert.Equal(t, uuid.Nil, scope)
+	assert.Equal(t, uuid.Nil, write, "reads don't resolve the default (no extra lookup), they aggregate all")
 }

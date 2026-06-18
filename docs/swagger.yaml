@@ -67,6 +67,19 @@ definitions:
       secrets:
         type: integer
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ClusterListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse:
     properties:
       activity:
@@ -81,6 +94,31 @@ definitions:
         type: array
       services:
         $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceSummaryDTO'
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse:
+    properties:
+      created_at:
+        type: string
+      endpoint:
+        type: string
+      id:
+        type: string
+      is_default:
+        type: boolean
+      labels:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+      status:
+        type: string
+      tls_enabled:
+        type: boolean
+      type:
+        type: string
+      updated_at:
+        type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ClusterSummaryDTO:
     properties:
@@ -129,6 +167,8 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse:
     properties:
+      cluster_id:
+        type: string
       created_at:
         type: string
       current_version:
@@ -155,8 +195,35 @@ definitions:
       version:
         type: integer
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateClusterRequest:
+    properties:
+      ca_cert:
+        type: string
+      client_cert:
+        type: string
+      client_key:
+        type: string
+      endpoint:
+        example: tcp://10.0.0.10:2376
+        type: string
+      labels:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        example: prod-eu
+        type: string
+      type:
+        example: swarm
+        type: string
+    required:
+    - name
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateConfigRequest:
     properties:
+      cluster:
+        description: Cluster is the target cluster id. Empty selects the default cluster.
+        type: string
       comment:
         example: initial version
         type: string
@@ -190,6 +257,9 @@ definitions:
       attachable:
         example: true
         type: boolean
+      cluster:
+        description: Cluster is the target cluster id. Empty selects the default cluster.
+        type: string
       external:
         example: false
         type: boolean
@@ -204,6 +274,9 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateSecretRequest:
     properties:
+      cluster:
+        description: Cluster is the target cluster id. Empty selects the default cluster.
+        type: string
       name:
         example: db_password
         type: string
@@ -218,6 +291,9 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateServiceRequest:
     properties:
+      cluster:
+        description: Cluster is the target cluster id. Empty selects the default cluster.
+        type: string
       command:
         items:
           type: string
@@ -228,6 +304,8 @@ definitions:
         items:
           type: string
         type: array
+      hive:
+        type: string
       image:
         type: string
       name:
@@ -245,6 +323,11 @@ definitions:
     required:
     - image
     - name
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.CreateSnapshotRequest:
+    properties:
+      label:
+        type: string
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateTemplateRequest:
     properties:
@@ -281,6 +364,9 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.CreateVolumeRequest:
     properties:
+      cluster:
+        description: Cluster is the target cluster id. Empty selects the default cluster.
+        type: string
       driver:
         example: local
         type: string
@@ -494,6 +580,8 @@ definitions:
     properties:
       attachable:
         type: boolean
+      cluster_id:
+        type: string
       created_at:
         type: string
       driver:
@@ -584,6 +672,15 @@ definitions:
         example: rollback to known-good config
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.RollbackResponse:
+    properties:
+      deployment:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse'
+      warnings:
+        items:
+          type: string
+        type: array
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.RotateSecretRequest:
     properties:
       value:
@@ -607,6 +704,8 @@ definitions:
   github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse:
     properties:
       checksum:
+        type: string
+      cluster_id:
         type: string
       created_at:
         type: string
@@ -647,6 +746,8 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse:
     properties:
+      cluster_id:
+        type: string
       command:
         items:
           type: string
@@ -699,6 +800,12 @@ definitions:
     properties:
       desired:
         type: integer
+      externally_removed:
+        description: |-
+          ExternallyRemoved is true when the swarm service was deleted out-of-band
+          (e.g. `docker service rm`). Hivemind reconciles the persisted status to
+          "removed" automatically; the UI can use this flag to display a drift alert.
+        type: boolean
       failed:
         type: integer
       pending:
@@ -739,6 +846,149 @@ definitions:
         items:
           $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountDTO'
         type: array
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotConfigRef:
+    properties:
+      checksum:
+        type: string
+      name:
+        type: string
+      target_path:
+        type: string
+      version:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotDetail:
+    properties:
+      command:
+        items:
+          type: string
+        type: array
+      configs:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotConfigRef'
+        type: array
+      description:
+        type: string
+      entrypoint:
+        items:
+          type: string
+        type: array
+      env_vars:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotEnvVar'
+        type: array
+      hive_id:
+        type: string
+      image:
+        type: string
+      mounts:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotMount'
+        type: array
+      name:
+        type: string
+      networks:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotNetwork'
+        type: array
+      replicas:
+        type: integer
+      secrets:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotSecretRef'
+        type: array
+      tag:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotEnvVar:
+    properties:
+      is_secret:
+        type: boolean
+      key:
+        type: string
+      value:
+        description: masked when is_secret
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotResponse'
+        type: array
+      page:
+        type: integer
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotMount:
+    properties:
+      read_only:
+        type: boolean
+      source:
+        type: string
+      target:
+        type: string
+      type:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotNetwork:
+    properties:
+      name:
+        type: string
+      subnet:
+        type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      detail:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotDetail'
+      id:
+        type: string
+      label:
+        type: string
+      schema_version:
+        type: integer
+      service_id:
+        type: string
+      summary:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotSummary'
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotSecretRef:
+    properties:
+      checksum:
+        description: Value is never returned; only its presence/checksum metadata.
+        type: string
+      name:
+        type: string
+      target_path:
+        type: string
+      version:
+        type: integer
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.SnapshotSummary:
+    properties:
+      config_count:
+        type: integer
+      env_count:
+        type: integer
+      full_image:
+        type: string
+      mount_count:
+        type: integer
+      network_count:
+        type: integer
+      replicas:
+        type: integer
+      secret_count:
+        type: integer
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.SwarmNetworkInfo:
     properties:
@@ -873,6 +1123,23 @@ definitions:
       token_type:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.UpdateClusterRequest:
+    properties:
+      ca_cert:
+        type: string
+      client_cert:
+        type: string
+      client_key:
+        type: string
+      endpoint:
+        type: string
+      labels:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        type: string
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO:
     properties:
       delay_seconds:
@@ -996,6 +1263,8 @@ definitions:
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse:
     properties:
+      cluster_id:
+        type: string
       created_at:
         type: string
       driver:
@@ -1148,6 +1417,198 @@ paths:
       security:
       - BearerAuth: []
       summary: Cluster dashboard overview
+      tags:
+      - cluster
+  /clusters:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterListResponse'
+      security:
+      - BearerAuth: []
+      summary: List clusters
+      tags:
+      - cluster
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cluster
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateClusterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Register a cluster
+      tags:
+      - cluster
+  /clusters/{id}:
+    delete:
+      parameters:
+      - description: Cluster ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "409":
+          description: default or non-empty cluster
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove a cluster
+      tags:
+      - cluster
+    get:
+      parameters:
+      - description: Cluster ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a cluster
+      tags:
+      - cluster
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cluster ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Patch
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateClusterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Patch a cluster
+      tags:
+      - cluster
+  /clusters/{id}/default:
+    put:
+      parameters:
+      - description: Cluster ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse'
+      security:
+      - BearerAuth: []
+      summary: Promote a cluster to default
+      tags:
+      - cluster
+  /clusters/{id}/overview:
+    get:
+      description: Same payload as /cluster/overview but with node health scoped to
+        the given cluster.
+      parameters:
+      - description: Cluster ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cluster dashboard overview for a specific cluster
+      tags:
+      - cluster
+  /clusters/{id}/test:
+    post:
+      parameters:
+      - description: Cluster ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse'
+        "503":
+          description: unreachable
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Probe cluster connectivity
       tags:
       - cluster
   /configs:
@@ -3125,6 +3586,87 @@ paths:
       summary: Detach a secret from a service
       tags:
       - secrets
+  /services/{id}/snapshots:
+    get:
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List a service's snapshots
+      tags:
+      - snapshots
+    post:
+      consumes:
+      - application/json
+      description: Captures a complete, point-in-time snapshot of the service and
+        every element it uses (spec, env, networks, secrets, configs, mounts), resolved
+        to their current values. Reusable for a manual rollback.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Optional label
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateSnapshotRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Capture a service snapshot
+      tags:
+      - snapshots
   /services/{id}/status:
     get:
       description: 'Returns the aggregated orchestrator view of a service: effective
@@ -3204,6 +3746,50 @@ paths:
       summary: Tasks of a service (F-MVP-10)
       tags:
       - supervision
+  /services/{id}/undeploy:
+    post:
+      description: 'Removes the service from the orchestrator (Swarm) but keeps its
+        Hivemind definition. Status transitions deployed → removed. Idempotent: a
+        service that is not deployed returns its current state. Use POST /services/{id}/deploy
+        to redeploy it later.'
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: a deployment is still in progress
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "503":
+          description: deployment engine not configured
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Undeploy a service
+      tags:
+      - deployments
   /services/from-template/{templateId}:
     post:
       consumes:
@@ -3250,6 +3836,109 @@ paths:
       summary: Create a service from a template
       tags:
       - templates
+  /snapshots/{id}:
+    delete:
+      parameters:
+      - description: Snapshot ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a snapshot
+      tags:
+      - snapshots
+    get:
+      parameters:
+      - description: Snapshot ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a snapshot (full detail, values masked)
+      tags:
+      - snapshots
+  /snapshots/{id}/rollback:
+    post:
+      description: Restores the service definition from the snapshot (spec, env, mounts,
+        attachments) and triggers a new deployment (trigger=rollback). Returns the
+        deployment plus any non-fatal warnings (e.g. a secret was recreated or has
+        drifted since capture).
+      parameters:
+      - description: Snapshot ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.RollbackResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "409":
+          description: a deployment is already in progress
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "503":
+          description: deployment engine not configured
+          schema:
+            $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Roll back a service to a snapshot
+      tags:
+      - snapshots
   /templates:
     get:
       parameters:

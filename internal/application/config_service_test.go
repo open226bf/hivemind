@@ -54,7 +54,7 @@ func (r *fakeConfigRepo) ListVersions(_ context.Context, id uuid.UUID) ([]*confi
 	return r.versions[id], nil
 }
 
-func (r *fakeConfigRepo) List(_ context.Context, _ pagination.Page) ([]*config.Config, int64, error) {
+func (r *fakeConfigRepo) List(_ context.Context, _ uuid.UUID, _ pagination.Page) ([]*config.Config, int64, error) {
 	out := make([]*config.Config, 0, len(r.byID))
 	for _, c := range r.byID {
 		out = append(out, c)

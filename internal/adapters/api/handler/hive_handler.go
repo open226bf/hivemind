@@ -50,7 +50,7 @@ func (h *HiveHandler) Register(protected *gin.RouterGroup) {
 //	@Router			/hives [get]
 func (h *HiveHandler) List(c *gin.Context) {
 	page := parsePage(c)
-	items, total, err := h.svc.List(c.Request.Context(), page)
+	items, total, err := h.svc.List(c.Request.Context(), currentCluster(c), page)
 	if err != nil {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list hives")
 		return
@@ -86,7 +86,7 @@ func (h *HiveHandler) Create(c *gin.Context) {
 		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
 		return
 	}
-	hv, err := h.svc.Create(c.Request.Context(), application.SaveHiveInput{
+	hv, err := h.svc.Create(c.Request.Context(), writeCluster(c), application.SaveHiveInput{
 		Name: req.Name, Description: req.Description, Color: req.Color,
 	})
 	if err != nil {
@@ -265,6 +265,7 @@ func (h *HiveHandler) writeHiveError(c *gin.Context, err error) {
 func toHiveResponse(h *hive.Hive, serviceCount int64) dto.HiveResponse {
 	return dto.HiveResponse{
 		ID:           h.ID.String(),
+		ClusterID:    clusterIDString(h.ClusterID),
 		Name:         h.Name,
 		Description:  h.Description,
 		Color:        h.Color,

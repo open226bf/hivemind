@@ -37,6 +37,8 @@ func (h *ServiceHandler) Register(protected *gin.RouterGroup) {
 	g.PUT("/:id/placement", middleware.RequireRole(user.RoleOperator), h.SetPlacement)
 	g.GET("/:id/env", middleware.RequireRole(user.RoleViewer), h.GetEnvVars)
 	g.PUT("/:id/env", middleware.RequireRole(user.RoleOperator), h.SetEnvVars)
+	g.GET("/:id/ports", middleware.RequireRole(user.RoleViewer), h.GetPorts)
+	g.PUT("/:id/ports", middleware.RequireRole(user.RoleOperator), h.SetPorts)
 	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
 }
 
@@ -74,6 +76,9 @@ func (h *ServiceHandler) List(c *gin.Context) {
 			return
 		}
 		filter.HiveID = &id
+	}
+	if cid := currentCluster(c); cid != uuid.Nil {
+		filter.ClusterID = &cid
 	}
 
 	items, total, err := h.svc.List(c.Request.Context(), filter, page)
@@ -127,6 +132,8 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 		hiveID = id
 	}
 
+	clusterID := writeCluster(c) // default cluster when none is selected (never NULL)
+
 	in := application.CreateServiceInput{
 		Name:        req.Name,
 		Description: req.Description,
@@ -150,6 +157,7 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 	if hiveID != uuid.Nil {
 		in.Hive = hiveID
 	}
+	in.Cluster = clusterID
 
 	svc, err := h.svc.Create(c.Request.Context(), in)
 	if err != nil {
@@ -387,6 +395,74 @@ func (h *ServiceHandler) SetEnvVars(c *gin.Context) {
 	c.JSON(http.StatusOK, toEnvVarsResponse(vars))
 }
 
+// GetPorts godoc
+//
+//	@Summary		List a service's published ports
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		string	true	"Service ID (UUID)"
+//	@Success		200	{object}	dto.PortsResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/services/{id}/ports [get]
+func (h *ServiceHandler) GetPorts(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	pts, err := h.svc.GetPorts(c.Request.Context(), id)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toPortsResponse(pts))
+}
+
+// SetPorts godoc
+//
+//	@Summary		Replace a service's published ports
+//	@Description	Atomically replaces the full set of published ports. The submitted list is authoritative — omitted ports are removed. Applied at the next deploy.
+//	@Tags			services
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string				true	"Service ID (UUID)"
+//	@Param			body	body		dto.SetPortsRequest	true	"Full published-port set"
+//	@Success		200		{object}	dto.PortsResponse
+//	@Failure		400		{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		422		{object}	dto.ErrorResponse	"invalid port"
+//	@Router			/services/{id}/ports [put]
+func (h *ServiceHandler) SetPorts(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+
+	var req dto.SetPortsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	pts := make([]service.Port, len(req.Ports))
+	for i, p := range req.Ports {
+		pts[i] = service.Port{
+			TargetPort:    p.TargetPort,
+			PublishedPort: p.PublishedPort,
+			Protocol:      p.Protocol,
+			Mode:          p.Mode,
+		}
+	}
+
+	saved, err := h.svc.SetPorts(c.Request.Context(), id, pts)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toPortsResponse(saved))
+}
+
 // Delete godoc
 //
 //	@Summary		Delete a service
@@ -443,7 +519,12 @@ func isValidationError(err error) bool {
 		errors.Is(err, service.ErrInvalidConstraint),
 		errors.Is(err, service.ErrInvalidPreference),
 		errors.Is(err, service.ErrInvalidEnvKey),
-		errors.Is(err, service.ErrDuplicateKey):
+		errors.Is(err, service.ErrDuplicateKey),
+		errors.Is(err, service.ErrInvalidPortTarget),
+		errors.Is(err, service.ErrInvalidPortPublished),
+		errors.Is(err, service.ErrInvalidPortProtocol),
+		errors.Is(err, service.ErrInvalidPortMode),
+		errors.Is(err, service.ErrDuplicatePort):
 		return true
 	default:
 		return false
@@ -452,13 +533,31 @@ func isValidationError(err error) bool {
 
 // ─── DTO converters ───────────────────────────────────────────────────────────
 
+func toPortsResponse(pts []service.Port) dto.PortsResponse {
+	out := dto.PortsResponse{Ports: make([]dto.PortDTO, len(pts))}
+	for i, p := range pts {
+		out.Ports[i] = dto.PortDTO{
+			TargetPort:    p.TargetPort,
+			PublishedPort: p.PublishedPort,
+			Protocol:      p.Protocol,
+			Mode:          p.Mode,
+		}
+	}
+	return out
+}
+
 func toServiceResponse(s *service.Service) dto.ServiceResponse {
 	hiveID := ""
 	if s.HiveID != nil {
 		hiveID = s.HiveID.String()
 	}
+	clusterID := ""
+	if s.ClusterID != uuid.Nil {
+		clusterID = s.ClusterID.String()
+	}
 	return dto.ServiceResponse{
 		ID:             s.ID.String(),
+		ClusterID:      clusterID,
 		HiveID:         hiveID,
 		Name:           s.Name,
 		Description:    s.Description,
