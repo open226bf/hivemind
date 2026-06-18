@@ -122,3 +122,22 @@ func resolveOrchestrator(c *gin.Context, registry ports.OrchestratorRegistry) (p
 	}
 	return orch, true
 }
+
+// resolveCollector resolves the telemetry collector for the active cluster (the
+// X-Hivemind-Cluster header, default cluster when absent). It writes the
+// appropriate error response and returns false when monitoring is unconfigured
+// or the cluster cannot provide telemetry (e.g. stub backend, or an agent-mode
+// cluster before the agent collector exists).
+func resolveCollector(c *gin.Context, registry ports.TelemetryCollectorRegistry) (ports.TelemetryCollector, bool) {
+	if registry == nil {
+		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, "monitoring not configured")
+		return nil, false
+	}
+
+	col, err := registry.For(c.Request.Context(), currentCluster(c))
+	if err != nil || col == nil {
+		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, "cluster telemetry unavailable")
+		return nil, false
+	}
+	return col, true
+}

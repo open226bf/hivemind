@@ -158,6 +158,9 @@ func main() {
 	// ─── Agent hub + orchestrator registry ───────────────────────────────────
 	hub := agenthub.New(0)
 	registry := buildRegistry(context.Background(), env, log, clusterRepo, hub)
+	// Telemetry collectors reuse each cluster's already-resolved orchestrator
+	// connection (no second Docker client per cluster).
+	collectorRegistry := orchestrator.NewCollectorRegistry(registry)
 
 	// Internal CA: signs agent client certs (enrollment) and the hub server cert.
 	agentCA, err := persistence.NewAgentCARepository(db, cipher).LoadOrCreate(context.Background())
@@ -231,6 +234,7 @@ func main() {
 		Agent:         agentSvc,
 		AgentHub:      hub,
 		Registry:      registry,
+		Collectors:    collectorRegistry,
 		AuditLog:      auditRepo,
 		WSTickets:     wsTickets,
 		StreamTickets: streamTickets,
