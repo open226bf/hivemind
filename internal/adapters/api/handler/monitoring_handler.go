@@ -63,16 +63,18 @@ func toClusterHealthResponse(h *monitoring.ClusterHealth, caps ports.CollectorCa
 	}
 	for i, n := range h.Nodes {
 		nr := dto.NodeHealthResponse{
-			NodeID:     n.NodeID,
-			Hostname:   n.Hostname,
-			Role:       n.Role,
-			Reachable:  n.Reachable,
-			TunnelUp:   n.TunnelUp,
-			Worst:      string(n.Worst()),
-			OK:         n.OK,
-			Warning:    n.Warning,
-			Critical:   n.Critical,
-			Containers: make([]dto.ContainerHealthResponse, len(n.Containers)),
+			NodeID:      n.NodeID,
+			Hostname:    n.Hostname,
+			Role:        n.Role,
+			Reachable:   n.Reachable,
+			TunnelUp:    n.TunnelUp,
+			CPUs:        n.CPUs,
+			MemoryBytes: n.MemoryBytes,
+			Worst:       string(n.Worst()),
+			OK:          n.OK,
+			Warning:     n.Warning,
+			Critical:    n.Critical,
+			Containers:  make([]dto.ContainerHealthResponse, len(n.Containers)),
 		}
 		for j, ch := range n.Containers {
 			nr.Containers[j] = dto.ContainerHealthResponse{
