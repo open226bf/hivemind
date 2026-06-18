@@ -11,7 +11,6 @@ import (
 	"github.com/orange/hivemind/internal/application"
 	"github.com/orange/hivemind/internal/domain/secret"
 	"github.com/orange/hivemind/internal/domain/user"
-	"github.com/orange/hivemind/pkg/domainerrors"
 )
 
 type SecretHandler struct {
@@ -305,14 +304,12 @@ func (h *SecretHandler) DetachFromService(c *gin.Context) {
 
 func (h *SecretHandler) writeSecretError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, secret.ErrSecretInUse), errors.Is(err, application.ErrClusterMismatch):
+	case errors.Is(err, secret.ErrSecretInUse):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, secret.ErrInvalidName), errors.Is(err, secret.ErrEmptyValue):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "resource not found")
 	}
 }
 

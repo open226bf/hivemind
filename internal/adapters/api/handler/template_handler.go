@@ -12,7 +12,6 @@ import (
 	"github.com/orange/hivemind/internal/application"
 	"github.com/orange/hivemind/internal/domain/template"
 	"github.com/orange/hivemind/internal/domain/user"
-	"github.com/orange/hivemind/pkg/domainerrors"
 )
 
 type TemplateHandler struct {
@@ -269,10 +268,6 @@ func (h *TemplateHandler) specFromDTO(c *gin.Context, in dto.TemplateSpecDTO) (t
 
 func (h *TemplateHandler) writeTemplateError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict):
-		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, template.ErrInvalidName),
 		errors.Is(err, template.ErrInvalidImage),
 		errors.Is(err, template.ErrInvalidLock),
@@ -281,7 +276,7 @@ func (h *TemplateHandler) writeTemplateError(c *gin.Context, err error) {
 		isValidationError(err):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "resource not found")
 	}
 }
 

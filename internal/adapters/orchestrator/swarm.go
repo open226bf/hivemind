@@ -499,7 +499,7 @@ func (o *SwarmOrchestrator) ListNetworks(ctx context.Context) ([]ports.SwarmNetw
 			Scope:  n.Scope,
 			Driver: n.Driver,
 		}
-		if n.IPAM.Config != nil && len(n.IPAM.Config) > 0 {
+		if len(n.IPAM.Config) > 0 {
 			info.Subnet = n.IPAM.Config[0].Subnet
 		}
 		out = append(out, info)
