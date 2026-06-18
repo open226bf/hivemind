@@ -132,7 +132,7 @@ func (h *ServiceHandler) Create(c *gin.Context) {
 		hiveID = id
 	}
 
-	clusterID := currentCluster(c) // active cluster from X-Hivemind-Cluster
+	clusterID := writeCluster(c) // default cluster when none is selected (never NULL)
 
 	in := application.CreateServiceInput{
 		Name:        req.Name,

@@ -86,7 +86,7 @@ func (h *HiveHandler) Create(c *gin.Context) {
 		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
 		return
 	}
-	hv, err := h.svc.Create(c.Request.Context(), currentCluster(c), application.SaveHiveInput{
+	hv, err := h.svc.Create(c.Request.Context(), writeCluster(c), application.SaveHiveInput{
 		Name: req.Name, Description: req.Description, Color: req.Color,
 	})
 	if err != nil {

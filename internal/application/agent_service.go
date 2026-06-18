@@ -274,14 +274,28 @@ func (s *AgentService) ReconcilePresence(ctx context.Context) error {
 	return nil
 }
 
-// Bound reports whether an agent id maps to an enrolled cluster — used to
-// authenticate a tunnel connection before attaching it.
-func (s *AgentService) Bound(ctx context.Context, agentID string) bool {
-	if agentID == "" {
-		return false
+// AuthorizeTunnelToken authenticates a token-mode data-plane tunnel before it is
+// attached. The agent presents its agent id (public — the API exposes it) AND
+// the reusable enrollment token (secret); both must resolve to the same enrolled
+// cluster. The token is what makes the tunnel a trusted data plane: the control
+// plane pushes Docker API calls — including secret and config payloads — over
+// it, so authenticating on the agent id alone would let anyone who knows the
+// cluster id hijack the tunnel and receive those payloads. The token match is
+// constant-time (see cluster.MatchEnrollment); rotating or clearing the token
+// (GenerateEnrollment / UseDirectMode) revokes existing tunnels.
+func (s *AgentService) AuthorizeTunnelToken(ctx context.Context, agentID, token string) error {
+	if agentID == "" || token == "" {
+		return ErrInvalidEnrollment
 	}
-	_, err := s.clusters.FindByAgentID(ctx, agentID)
-	return err == nil
+	c, err := s.clusters.FindByAgentID(ctx, agentID)
+	if err != nil {
+		return ErrInvalidEnrollment
+	}
+	ok, err := c.MatchEnrollment(token)
+	if err != nil || !ok {
+		return ErrInvalidEnrollment
+	}
+	return nil
 }
 
 // Heartbeat records liveness from an enrolled agent.

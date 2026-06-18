@@ -66,6 +66,29 @@ func TestAgentRegister_BadToken(t *testing.T) {
 	assert.ErrorIs(t, err, application.ErrInvalidEnrollment)
 }
 
+func TestAuthorizeTunnelToken(t *testing.T) {
+	svc, _, _, c := newAgentSvc(t)
+	enr, err := svc.Enroll(context.Background(), c.ID)
+	require.NoError(t, err)
+	reg, err := svc.Register(context.Background(), application.RegisterInput{EnrollToken: enr.Token})
+	require.NoError(t, err)
+
+	// Valid agent id + token authorises the data-plane tunnel.
+	require.NoError(t, svc.AuthorizeTunnelToken(context.Background(), reg.AgentID, enr.Token))
+
+	// The agent id alone (which the API exposes) must NOT be enough: a missing or
+	// wrong token is rejected, so knowing the cluster id can't hijack the tunnel.
+	assert.ErrorIs(t, svc.AuthorizeTunnelToken(context.Background(), reg.AgentID, ""), application.ErrInvalidEnrollment)
+	assert.ErrorIs(t, svc.AuthorizeTunnelToken(context.Background(), reg.AgentID, "wrong-token"), application.ErrInvalidEnrollment)
+	assert.ErrorIs(t, svc.AuthorizeTunnelToken(context.Background(), "", enr.Token), application.ErrInvalidEnrollment)
+
+	// Rotating the enrollment token revokes tunnels presenting the old one.
+	enr2, err := svc.Enroll(context.Background(), c.ID)
+	require.NoError(t, err)
+	assert.ErrorIs(t, svc.AuthorizeTunnelToken(context.Background(), reg.AgentID, enr.Token), application.ErrInvalidEnrollment)
+	require.NoError(t, svc.AuthorizeTunnelToken(context.Background(), reg.AgentID, enr2.Token))
+}
+
 func TestAgentReconnectAndHeartbeat(t *testing.T) {
 	svc, _, presence, c := newAgentSvc(t)
 	enr, err := svc.Enroll(context.Background(), c.ID)

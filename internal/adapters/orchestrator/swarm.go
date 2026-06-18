@@ -100,7 +100,12 @@ func NewSwarmOrchestratorFromSpec(ctx context.Context, spec ConnSpec) (*SwarmOrc
 // opens a stream to the agent, which proxies it to the cluster's docker.sock.
 // Connectivity is already proven by the live tunnel, so we do not ping here.
 func NewSwarmOrchestratorOverDial(dial func(ctx context.Context, network, addr string) (net.Conn, error)) (*SwarmOrchestrator, error) {
-	httpClient := &http.Client{Transport: &http.Transport{DialContext: dial}}
+	// DisableKeepAlives: a yamux stream is cheap, and pooling streams across the
+	// tunnel is unsafe — after a reconnect the dialer resolves a new session, but
+	// the transport could otherwise hand a request a pooled stream from the old
+	// (now closed) session. One fresh stream per request keeps reconnects
+	// transparent.
+	httpClient := &http.Client{Transport: &http.Transport{DialContext: dial, DisableKeepAlives: true}}
 	cli, err := client.NewClientWithOpts(
 		client.WithHost("tcp://hivemind-agent:2375"), // dummy: the dialer ignores the address
 		client.WithHTTPClient(httpClient),

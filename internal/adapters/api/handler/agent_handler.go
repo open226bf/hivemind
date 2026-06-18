@@ -25,6 +25,11 @@ import (
 // reverse tunnel.
 const tunnelProto = "hivemind-tunnel"
 
+// tunnelTokenHeader carries the enrollment token that authenticates a token-mode
+// tunnel. It travels in a header (not the URL) so the secret stays out of access
+// logs. Keep in sync with the agent's tunnel package.
+const tunnelTokenHeader = "X-Hivemind-Enroll-Token"
+
 // AgentHandler exposes the agent handshake: admin-only enrollment (protected),
 // the agent-facing register/heartbeat endpoints and the reverse-tunnel connect
 // endpoint (public — the agent authenticates with its enrollment token or agent
@@ -54,11 +59,17 @@ func (h *AgentHandler) Register(public, protected *gin.RouterGroup) {
 
 // Connect upgrades the request to the raw reverse tunnel: the agent dials out,
 // the server hijacks the connection and hands it to the hub, which multiplexes
-// Docker API calls over it. Authentication is the bound agent id (the tunnel is
-// only useful for an already-enrolled agent).
+// Docker API calls over it. Authentication is the agent id PLUS the enrollment
+// token (in the X-Hivemind-Enroll-Token header): the control plane pushes secret
+// and config payloads over this tunnel, so the agent id alone — which the API
+// exposes — must not be enough to attach.
 func (h *AgentHandler) Connect(c *gin.Context) {
 	agentID := c.Query("agent_id")
-	if h.hub == nil || !h.svc.Bound(c.Request.Context(), agentID) {
+	if h.hub == nil {
+		dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "unknown agent")
+		return
+	}
+	if err := h.svc.AuthorizeTunnelToken(c.Request.Context(), agentID, c.GetHeader(tunnelTokenHeader)); err != nil {
 		dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "unknown agent")
 		return
 	}

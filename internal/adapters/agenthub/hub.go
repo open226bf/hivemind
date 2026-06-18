@@ -186,29 +186,54 @@ func (h *Hub) Presence(agentID string) (NodePresence, bool) {
 // Orchestrator returns a Swarm orchestrator carried over a manager node's tunnel
 // (orchestration must run on a manager). Without a usable session it returns
 // ErrDataPlaneUnavailable (heartbeating but no tunnel) or ErrAgentOffline.
+//
+// The dialer re-resolves a live manager session on every call rather than
+// capturing one at construction time. This keeps the orchestrator valid across
+// tunnel reconnects (agent restart, network blip, manager failover): the
+// registry caches this orchestrator, so binding it to a single session would
+// leave every later Docker call dialing a dead session until a re-enrollment
+// happened to invalidate the cache.
 func (h *Hub) Orchestrator(_ context.Context, agentID string) (ports.Orchestrator, error) {
-	ns, ok := h.pickManager(agentID)
-	if !ok {
+	if _, ok := h.pickManager(agentID); !ok {
 		if h.Online(agentID) {
 			return nil, ErrDataPlaneUnavailable
 		}
 		return nil, ErrAgentOffline
 	}
-	dial := func(_ context.Context, _, _ string) (net.Conn, error) {
+	return orchestrator.NewSwarmOrchestratorOverDial(h.managerDialer(agentID))
+}
+
+// managerDialer opens a stream on the agent's current manager session, resolved
+// fresh on every call so the dialer follows tunnel reconnects.
+func (h *Hub) managerDialer(agentID string) func(context.Context, string, string) (net.Conn, error) {
+	return func(context.Context, string, string) (net.Conn, error) {
+		ns, ok := h.pickManager(agentID)
+		if !ok {
+			return nil, ErrAgentOffline
+		}
 		return ns.session.Open()
 	}
-	return orchestrator.NewSwarmOrchestratorOverDial(dial)
 }
 
 // OrchestratorForNode returns an orchestrator carried over a specific node's
 // tunnel, for node-scoped operations (exec/logs/stats/metrics of that node).
+// Like Orchestrator, the dialer re-resolves the node's live session per call so
+// it survives that node's tunnel reconnecting.
 func (h *Hub) OrchestratorForNode(_ context.Context, agentID, nodeID string) (ports.Orchestrator, error) {
-	ns, ok := h.sessionForNode(agentID, nodeID)
-	if !ok {
+	if _, ok := h.sessionForNode(agentID, nodeID); !ok {
 		return nil, ErrAgentOffline
 	}
-	dial := func(_ context.Context, _, _ string) (net.Conn, error) {
+	return orchestrator.NewSwarmOrchestratorOverDial(h.nodeDialer(agentID, nodeID))
+}
+
+// nodeDialer opens a stream on a specific node's current session, resolved fresh
+// on every call so the dialer follows that node's tunnel reconnecting.
+func (h *Hub) nodeDialer(agentID, nodeID string) func(context.Context, string, string) (net.Conn, error) {
+	return func(context.Context, string, string) (net.Conn, error) {
+		ns, ok := h.sessionForNode(agentID, nodeID)
+		if !ok {
+			return nil, ErrAgentOffline
+		}
 		return ns.session.Open()
 	}
-	return orchestrator.NewSwarmOrchestratorOverDial(dial)
 }

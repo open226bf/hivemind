@@ -268,3 +268,16 @@ func (s *ClusterService) countDeployments(ctx context.Context, status string) (i
 func countPage() pagination.Page {
 	return pagination.Page{Number: 1, Size: 1}
 }
+
+// DefaultClusterID resolves the platform's default cluster id. It backs the
+// write-scope resolution in the cluster-context middleware: a resource created
+// with no cluster selected lands on the default cluster (a concrete id) rather
+// than a NULL/zero cluster, so it stays visible when that cluster is later
+// selected explicitly and per-cluster name uniqueness still applies.
+func (s *ClusterService) DefaultClusterID(ctx context.Context) (uuid.UUID, error) {
+	c, err := s.clusters.FindDefault(ctx)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return c.ID, nil
+}

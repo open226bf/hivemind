@@ -227,6 +227,7 @@ func (h *TemplateHandler) Instantiate(c *gin.Context) {
 		Description:      req.Description,
 		TagOverride:      req.Tag,
 		ReplicasOverride: req.Replicas,
+		Cluster:          writeCluster(c),
 	}
 	if req.Resources != nil {
 		r := fromResourcesDTO(*req.Resources)
