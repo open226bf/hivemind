@@ -11,3 +11,4 @@ Decision, Consequences. Number files sequentially (`NNNN-title.md`).
 | ADR | Title | Status |
 |-----|-------|--------|
 | [0001](0001-encryption-at-rest.md) | Encryption at rest for sensitive data | Accepted (preview) |
+| [0002](0002-monitoring-and-alerting.md) | Monitoring and alerting across agent and agentless clusters | Accepted (preview) |
