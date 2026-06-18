@@ -20,16 +20,18 @@ type ContainerHealthResponse struct {
 // NodeHealthResponse groups a node's containers with a verdict rollup. TunnelUp
 // is present only for agent-mode clusters.
 type NodeHealthResponse struct {
-	NodeID     string                    `json:"node_id"`
-	Hostname   string                    `json:"hostname,omitempty"`
-	Role       string                    `json:"role,omitempty"`
-	Reachable  bool                      `json:"reachable"`
-	TunnelUp   *bool                     `json:"tunnel_up,omitempty"`
-	Worst      string                    `json:"worst"` // highest severity among containers
-	OK         int                       `json:"ok"`
-	Warning    int                       `json:"warning"`
-	Critical   int                       `json:"critical"`
-	Containers []ContainerHealthResponse `json:"containers"`
+	NodeID      string                    `json:"node_id"`
+	Hostname    string                    `json:"hostname,omitempty"`
+	Role        string                    `json:"role,omitempty"`
+	Reachable   bool                      `json:"reachable"`
+	TunnelUp    *bool                     `json:"tunnel_up,omitempty"`
+	CPUs        float64                   `json:"cpus"`         // total cores (capacity, not usage)
+	MemoryBytes uint64                    `json:"memory_bytes"` // total RAM (capacity, not usage)
+	Worst       string                    `json:"worst"`        // highest severity among containers
+	OK          int                       `json:"ok"`
+	Warning     int                       `json:"warning"`
+	Critical    int                       `json:"critical"`
+	Containers  []ContainerHealthResponse `json:"containers"`
 }
 
 // ClusterHealthResponse is the per-node health snapshot of a cluster.
