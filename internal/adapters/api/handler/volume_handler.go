@@ -15,7 +15,6 @@ import (
 	"github.com/open226bf/hivemind/internal/domain/user"
 	"github.com/open226bf/hivemind/internal/domain/volume"
 	"github.com/open226bf/hivemind/internal/ports"
-	"github.com/open226bf/hivemind/pkg/domainerrors"
 )
 
 type VolumeHandler struct {
@@ -278,9 +277,7 @@ func (h *VolumeHandler) journalBindMounts(c *gin.Context, serviceID uuid.UUID, m
 
 func (h *VolumeHandler) writeVolumeError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, volume.ErrVolumeInUse):
+	case errors.Is(err, volume.ErrVolumeInUse):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, volume.ErrInvalidName),
 		errors.Is(err, volume.ErrInvalidMountType),
@@ -292,7 +289,7 @@ func (h *VolumeHandler) writeVolumeError(c *gin.Context, err error) {
 		errors.Is(err, volume.ErrUnknownVolume):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "resource not found")
 	}
 }
 

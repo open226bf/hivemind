@@ -18,7 +18,6 @@ import (
 	"github.com/open226bf/hivemind/internal/domain/cluster"
 	"github.com/open226bf/hivemind/internal/domain/user"
 	"github.com/open226bf/hivemind/internal/ports"
-	"github.com/open226bf/hivemind/pkg/domainerrors"
 )
 
 // tunnelProto is the Upgrade token the agent and server agree on for the
@@ -267,11 +266,9 @@ func writeAgentError(c *gin.Context, err error) {
 		dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "invalid or expired enrollment token")
 	case errors.Is(err, application.ErrAgentNotRegistered):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "agent is not registered")
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "cluster not found")
 	case errors.Is(err, cluster.ErrNotAgentMode), errors.Is(err, cluster.ErrNoEnrollment):
 		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "cluster not found")
 	}
 }

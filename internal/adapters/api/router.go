@@ -45,6 +45,10 @@ type Dependencies struct {
 	// WSTickets mints single-use tickets that authenticate the exec WebSocket
 	// upgrade without putting the access token in the URL.
 	WSTickets *auth.TicketStore
+	// StreamTickets mints single-use tickets for the SSE status stream. A
+	// separate store from WSTickets so a Viewer-issued stream ticket can never be
+	// replayed against the Admin-only exec endpoint.
+	StreamTickets *auth.TicketStore
 	// BaseURL is the canonical external URL (HIVEMIND_BASE_URL) used to render
 	// agent install/deploy commands.
 	BaseURL string
@@ -112,6 +116,15 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	exec := handler.NewExecHandler(deps.Deployments, deps.WSTickets)
 	protected.POST("/services/:id/exec/ticket", middleware.RequireRole(user.RoleAdmin), exec.IssueTicket)
 	v1.GET("/services/:id/exec", exec.Exec)
+
+	// ─── Live status stream (SSE) ────────────────────────────────────────────
+	// Reactive replacement for client polling: the UI gets a ticket (Viewer),
+	// then opens an EventSource that pushes {status, tasks} on change. Like exec,
+	// the stream route validates the ticket itself (EventSource can't send
+	// headers), so no token/role middleware here.
+	stream := handler.NewStreamHandler(deps.Deployments, deps.StreamTickets)
+	protected.POST("/services/:id/status/stream-ticket", middleware.RequireRole(user.RoleViewer), stream.IssueTicket)
+	v1.GET("/services/:id/status/stream", stream.StreamStatus)
 
 	// ─── Embedded web UI ─────────────────────────────────────────────────────
 	// Serve the bundled Angular SPA from the same engine so one container exposes

@@ -11,7 +11,6 @@ import (
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/user"
-	"github.com/open226bf/hivemind/pkg/domainerrors"
 )
 
 type UserHandler struct {
@@ -168,10 +167,6 @@ func (h *UserHandler) actingUserID(c *gin.Context) uuid.UUID {
 
 func (h *UserHandler) writeUserError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "user not found")
-	case errors.Is(err, domainerrors.ErrConflict):
-		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, application.ErrLastAdmin),
 		errors.Is(err, application.ErrSelfDelete),
 		errors.Is(err, application.ErrSelfDemote):
@@ -181,7 +176,7 @@ func (h *UserHandler) writeUserError(c *gin.Context, err error) {
 		errors.Is(err, user.ErrInvalidRole):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "user not found")
 	}
 }
 

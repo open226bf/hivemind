@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a problem with Hivemind (control plane, agent, or UI)
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Please do **not** file security issues here — see
+        [SECURITY.md](https://github.com/open226bf/hivemind/blob/main/SECURITY.md).
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - control plane (hivemind)
+        - agent (hivemind-agent)
+        - web UI (hivemind-gui)
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+        3. …
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Version/commit, OS, Docker/Swarm version, connection mode (direct/agent), browser (for UI).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Server/agent logs or browser console output (redact secrets).
+      render: shell

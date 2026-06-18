@@ -58,10 +58,6 @@ func (s *UserService) List(ctx context.Context, p pagination.Page) ([]*user.User
 	return s.users.List(ctx, p)
 }
 
-func (s *UserService) Get(ctx context.Context, id uuid.UUID) (*user.User, error) {
-	return s.users.FindByID(ctx, id)
-}
-
 func (s *UserService) Create(ctx context.Context, in CreateUserInput) (*user.User, error) {
 	email := strings.TrimSpace(strings.ToLower(in.Email))
 	if email == "" {

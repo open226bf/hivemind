@@ -11,7 +11,6 @@ import (
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/cluster"
 	"github.com/open226bf/hivemind/internal/domain/user"
-	"github.com/open226bf/hivemind/pkg/domainerrors"
 )
 
 type ClusterHandler struct {
@@ -326,16 +325,12 @@ func (h *ClusterHandler) Test(c *gin.Context) {
 
 func (h *ClusterHandler) writeClusterError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "cluster not found")
-	case errors.Is(err, domainerrors.ErrConflict),
-		errors.Is(err, cluster.ErrDefaultCluster),
-		errors.Is(err, cluster.ErrClusterNotEmpty):
+	case errors.Is(err, cluster.ErrDefaultCluster), errors.Is(err, cluster.ErrClusterNotEmpty):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, cluster.ErrInvalidName), errors.Is(err, cluster.ErrInvalidType):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "cluster not found")
 	}
 }
 
