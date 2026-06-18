@@ -1605,6 +1605,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/monitoring/alerts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The alerts currently firing across clusters, produced by the event-driven alert engine (failed/crash-looping containers, unreachable nodes).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "monitoring"
+                ],
+                "summary": "Active alerts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AlertListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/monitoring/health": {
             "get": {
                 "security": [
@@ -5288,6 +5325,57 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "cluster_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.AlertListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AlertResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.AlertResponse": {
+            "type": "object",
+            "properties": {
+                "cluster_id": {
+                    "type": "string"
+                },
+                "container_id": {
+                    "type": "string"
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "fired_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "task_failed | crash_loop | node_unreachable | …",
+                    "type": "string"
+                },
+                "node_id": {
+                    "type": "string"
+                },
+                "service_id": {
+                    "type": "string"
+                },
+                "severity": {
+                    "description": "ok | warning | critical | unknown",
+                    "type": "string"
+                },
+                "summary": {
                     "type": "string"
                 }
             }
