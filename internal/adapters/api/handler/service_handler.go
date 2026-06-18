@@ -15,7 +15,6 @@ import (
 	"github.com/orange/hivemind/internal/domain/service"
 	"github.com/orange/hivemind/internal/domain/user"
 	"github.com/orange/hivemind/internal/ports"
-	"github.com/orange/hivemind/pkg/domainerrors"
 )
 
 type ServiceHandler struct {
@@ -493,14 +492,12 @@ func (h *ServiceHandler) Delete(c *gin.Context) {
 
 func (h *ServiceHandler) writeServiceError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "service not found")
-	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, application.ErrServiceDeployed):
+	case errors.Is(err, application.ErrServiceDeployed):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case isValidationError(err):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "service not found")
 	}
 }
 

@@ -102,6 +102,9 @@ func main() {
 	// Single-use tickets authenticate the exec WebSocket upgrade (browsers can't
 	// set headers on a WebSocket; this keeps the access token out of the URL).
 	wsTickets := auth.NewTicketStore(30 * time.Second)
+	// Separate store for the SSE status stream so a Viewer-issued stream ticket
+	// can never be replayed against the Admin-only exec endpoint.
+	streamTickets := auth.NewTicketStore(30 * time.Second)
 
 	// ─── Repositories ───────────────────────────────────────────────────────
 	cipher, err := buildCipher(os.Getenv("AES_KEY"))
@@ -211,26 +214,27 @@ func main() {
 
 	// ─── HTTP server ────────────────────────────────────────────────────────
 	r := api.NewRouter(api.Dependencies{
-		DB:          db,
-		Tokens:      tokens,
-		Auth:        authSvc,
-		Users:       userSvc,
-		Services:    serviceSvc,
-		Hives:       hiveSvc,
-		Networks:    networkSvc,
-		Volumes:     volumeSvc,
-		Secrets:     secretSvc,
-		Configs:     configSvc,
-		Templates:   templateSvc,
-		Deployments: deploymentSvc,
-		Snapshots:   snapshotSvc,
-		Cluster:     clusterSvc,
-		Agent:       agentSvc,
-		AgentHub:    hub,
-		Registry:    registry,
-		AuditLog:    auditRepo,
-		WSTickets:   wsTickets,
-		BaseURL:     os.Getenv("HIVEMIND_BASE_URL"),
+		DB:            db,
+		Tokens:        tokens,
+		Auth:          authSvc,
+		Users:         userSvc,
+		Services:      serviceSvc,
+		Hives:         hiveSvc,
+		Networks:      networkSvc,
+		Volumes:       volumeSvc,
+		Secrets:       secretSvc,
+		Configs:       configSvc,
+		Templates:     templateSvc,
+		Deployments:   deploymentSvc,
+		Snapshots:     snapshotSvc,
+		Cluster:       clusterSvc,
+		Agent:         agentSvc,
+		AgentHub:      hub,
+		Registry:      registry,
+		AuditLog:      auditRepo,
+		WSTickets:     wsTickets,
+		StreamTickets: streamTickets,
+		BaseURL:       os.Getenv("HIVEMIND_BASE_URL"),
 	})
 
 	port := os.Getenv("PORT")

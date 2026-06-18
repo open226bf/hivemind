@@ -16,7 +16,6 @@ import (
 	"github.com/orange/hivemind/internal/domain/deployment"
 	"github.com/orange/hivemind/internal/domain/user"
 	"github.com/orange/hivemind/internal/ports"
-	"github.com/orange/hivemind/pkg/domainerrors"
 )
 
 type DeploymentHandler struct {
@@ -380,16 +379,12 @@ func (h *DeploymentHandler) Get(c *gin.Context) {
 
 func (h *DeploymentHandler) writeDeploymentError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
 	case errors.Is(err, deployment.ErrAlreadyInProgress),
 		errors.Is(err, application.ErrServiceNotDeployed),
 		errors.Is(err, application.ErrDeploymentInProgress):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
-	case errors.Is(err, application.ErrOrchestratorUnavailable):
-		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "resource not found")
 	}
 }
 

@@ -12,7 +12,6 @@ import (
 	"github.com/orange/hivemind/internal/domain/network"
 	"github.com/orange/hivemind/internal/domain/user"
 	"github.com/orange/hivemind/internal/ports"
-	"github.com/orange/hivemind/pkg/domainerrors"
 )
 
 type NetworkHandler struct {
@@ -295,14 +294,12 @@ func (h *NetworkHandler) DiscoverSwarm(c *gin.Context) {
 
 func (h *NetworkHandler) writeNetworkError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, network.ErrNetworkInUse), errors.Is(err, application.ErrClusterMismatch):
+	case errors.Is(err, network.ErrNetworkInUse):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, network.ErrInvalidName):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "resource not found")
 	}
 }
 
