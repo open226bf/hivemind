@@ -154,11 +154,13 @@ func (c *DirectCollector) CollectHealth(ctx context.Context) (*monitoring.Cluste
 	out := &monitoring.ClusterHealth{ClusterID: c.clusterID, ObservedAt: c.now()}
 	for _, n := range nodes {
 		nh := monitoring.NodeHealth{
-			NodeID:     n.ID,
-			Hostname:   n.Description.Hostname,
-			Role:       string(n.Spec.Role),
-			Reachable:  n.Status.State == swarm.NodeStateReady,
-			Containers: byNode[n.ID],
+			NodeID:      n.ID,
+			Hostname:    n.Description.Hostname,
+			Role:        string(n.Spec.Role),
+			Reachable:   n.Status.State == swarm.NodeStateReady,
+			CPUs:        float64(n.Description.Resources.NanoCPUs) / 1e9,
+			MemoryBytes: uint64(n.Description.Resources.MemoryBytes),
+			Containers:  byNode[n.ID],
 		}
 		nh.Recount()
 		out.Nodes = append(out.Nodes, nh)

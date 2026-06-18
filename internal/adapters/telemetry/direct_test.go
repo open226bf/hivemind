@@ -46,10 +46,13 @@ func task(id, svc string, slot int, node string, state, desired swarm.TaskState,
 
 func node(id, host, role string, state swarm.NodeState) swarm.Node {
 	return swarm.Node{
-		ID:          id,
-		Description: swarm.NodeDescription{Hostname: host},
-		Spec:        swarm.NodeSpec{Annotations: swarm.Annotations{}, Role: swarm.NodeRole(role)},
-		Status:      swarm.NodeStatus{State: state},
+		ID: id,
+		Description: swarm.NodeDescription{
+			Hostname:  host,
+			Resources: swarm.Resources{NanoCPUs: 4e9, MemoryBytes: 8 << 30}, // 4 cores, 8 GiB
+		},
+		Spec:   swarm.NodeSpec{Annotations: swarm.Annotations{}, Role: swarm.NodeRole(role)},
+		Status: swarm.NodeStatus{State: state},
 	}
 }
 
@@ -103,6 +106,8 @@ func TestDirectCollector_CollectHealth(t *testing.T) {
 	assert.Equal(t, "alpha", a.Hostname)
 	assert.Equal(t, "manager", a.Role)
 	assert.True(t, a.Reachable)
+	assert.Equal(t, 4.0, a.CPUs)                  // capacity from NodeList
+	assert.Equal(t, uint64(8)<<30, a.MemoryBytes) // 8 GiB
 	assert.Equal(t, 1, a.OK)
 	assert.Equal(t, 1, a.Critical)
 	assert.Equal(t, monitoring.SeverityCritical, a.Worst())
