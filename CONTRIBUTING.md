@@ -3,9 +3,9 @@
 Thanks for taking the time to contribute! This document explains how to get set
 up, the conventions we follow, and how to propose changes.
 
-Hivemind spans three repositories — [`hivemind`](https://github.com/open226/hivemind)
-(control plane), [`hivemind-agent`](https://github.com/open226/hivemind-agent),
-and [`hivemind-gui`](https://github.com/open226/hivemind-gui). This guide lives
+Hivemind spans three repositories — [`hivemind`](https://github.com/open226bf/hivemind)
+(control plane), [`hivemind-agent`](https://github.com/open226bf/hivemind-agent),
+and [`hivemind-gui`](https://github.com/open226bf/hivemind-gui). This guide lives
 in the control-plane repo and applies to all three; the others link back here.
 
 ## Code of Conduct
@@ -17,7 +17,7 @@ maintainers (see [SECURITY.md](SECURITY.md) for contact).
 ## Getting started
 
 ```bash
-git clone https://github.com/open226/hivemind.git
+git clone https://github.com/open226bf/hivemind.git
 cd hivemind
 cp .env.example .env          # edit DATABASE_URL, AES_KEY, ADMIN_*
 go mod download
@@ -26,7 +26,7 @@ make run                      # or: go run ./cmd/server
 
 You need **Go 1.25+**. A Postgres database is required; a Docker Swarm is
 optional (the server falls back to a stub orchestrator). For the UI, see the
-[`hivemind-gui`](https://github.com/open226/hivemind-gui) README.
+[`hivemind-gui`](https://github.com/open226bf/hivemind-gui) README.
 
 ## Development workflow
 

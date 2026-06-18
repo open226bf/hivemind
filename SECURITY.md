@@ -15,7 +15,7 @@ branch yet.
 
 Instead, report privately through one of:
 
-- GitHub's [private vulnerability reporting](https://github.com/open226/hivemind/security/advisories/new)
+- GitHub's [private vulnerability reporting](https://github.com/open226bf/hivemind/security/advisories/new)
   (preferred — "Report a vulnerability" on the Security tab), or
 - email to the maintainers at **security@open226.dev**.
 
@@ -40,6 +40,6 @@ out in the docs and logs. In production you should:
 - run agents in **mTLS mode** (the token-mode tunnel is for trusted/dev networks),
 - serve the API/UI behind TLS and restrict the agent hub to the intended hosts.
 
-See the [Security model](https://open226.github.io/hivemind-doc/concepts/security/)
-and [Production checklist](https://open226.github.io/hivemind-doc/operations/production-checklist/)
+See the [Security model](https://open226bf.github.io/hivemind-doc/concepts/security/)
+and [Production checklist](https://open226bf.github.io/hivemind-doc/operations/production-checklist/)
 in the documentation.
