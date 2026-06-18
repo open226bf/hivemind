@@ -12,7 +12,6 @@ import (
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/hive"
 	"github.com/open226bf/hivemind/internal/domain/user"
-	"github.com/open226bf/hivemind/pkg/domainerrors"
 )
 
 type HiveHandler struct {
@@ -249,16 +248,12 @@ func (h *HiveHandler) AssignService(c *gin.Context) {
 
 func (h *HiveHandler) writeHiveError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict):
-		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, hive.ErrHiveNotEmpty):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, hive.ErrInvalidName), errors.Is(err, hive.ErrInvalidColor):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "resource not found")
 	}
 }
 

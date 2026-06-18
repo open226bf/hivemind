@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -9,9 +10,32 @@ import (
 
 	"github.com/open226bf/hivemind/internal/adapters/api/dto"
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
+	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/ports"
+	"github.com/open226bf/hivemind/pkg/domainerrors"
 	"github.com/open226bf/hivemind/pkg/pagination"
 )
+
+// writeError maps the cross-cutting use-case errors that every resource handler
+// shares to their HTTP responses: not-found (with the caller's resource-specific
+// message), conflict, forbidden, cluster mismatch, orchestrator unavailable, and
+// the 500 fallback. Handlers handle their own domain-specific validation (422)
+// and any extra sentinels first, then delegate here for the rest — so this
+// mapping lives in one place instead of in a switch per handler.
+func writeError(c *gin.Context, err error, notFound string) {
+	switch {
+	case errors.Is(err, domainerrors.ErrNotFound):
+		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, notFound)
+	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, application.ErrClusterMismatch):
+		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
+	case errors.Is(err, domainerrors.ErrForbidden):
+		dto.Abort(c, http.StatusForbidden, dto.CodeForbidden, err.Error())
+	case errors.Is(err, application.ErrOrchestratorUnavailable):
+		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, err.Error())
+	default:
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+	}
+}
 
 // parseUUID parses a named URL parameter as a UUID. It writes a 400 response
 // and returns false if the value is not a valid UUID.

@@ -13,7 +13,6 @@ import (
 	"github.com/open226bf/hivemind/internal/domain/deployment"
 	"github.com/open226bf/hivemind/internal/domain/snapshot"
 	"github.com/open226bf/hivemind/internal/domain/user"
-	"github.com/open226bf/hivemind/pkg/domainerrors"
 )
 
 type SnapshotHandler struct {
@@ -202,16 +201,12 @@ func (h *SnapshotHandler) Rollback(c *gin.Context) {
 
 func (h *SnapshotHandler) writeError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "not found")
 	case errors.Is(err, deployment.ErrAlreadyInProgress):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
-	case errors.Is(err, application.ErrOrchestratorUnavailable):
-		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, err.Error())
 	case errors.Is(err, snapshot.ErrSchemaUnknown), errors.Is(err, snapshot.ErrEmptyPayload):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "not found")
 	}
 }
 

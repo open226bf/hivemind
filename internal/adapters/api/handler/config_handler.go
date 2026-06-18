@@ -13,7 +13,6 @@ import (
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/config"
 	"github.com/open226bf/hivemind/internal/domain/user"
-	"github.com/open226bf/hivemind/pkg/domainerrors"
 )
 
 type ConfigHandler struct {
@@ -453,9 +452,7 @@ func (h *ConfigHandler) writeConfigError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, application.ErrVersionNotFound):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, err.Error())
-	case errors.Is(err, domainerrors.ErrNotFound):
-		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, "resource not found")
-	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, config.ErrConfigInUse), errors.Is(err, application.ErrClusterMismatch):
+	case errors.Is(err, config.ErrConfigInUse):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
 	case errors.Is(err, config.ErrInvalidName),
 		errors.Is(err, config.ErrContentTooLarge),
@@ -463,7 +460,7 @@ func (h *ConfigHandler) writeConfigError(c *gin.Context, err error) {
 		errors.Is(err, config.ErrCommentRequired):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
+		writeError(c, err, "resource not found")
 	}
 }
 
