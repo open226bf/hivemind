@@ -21,6 +21,113 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/agent/heartbeat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agent"
+                ],
+                "summary": "Agent liveness heartbeat",
+                "parameters": [
+                    {
+                        "description": "Heartbeat",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentHeartbeatRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "no content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/install": {
+            "get": {
+                "description": "Returns a self-contained shell script to run on a cluster manager (creates secrets, writes the compose and runs docker stack deploy). Authenticated by the enrollment token.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "agent"
+                ],
+                "summary": "Agent install script",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Enrollment token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "shell script",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent/register": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agent"
+                ],
+                "summary": "Agent enrollment / reconnection",
+                "parameters": [
+                    {
+                        "description": "Agent registration",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Returns an access token (15 min) and a refresh token (7 days).",
@@ -443,6 +550,46 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/clusters/{id}/enroll": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Switches the cluster to agent connection mode (if needed) and returns a one-time enrollment token plus a ready-to-run deploy command. The token is shown only once.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "clusters"
+                ],
+                "summary": "Issue an agent enrollment token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnrollClusterResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1451,6 +1598,49 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/monitoring/health": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Per-node health snapshot of the active cluster: every task/container with a normalised verdict (ok/warning/critical), grouped by node, plus a rollup. Cluster-wide in both connection modes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "monitoring"
+                ],
+                "summary": "Cluster health (per-node container health)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterHealthResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "cluster telemetry unavailable",
                         "schema": {
                             "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
@@ -2822,7 +3012,7 @@ const docTemplate = `{
         },
         "/services/{id}/exec": {
             "get": {
-                "description": "Upgrades to a WebSocket and attaches an interactive TTY exec session to one of the service's containers. Client→server text messages are tagged by a leading byte: '0'=stdin data, '1'=JSON resize {cols,rows}. Server→client messages are raw terminal output. Authenticate with ?token=\u003caccess_token\u003e (WebSocket cannot carry an Authorization header). Requires the Admin role.",
+                "description": "Upgrades to a WebSocket and attaches an interactive TTY exec session to one of the service's containers. Client→server text messages are tagged by a leading byte: '0'=stdin data, '1'=JSON resize {cols,rows}. Server→client messages are raw terminal output. Authenticate with ?ticket=\u003cid\u003e from POST /services/{id}/exec/ticket (WebSocket cannot carry an Authorization header; the ticket avoids putting the access token in the URL). Requires the Admin role.",
                 "tags": [
                     "supervision"
                 ],
@@ -2844,8 +3034,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Access token",
-                        "name": "token",
+                        "description": "Single-use exec ticket",
+                        "name": "ticket",
                         "in": "query",
                         "required": true
                     },
@@ -2883,6 +3073,50 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "service not deployed",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/services/{id}/exec/ticket": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Exchanges the bearer token for a short-lived, single-use ticket bound to the caller and this service. The web terminal then opens the exec WebSocket with ?ticket=\u003cid\u003e instead of putting the access token in the URL (browsers cannot set headers on a WebSocket, and URLs leak into logs).",
+                "tags": [
+                    "supervision"
+                ],
+                "summary": "Mint a single-use exec ticket (Admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ticket and expires_in (seconds)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
@@ -3392,6 +3626,107 @@ const docTemplate = `{
                 }
             }
         },
+        "/services/{id}/ports": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "services"
+                ],
+                "summary": "List a service's published ports",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atomically replaces the full set of published ports. The submitted list is authoritative — omitted ports are removed. Applied at the next deploy.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "services"
+                ],
+                "summary": "Replace a service's published ports",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Full published-port set",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SetPortsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "validation_error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "invalid port",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/services/{id}/resources": {
             "put": {
                 "security": [
@@ -3816,6 +4151,83 @@ const docTemplate = `{
                     },
                     "503": {
                         "description": "deployment engine not configured",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/services/{id}/status/stream": {
+            "get": {
+                "description": "Server-Sent Events stream of the service's live state ({status, tasks}). Emits a ` + "`" + `status` + "`" + ` event whenever the state changes, plus heartbeat comments. Authenticate with ?ticket=\u003cid\u003e from POST /services/{id}/status/stream-ticket.",
+                "tags": [
+                    "supervision"
+                ],
+                "summary": "Stream a service's live state (SSE)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Single-use stream ticket",
+                        "name": "ticket",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "text/event-stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/services/{id}/status/stream-ticket": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "EventSource cannot send an Authorization header, so the client exchanges its bearer token (this request is header-authenticated) for a short-lived, single-use ticket and opens GET /services/{id}/status/stream?ticket=\u003cid\u003e with it — keeping the access token out of the URL.",
+                "tags": [
+                    "supervision"
+                ],
+                "summary": "Mint a single-use status-stream ticket (Viewer)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ticket and expires_in (seconds)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
@@ -4812,6 +5224,74 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_orange_hivemind_internal_adapters_api_dto.AgentHeartbeatRequest": {
+            "type": "object",
+            "required": [
+                "agent_id"
+            ],
+            "properties": {
+                "agent_id": {
+                    "type": "string"
+                },
+                "node": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO": {
+            "type": "object",
+            "properties": {
+                "engine_version": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "is_leader": {
+                    "type": "boolean"
+                },
+                "is_manager": {
+                    "type": "boolean"
+                },
+                "node_id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "swarm_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterRequest": {
+            "type": "object",
+            "properties": {
+                "agent_id": {
+                    "type": "string"
+                },
+                "enroll_token": {
+                    "type": "string"
+                },
+                "node": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterResponse": {
+            "type": "object",
+            "properties": {
+                "agent_id": {
+                    "type": "string"
+                },
+                "cluster_id": {
+                    "type": "string"
+                },
+                "cluster_name": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_orange_hivemind_internal_adapters_api_dto.AssignHiveRequest": {
             "type": "object",
             "properties": {
@@ -4879,6 +5359,27 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_orange_hivemind_internal_adapters_api_dto.ClusterHealthResponse": {
+            "type": "object",
+            "properties": {
+                "cluster_id": {
+                    "type": "string"
+                },
+                "metrics_coverage": {
+                    "description": "MetricsCoverage reports whether per-container metrics for this cluster are\ncluster-wide (\"cluster\", agent mode) or limited to the connected node\n(\"connected-node\", direct mode) — so the UI can set expectations.",
+                    "type": "string"
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeHealthResponse"
+                    }
+                },
+                "observed_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_orange_hivemind_internal_adapters_api_dto.ClusterListResponse": {
             "type": "object",
             "properties": {
@@ -4925,6 +5426,15 @@ const docTemplate = `{
         "github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse": {
             "type": "object",
             "properties": {
+                "agent_last_seen": {
+                    "type": "string"
+                },
+                "agent_status": {
+                    "type": "string"
+                },
+                "connection_mode": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -5075,6 +5585,45 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_orange_hivemind_internal_adapters_api_dto.ContainerHealthResponse": {
+            "type": "object",
+            "properties": {
+                "container_id": {
+                    "type": "string"
+                },
+                "exit_code": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "restarts": {
+                    "type": "integer"
+                },
+                "service_id": {
+                    "type": "string"
+                },
+                "service_name": {
+                    "type": "string"
+                },
+                "since": {
+                    "type": "string"
+                },
+                "slot": {
+                    "type": "integer"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                },
+                "verdict": {
+                    "description": "ok | warning | critical | unknown",
+                    "type": "string"
+                }
+            }
+        },
         "github_com_orange_hivemind_internal_adapters_api_dto.CreateClusterRequest": {
             "type": "object",
             "required": [
@@ -5117,10 +5666,6 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
-                "cluster": {
-                    "description": "Cluster is the target cluster id. Empty selects the default cluster.",
-                    "type": "string"
-                },
                 "comment": {
                     "type": "string",
                     "example": "initial version"
@@ -5167,10 +5712,6 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
-                "cluster": {
-                    "description": "Cluster is the target cluster id. Empty selects the default cluster.",
-                    "type": "string"
-                },
                 "external": {
                     "type": "boolean",
                     "example": false
@@ -5192,10 +5733,6 @@ const docTemplate = `{
                 "value"
             ],
             "properties": {
-                "cluster": {
-                    "description": "Cluster is the target cluster id. Empty selects the default cluster.",
-                    "type": "string"
-                },
                 "name": {
                     "type": "string",
                     "example": "db_password"
@@ -5216,10 +5753,6 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
-                "cluster": {
-                    "description": "Cluster is the target cluster id. Empty selects the default cluster.",
-                    "type": "string"
-                },
                 "command": {
                     "type": "array",
                     "items": {
@@ -5323,10 +5856,6 @@ const docTemplate = `{
                 "name"
             ],
             "properties": {
-                "cluster": {
-                    "description": "Cluster is the target cluster id. Empty selects the default cluster.",
-                    "type": "string"
-                },
                 "driver": {
                     "type": "string",
                     "example": "local"
@@ -5405,6 +5934,40 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.EnrollClusterResponse": {
+            "type": "object",
+            "properties": {
+                "ca_cert": {
+                    "type": "string"
+                },
+                "client_cert": {
+                    "type": "string"
+                },
+                "client_key": {
+                    "type": "string"
+                },
+                "cluster_id": {
+                    "type": "string"
+                },
+                "cluster_name": {
+                    "type": "string"
+                },
+                "command": {
+                    "type": "string"
+                },
+                "hub_addr": {
+                    "description": "mTLS material (empty in token/dev mode).",
+                    "type": "string"
+                },
+                "install_command": {
+                    "description": "InstallCommand is the one-liner to paste on a manager (curl … | sh).",
+                    "type": "string"
+                },
+                "token": {
                     "type": "string"
                 }
             }
@@ -5491,6 +6054,9 @@ const docTemplate = `{
         "github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse": {
             "type": "object",
             "properties": {
+                "cluster_id": {
+                    "type": "string"
+                },
                 "color": {
                     "type": "string"
                 },
@@ -5681,6 +6247,10 @@ const docTemplate = `{
                 "addr": {
                     "type": "string"
                 },
+                "agent_connected": {
+                    "description": "AgentConnected is true (agent clusters only) when the node has a live tunnel.",
+                    "type": "boolean"
+                },
                 "availability": {
                     "type": "string"
                 },
@@ -5713,6 +6283,45 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_orange_hivemind_internal_adapters_api_dto.NodeHealthResponse": {
+            "type": "object",
+            "properties": {
+                "containers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ContainerHealthResponse"
+                    }
+                },
+                "critical": {
+                    "type": "integer"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "node_id": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "integer"
+                },
+                "reachable": {
+                    "type": "boolean"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "tunnel_up": {
+                    "type": "boolean"
+                },
+                "warning": {
+                    "type": "integer"
+                },
+                "worst": {
+                    "description": "highest severity among containers",
+                    "type": "string"
+                }
+            }
+        },
         "github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO": {
             "type": "object",
             "properties": {
@@ -5737,6 +6346,38 @@ const docTemplate = `{
                     "example": [
                         "node.labels.zone"
                     ]
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.PortDTO": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "description": "ingress | host (default ingress)",
+                    "type": "string"
+                },
+                "protocol": {
+                    "description": "tcp | udp | sctp (default tcp)",
+                    "type": "string"
+                },
+                "published_port": {
+                    "description": "host/ingress port (0 = auto)",
+                    "type": "integer"
+                },
+                "target_port": {
+                    "description": "container port (1–65535)",
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse": {
+            "type": "object",
+            "properties": {
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortDTO"
+                    }
                 }
             }
         },
@@ -6043,6 +6684,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountDTO"
+                    }
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.SetPortsRequest": {
+            "type": "object",
+            "properties": {
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortDTO"
                     }
                 }
             }

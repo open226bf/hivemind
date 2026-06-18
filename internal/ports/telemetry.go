@@ -69,6 +69,15 @@ type TelemetryCollectorRegistry interface {
 	Default(ctx context.Context) (TelemetryCollector, error)
 }
 
+// TelemetryProvider is implemented by an Orchestrator that can also expose
+// telemetry for its own cluster connection (e.g. the Swarm orchestrator, which
+// already holds a Docker client). The collector registry derives a collector
+// from the resolved orchestrator through this interface, reusing the live
+// connection instead of opening a second one.
+type TelemetryProvider interface {
+	Collector(clusterID uuid.UUID) TelemetryCollector
+}
+
 // AlertRouter is the output port the alert engine calls when a rule fires or
 // resolves. Implementations fan out to notification channels (Slack, email,
 // webhooks) — the same plumbing as the existing Notifier — and may forward to an
