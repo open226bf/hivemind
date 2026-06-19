@@ -29,7 +29,48 @@ func NewMonitoringHandler(collectors ports.TelemetryCollectorRegistry, alerts *a
 func (h *MonitoringHandler) Register(protected *gin.RouterGroup) {
 	m := protected.Group("/monitoring")
 	m.GET("/health", middleware.RequireRole(user.RoleViewer), h.ClusterHealth)
+	m.GET("/metrics", middleware.RequireRole(user.RoleViewer), h.Metrics)
 	m.GET("/alerts", middleware.RequireRole(user.RoleViewer), h.Alerts)
+}
+
+// Metrics godoc
+//
+//	@Summary		Per-container resource usage
+//	@Description	One-shot CPU%/memory snapshot for the active cluster's containers. Coverage depends on the connection mode (metrics_coverage): direct = the connected node only; agent = cluster-wide.
+//	@Tags			monitoring
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Success		200	{object}	dto.MetricsResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		503	{object}	dto.ErrorResponse	"cluster telemetry unavailable"
+//	@Router			/monitoring/metrics [get]
+func (h *MonitoringHandler) Metrics(c *gin.Context) {
+	col, ok := resolveCollector(c, h.collectors)
+	if !ok {
+		return
+	}
+	samples, err := col.CollectMetrics(c.Request.Context())
+	if err != nil {
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to collect metrics")
+		return
+	}
+	resp := dto.MetricsResponse{
+		MetricsCoverage: string(col.Capabilities().MetricsCoverage),
+		Items:           make([]dto.MetricSampleResponse, len(samples)),
+	}
+	for i, s := range samples {
+		resp.Items[i] = dto.MetricSampleResponse{
+			ContainerID:   s.ContainerID,
+			NodeID:        s.NodeID,
+			At:            s.At,
+			CPUPercent:    s.CPUPercent,
+			MemUsedBytes:  s.MemUsedBytes,
+			MemLimitBytes: s.MemLimitBytes,
+			MemPercent:    s.MemPercent,
+		}
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // ClusterHealth godoc

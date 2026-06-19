@@ -2,7 +2,6 @@ package ports
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/orange/hivemind/internal/domain/monitoring"
@@ -25,23 +24,15 @@ type TelemetryCollector interface {
 	// where".
 	CollectHealth(ctx context.Context) (*monitoring.ClusterHealth, error)
 
-	// StreamMetrics streams per-container resource samples until ctx is done.
-	// Agent mode covers the whole cluster (node-local stats pushed over the
-	// tunnel); direct mode covers only the connected daemon's node — callers
-	// should consult Capabilities first.
-	StreamMetrics(ctx context.Context, opts MetricStreamOptions) (<-chan monitoring.MetricSample, error)
+	// CollectMetrics returns a one-shot snapshot of per-container resource usage
+	// (CPU%, memory). Coverage depends on the mode — see Capabilities: direct
+	// covers only the connected daemon's node; agent covers the whole cluster
+	// (per-node tunnels). Suited to the polling UI; an SSE push can wrap it later.
+	CollectMetrics(ctx context.Context) ([]monitoring.MetricSample, error)
 
 	// Capabilities reports what this collector can actually deliver for its
 	// cluster, so callers and the UI adapt without knowing the connection mode.
 	Capabilities() CollectorCapabilities
-}
-
-// MetricStreamOptions narrows a metrics stream.
-type MetricStreamOptions struct {
-	// Interval between samples for a given container.
-	Interval time.Duration
-	// ServiceID, when non-nil, limits the stream to one service's containers.
-	ServiceID *uuid.UUID
 }
 
 // MetricsCoverage describes how much of a cluster a collector's metrics stream

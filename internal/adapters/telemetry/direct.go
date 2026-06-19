@@ -5,12 +5,12 @@ package telemetry
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/google/uuid"
 
@@ -22,18 +22,16 @@ import (
 // UUID (set by the orchestrator when it creates the service).
 const hivemindServiceLabel = "hivemind.service.id"
 
-// ErrMetricsUnsupported is returned by DirectCollector.StreamMetrics: a single
-// manager endpoint only exposes node-local container stats, so cluster-wide
-// per-container metrics in direct mode need an in-cluster exporter (ADR 0002,
-// phase 3), not this collector.
-var ErrMetricsUnsupported = errors.New("direct-mode per-container metrics require an in-cluster exporter (ADR 0002 phase 3)")
-
 // swarmAPI is the subset of the Docker client DirectCollector needs. The real
-// *client.Client satisfies it; tests inject a fake.
+// *client.Client satisfies it; tests inject a fake. ContainerList/ContainerStats
+// are node-local (the daemon we talk to), which is exactly the direct-mode
+// coverage.
 type swarmAPI interface {
 	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
+	ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error)
 }
 
 // Compile-time guarantee that the collector satisfies the port.
@@ -41,8 +39,8 @@ var _ ports.TelemetryCollector = (*DirectCollector)(nil)
 
 // DirectCollector implements ports.TelemetryCollector for an agentless cluster by
 // reading the Docker API of the cluster's manager directly. Health is cluster-wide
-// (built from the Swarm task list); per-container metrics are not available here
-// (see ErrMetricsUnsupported / ADR 0002).
+// (built from the Swarm task list); metrics cover only the connected daemon's
+// node (node-local container stats — see ADR 0002).
 type DirectCollector struct {
 	api       swarmAPI
 	clusterID uuid.UUID
@@ -62,11 +60,6 @@ func (c *DirectCollector) Capabilities() ports.CollectorCapabilities {
 		MetricsCoverage:     ports.MetricsConnectedNode,
 		PerNodeTunnelHealth: false,
 	}
-}
-
-// StreamMetrics is unsupported in direct mode — see ErrMetricsUnsupported.
-func (c *DirectCollector) StreamMetrics(ctx context.Context, opts ports.MetricStreamOptions) (<-chan monitoring.MetricSample, error) {
-	return nil, ErrMetricsUnsupported
 }
 
 // instanceKey identifies a logical service instance so historical (failed)
