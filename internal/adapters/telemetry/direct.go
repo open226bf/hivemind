@@ -22,6 +22,11 @@ import (
 // UUID (set by the orchestrator when it creates the service).
 const hivemindServiceLabel = "hivemind.service.id"
 
+// restartWindow bounds how far back a task failure counts toward the crash-loop
+// signal. Swarm keeps terminal tasks around, so without this a service's lifetime
+// failures would falsely read as an ongoing crash loop.
+const restartWindow = 15 * time.Minute
+
 // swarmAPI is the subset of the Docker client DirectCollector needs. The real
 // *client.Client satisfies it; tests inject a fake. ContainerList/ContainerStats
 // are node-local (the daemon we talk to), which is exactly the direct-mode
@@ -97,15 +102,21 @@ func (c *DirectCollector) CollectHealth(ctx context.Context) (*monitoring.Cluste
 
 	svcByID := indexServices(services)
 
-	// Keep the most recent task per instance, and count failures per instance as
-	// the crash-loop signal (Swarm keeps a bounded history of terminal tasks).
+	// Keep the most recent task per instance, and count *recent* failures per
+	// instance as the crash-loop signal. The window matters: Swarm retains
+	// terminal tasks, so a long-lived service accumulates old failures over its
+	// lifetime — counting those would flag a perfectly healthy service as
+	// crash-looping. A crash loop is repeated failures *now*, not ever.
+	cutoff := c.now().Add(-restartWindow)
 	current := make(map[instanceKey]swarm.Task)
 	fails := make(map[instanceKey]int)
 	for _, t := range tasks {
 		k := keyOf(t)
 		switch t.Status.State {
 		case swarm.TaskStateFailed, swarm.TaskStateRejected:
-			fails[k]++
+			if t.CreatedAt.After(cutoff) {
+				fails[k]++
+			}
 		}
 		if prev, ok := current[k]; !ok || t.CreatedAt.After(prev.CreatedAt) {
 			current[k] = t
