@@ -163,8 +163,14 @@ func main() {
 	// connection (no second Docker client per cluster).
 	collectorRegistry := orchestrator.NewCollectorRegistry(registry)
 	// Event-driven alert engine: evaluates each cluster's health and fires/resolves
-	// alerts through the router (logs by default). Its loop is started below.
-	alertEngine := application.NewAlertEngine(collectorRegistry, clusterRepo, notify.NewLogAlertRouter(log), log)
+	// alerts through the router. Always logs; additionally POSTs to a webhook when
+	// HIVEMIND_ALERT_WEBHOOK_URL is set. Its loop is started below.
+	alertRouters := []ports.AlertRouter{notify.NewLogAlertRouter(log)}
+	if url := os.Getenv("HIVEMIND_ALERT_WEBHOOK_URL"); url != "" {
+		alertRouters = append(alertRouters, notify.NewWebhookAlertRouter(url))
+		log.Info("alert webhook enabled")
+	}
+	alertEngine := application.NewAlertEngine(collectorRegistry, clusterRepo, notify.NewMultiRouter(alertRouters...), log)
 
 	// Internal CA: signs agent client certs (enrollment) and the hub server cert.
 	agentCA, err := persistence.NewAgentCARepository(db, cipher).LoadOrCreate(context.Background())
