@@ -45,6 +45,25 @@ type ClusterHealthResponse struct {
 	Nodes           []NodeHealthResponse `json:"nodes"`
 }
 
+// MetricSampleResponse is one container's resource usage at a point in time.
+// Joined to the health snapshot by container_id (which carries the service name).
+type MetricSampleResponse struct {
+	ContainerID   string    `json:"container_id"`
+	NodeID        string    `json:"node_id,omitempty"`
+	At            time.Time `json:"at"`
+	CPUPercent    float64   `json:"cpu_percent"`
+	MemUsedBytes  uint64    `json:"mem_used_bytes"`
+	MemLimitBytes uint64    `json:"mem_limit_bytes"`
+	MemPercent    float64   `json:"mem_percent"`
+}
+
+// MetricsResponse wraps a per-container usage snapshot of the active cluster.
+type MetricsResponse struct {
+	// MetricsCoverage: "connected-node" (direct) or "cluster" (agent).
+	MetricsCoverage string                 `json:"metrics_coverage"`
+	Items           []MetricSampleResponse `json:"items"`
+}
+
 // AlertResponse is a firing alert produced by the event-driven alert engine.
 type AlertResponse struct {
 	ID          string    `json:"id"`
