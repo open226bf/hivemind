@@ -15,13 +15,19 @@ import (
 
 // swCollector returns whatever ClusterHealth its pointer currently holds, so a
 // test can flip a cluster from broken to healthy between reconciles.
-type swCollector struct{ h *monitoring.ClusterHealth }
+type swCollector struct {
+	h *monitoring.ClusterHealth
+	m *[]monitoring.MetricSample // nil = no usage data
+}
 
 func (c swCollector) CollectHealth(context.Context) (*monitoring.ClusterHealth, error) {
 	return c.h, nil
 }
-func (swCollector) CollectMetrics(context.Context) ([]monitoring.MetricSample, error) {
-	return nil, nil
+func (c swCollector) CollectMetrics(context.Context) ([]monitoring.MetricSample, error) {
+	if c.m == nil {
+		return nil, nil
+	}
+	return *c.m, nil
 }
 func (swCollector) Capabilities() ports.CollectorCapabilities { return ports.CollectorCapabilities{} }
 
@@ -106,4 +112,33 @@ func TestAlertEngine_PerClusterIsolation(t *testing.T) {
 		assert.Contains(t, []uuid.UUID{a, b}, al.ClusterID)
 		assert.Equal(t, monitoring.AlertFiring, al.State)
 	}
+}
+
+func TestAlertEngine_MetricThreshold(t *testing.T) {
+	// A healthy container (no health alert) whose CPU is over the default 85%.
+	h := monitoring.ClusterHealth{Nodes: []monitoring.NodeHealth{{
+		NodeID: "n1", Reachable: true,
+		Containers: []monitoring.ContainerHealth{
+			{TaskID: "t1", ContainerID: "c1", ServiceName: "redis", Verdict: monitoring.SeverityOK},
+		},
+	}}}
+	metrics := []monitoring.MetricSample{{ContainerID: "c1", CPUPercent: 95, MemPercent: 10}}
+
+	router := &recordRouter{}
+	engine := application.NewAlertEngine(fixedRegistry{col: swCollector{h: &h, m: &metrics}}, nil, router, nil)
+	cid := uuid.New()
+
+	// CPU over threshold → one warning alert (no health alert, container is OK).
+	require.NoError(t, engine.ReconcileCluster(context.Background(), cid))
+	require.Len(t, engine.ActiveAlerts(), 1)
+	al := engine.ActiveAlerts()[0]
+	assert.Equal(t, monitoring.SeverityWarning, al.Severity)
+	assert.Equal(t, "cpu_over", al.Labels["kind"])
+	assert.Contains(t, al.Summary, "redis")
+
+	// CPU drops below the threshold → the alert resolves.
+	metrics = []monitoring.MetricSample{{ContainerID: "c1", CPUPercent: 5, MemPercent: 10}}
+	require.NoError(t, engine.ReconcileCluster(context.Background(), cid))
+	assert.Empty(t, engine.ActiveAlerts())
+	assert.Len(t, router.resolved, 1)
 }
