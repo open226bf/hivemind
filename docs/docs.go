@@ -1685,6 +1685,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/monitoring/metrics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "One-shot CPU%/memory snapshot for the active cluster's containers. Coverage depends on the connection mode (metrics_coverage): direct = the connected node only; agent = cluster-wide.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "monitoring"
+                ],
+                "summary": "Per-container resource usage",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MetricsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "cluster telemetry unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/networks": {
             "get": {
                 "security": [
@@ -6231,6 +6274,47 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.MetricSampleResponse": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string"
+                },
+                "container_id": {
+                    "type": "string"
+                },
+                "cpu_percent": {
+                    "type": "number"
+                },
+                "mem_limit_bytes": {
+                    "type": "integer"
+                },
+                "mem_percent": {
+                    "type": "number"
+                },
+                "mem_used_bytes": {
+                    "type": "integer"
+                },
+                "node_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.MetricsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MetricSampleResponse"
+                    }
+                },
+                "metrics_coverage": {
+                    "description": "MetricsCoverage: \"connected-node\" (direct) or \"cluster\" (agent).",
                     "type": "string"
                 }
             }

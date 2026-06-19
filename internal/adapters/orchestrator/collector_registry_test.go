@@ -21,7 +21,7 @@ type stubCollector struct{ id uuid.UUID }
 func (s stubCollector) CollectHealth(context.Context) (*monitoring.ClusterHealth, error) {
 	return &monitoring.ClusterHealth{ClusterID: s.id}, nil
 }
-func (stubCollector) StreamMetrics(context.Context, ports.MetricStreamOptions) (<-chan monitoring.MetricSample, error) {
+func (stubCollector) CollectMetrics(context.Context) ([]monitoring.MetricSample, error) {
 	return nil, nil
 }
 func (stubCollector) Capabilities() ports.CollectorCapabilities { return ports.CollectorCapabilities{} }

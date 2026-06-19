@@ -2,10 +2,13 @@ package telemetry
 
 import (
 	"context"
+	"io"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -17,9 +20,11 @@ import (
 
 // fakeSwarm is a canned swarmAPI for the collector tests.
 type fakeSwarm struct {
-	tasks    []swarm.Task
-	nodes    []swarm.Node
-	services []swarm.Service
+	tasks      []swarm.Task
+	nodes      []swarm.Node
+	services   []swarm.Service
+	containers []types.Container
+	statsJSON  string // two concatenated stat frames, returned for any container
 }
 
 func (f fakeSwarm) TaskList(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
@@ -30,6 +35,12 @@ func (f fakeSwarm) NodeList(context.Context, types.NodeListOptions) ([]swarm.Nod
 }
 func (f fakeSwarm) ServiceList(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
 	return f.services, nil
+}
+func (f fakeSwarm) ContainerList(context.Context, container.ListOptions) ([]types.Container, error) {
+	return f.containers, nil
+}
+func (f fakeSwarm) ContainerStats(_ context.Context, _ string, _ bool) (container.StatsResponseReader, error) {
+	return container.StatsResponseReader{Body: io.NopCloser(strings.NewReader(f.statsJSON))}, nil
 }
 
 func task(id, svc string, slot int, node string, state, desired swarm.TaskState, errMsg string, ageMin int) swarm.Task {
@@ -153,14 +164,37 @@ func TestDirectCollector_CollectHealth(t *testing.T) {
 	assert.Len(t, got.Struggling(), 2)
 }
 
-func TestDirectCollector_Capabilities_and_Metrics(t *testing.T) {
-	c := NewDirectCollector(fakeSwarm{}, uuid.New())
-
-	caps := c.Capabilities()
+func TestDirectCollector_Capabilities(t *testing.T) {
+	caps := NewDirectCollector(fakeSwarm{}, uuid.New()).Capabilities()
 	assert.Equal(t, ports.MetricsConnectedNode, caps.MetricsCoverage)
 	assert.False(t, caps.PerNodeTunnelHealth)
+}
 
-	ch, err := c.StreamMetrics(context.Background(), ports.MetricStreamOptions{})
-	assert.Nil(t, ch)
-	assert.ErrorIs(t, err, ErrMetricsUnsupported)
+func TestDirectCollector_CollectMetrics(t *testing.T) {
+	// Two stat frames: cpuDelta=1000, sysDelta=10000, 2 online CPUs → 20% CPU;
+	// mem usage 200 MiB − 50 MiB inactive = 150 MiB of a 1 GiB limit ≈ 14.6%.
+	const frames = `{}` + `
+{"cpu_stats":{"cpu_usage":{"total_usage":2000},"system_cpu_usage":20000,"online_cpus":2},
+ "precpu_stats":{"cpu_usage":{"total_usage":1000},"system_cpu_usage":10000},
+ "memory_stats":{"usage":209715200,"limit":1073741824,"stats":{"inactive_file":52428800}}}`
+
+	fake := fakeSwarm{
+		containers: []types.Container{
+			{ID: "c1", Labels: map[string]string{"com.docker.swarm.node.id": "node-a"}},
+		},
+		statsJSON: frames,
+	}
+	c := NewDirectCollector(fake, uuid.New())
+
+	samples, err := c.CollectMetrics(context.Background())
+	require.NoError(t, err)
+	require.Len(t, samples, 1)
+
+	s := samples[0]
+	assert.Equal(t, "c1", s.ContainerID)
+	assert.Equal(t, "node-a", s.NodeID)
+	assert.InDelta(t, 20.0, s.CPUPercent, 0.01)
+	assert.Equal(t, uint64(157286400), s.MemUsedBytes) // 150 MiB
+	assert.Equal(t, uint64(1073741824), s.MemLimitBytes)
+	assert.InDelta(t, 14.65, s.MemPercent, 0.1)
 }
