@@ -164,6 +164,31 @@ func TestDirectCollector_CollectHealth(t *testing.T) {
 	assert.Len(t, got.Struggling(), 2)
 }
 
+func TestDirectCollector_OldFailuresAreNotCrashloop(t *testing.T) {
+	// A slot whose failures are all older than the restart window, with a current
+	// running task, must read healthy — not crash-looping. (Swarm retains old
+	// terminal tasks; lifetime failures must not flag a long-stable service.)
+	fake := fakeSwarm{
+		nodes:    []swarm.Node{node("node-a", "alpha", "manager", swarm.NodeStateReady)},
+		services: []swarm.Service{{ID: "svc-web", Spec: swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "web"}}}},
+		tasks: []swarm.Task{
+			task("old1", "svc-web", 1, "node-a", swarm.TaskStateFailed, swarm.TaskStateRunning, "boom", 90),
+			task("old2", "svc-web", 1, "node-a", swarm.TaskStateFailed, swarm.TaskStateRunning, "boom", 70),
+			task("old3", "svc-web", 1, "node-a", swarm.TaskStateFailed, swarm.TaskStateRunning, "boom", 60),
+			task("cur", "svc-web", 1, "node-a", swarm.TaskStateRunning, swarm.TaskStateRunning, "", 1),
+		},
+	}
+	c := NewDirectCollector(fake, uuid.New()) // default now → real 15-minute window
+
+	got, err := c.CollectHealth(context.Background())
+	require.NoError(t, err)
+	require.Len(t, got.Nodes, 1)
+	require.Len(t, got.Nodes[0].Containers, 1)
+	ch := got.Nodes[0].Containers[0]
+	assert.Equal(t, monitoring.SeverityOK, ch.Verdict)
+	assert.Equal(t, 0, ch.Restarts)
+}
+
 func TestDirectCollector_Capabilities(t *testing.T) {
 	caps := NewDirectCollector(fakeSwarm{}, uuid.New()).Capabilities()
 	assert.Equal(t, ports.MetricsConnectedNode, caps.MetricsCoverage)
