@@ -20,7 +20,7 @@ type swCollector struct{ h *monitoring.ClusterHealth }
 func (c swCollector) CollectHealth(context.Context) (*monitoring.ClusterHealth, error) {
 	return c.h, nil
 }
-func (swCollector) StreamMetrics(context.Context, ports.MetricStreamOptions) (<-chan monitoring.MetricSample, error) {
+func (swCollector) CollectMetrics(context.Context) ([]monitoring.MetricSample, error) {
 	return nil, nil
 }
 func (swCollector) Capabilities() ports.CollectorCapabilities { return ports.CollectorCapabilities{} }
