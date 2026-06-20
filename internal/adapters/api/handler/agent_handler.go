@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -65,10 +66,14 @@ func (h *AgentHandler) Register(public, protected *gin.RouterGroup) {
 func (h *AgentHandler) Connect(c *gin.Context) {
 	agentID := c.Query("agent_id")
 	if h.hub == nil {
+		slog.Warn("agent tunnel rejected", "agent_id", agentID, "reason", "agent hub not configured")
 		dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "unknown agent")
 		return
 	}
 	if err := h.svc.AuthorizeTunnelToken(c.Request.Context(), agentID, c.GetHeader(tunnelTokenHeader)); err != nil {
+		// Log the precise reason server-side (token rotated, unknown agent id, …); the
+		// agent still receives only a generic 401 so a probe can't tell the causes apart.
+		slog.Warn("agent tunnel rejected", "agent_id", agentID, "reason", err)
 		dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "unknown agent")
 		return
 	}
@@ -87,6 +92,11 @@ func (h *AgentHandler) Connect(c *gin.Context) {
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "connection hijack failed")
 		return
 	}
+	// The reverse tunnel is long-lived, but this endpoint is served by the main API
+	// server whose WriteTimeout would otherwise sever the hijacked connection within
+	// seconds. Clear the deadlines so the tunnel stays open (the dedicated mTLS hub
+	// listener sets no timeouts for the same reason).
+	_ = conn.SetDeadline(time.Time{})
 	if _, err := io.WriteString(conn,
 		"HTTP/1.1 101 Switching Protocols\r\nUpgrade: "+tunnelProto+"\r\nConnection: Upgrade\r\n\r\n"); err != nil {
 		_ = conn.Close()
