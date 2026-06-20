@@ -285,15 +285,20 @@ func (s *AgentService) ReconcilePresence(ctx context.Context) error {
 // (GenerateEnrollment / UseDirectMode) revokes existing tunnels.
 func (s *AgentService) AuthorizeTunnelToken(ctx context.Context, agentID, token string) error {
 	if agentID == "" || token == "" {
-		return ErrInvalidEnrollment
+		return fmt.Errorf("missing agent id or tunnel token: %w", ErrInvalidEnrollment)
 	}
 	c, err := s.clusters.FindByAgentID(ctx, agentID)
 	if err != nil {
-		return ErrInvalidEnrollment
+		return fmt.Errorf("no cluster bound to agent id %q: %w", agentID, ErrInvalidEnrollment)
 	}
 	ok, err := c.MatchEnrollment(token)
 	if err != nil || !ok {
-		return ErrInvalidEnrollment
+		// Most common cause: the cluster was re-enrolled (token rotated) after the
+		// agent was deployed, so the agent's baked token no longer matches. The
+		// reconnect path authorises on agent id alone, so the agent still registers
+		// and looks online — only the data-plane tunnel, which requires the token, is
+		// refused. The wrapped reason is logged server-side; the agent sees a 401.
+		return fmt.Errorf("tunnel token does not match cluster enrollment (rotated by re-enroll?): %w", ErrInvalidEnrollment)
 	}
 	return nil
 }
