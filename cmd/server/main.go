@@ -161,7 +161,7 @@ func main() {
 	registry := buildRegistry(context.Background(), env, log, clusterRepo, hub)
 	// Telemetry collectors reuse each cluster's already-resolved orchestrator
 	// connection (no second Docker client per cluster).
-	collectorRegistry := orchestrator.NewCollectorRegistry(registry)
+	collectorRegistry := orchestrator.NewCollectorRegistry(registry, clusterRepo, hub)
 	// Event-driven alert engine: evaluates each cluster's health and fires/resolves
 	// alerts through the router. Always logs; additionally POSTs to a webhook when
 	// HIVEMIND_ALERT_WEBHOOK_URL is set. Its loop is started below.
