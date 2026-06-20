@@ -104,6 +104,10 @@ type AgentHub interface {
 	// control-plane calls to a manager-resident agent task. Fails when the agent
 	// has no live session.
 	Orchestrator(ctx context.Context, agentID string) (Orchestrator, error)
+	// OrchestratorForNode returns an Orchestrator carried over a specific node's
+	// tunnel, for node-scoped operations (that node's local Docker — stats,
+	// metrics, logs, exec). Powers cluster-wide per-node metrics in agent mode.
+	OrchestratorForNode(ctx context.Context, agentID, nodeID string) (Orchestrator, error)
 	// Online reports whether the agent currently holds a live session.
 	Online(agentID string) bool
 	// ConnectedNodeIDs returns the set of Swarm node ids that currently have a
