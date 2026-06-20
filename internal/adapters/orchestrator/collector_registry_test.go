@@ -49,7 +49,7 @@ func (f fakeOrchRegistry) Default(context.Context) (ports.Orchestrator, error) {
 func (fakeOrchRegistry) Invalidate(uuid.UUID) {}
 
 func TestCollectorRegistry_For_Provider(t *testing.T) {
-	reg := orchestrator.NewCollectorRegistry(fakeOrchRegistry{orch: providerOrch{}})
+	reg := orchestrator.NewCollectorRegistry(fakeOrchRegistry{orch: providerOrch{}}, nil, nil)
 
 	id := uuid.New()
 	col, err := reg.For(context.Background(), id)
@@ -63,7 +63,7 @@ func TestCollectorRegistry_For_Provider(t *testing.T) {
 }
 
 func TestCollectorRegistry_For_Unsupported(t *testing.T) {
-	reg := orchestrator.NewCollectorRegistry(fakeOrchRegistry{orch: plainOrch{}})
+	reg := orchestrator.NewCollectorRegistry(fakeOrchRegistry{orch: plainOrch{}}, nil, nil)
 
 	col, err := reg.For(context.Background(), uuid.New())
 	assert.Nil(t, col)
@@ -72,7 +72,7 @@ func TestCollectorRegistry_For_Unsupported(t *testing.T) {
 
 func TestCollectorRegistry_For_PropagatesResolveError(t *testing.T) {
 	boom := errors.New("cluster unreachable")
-	reg := orchestrator.NewCollectorRegistry(fakeOrchRegistry{err: boom})
+	reg := orchestrator.NewCollectorRegistry(fakeOrchRegistry{err: boom}, nil, nil)
 
 	col, err := reg.For(context.Background(), uuid.New())
 	assert.Nil(t, col)
@@ -80,7 +80,7 @@ func TestCollectorRegistry_For_PropagatesResolveError(t *testing.T) {
 }
 
 func TestCollectorRegistry_Default(t *testing.T) {
-	reg := orchestrator.NewCollectorRegistry(fakeOrchRegistry{orch: providerOrch{}})
+	reg := orchestrator.NewCollectorRegistry(fakeOrchRegistry{orch: providerOrch{}}, nil, nil)
 
 	col, err := reg.Default(context.Background())
 	require.NoError(t, err)
