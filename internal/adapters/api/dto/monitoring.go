@@ -20,18 +20,28 @@ type ContainerHealthResponse struct {
 // NodeHealthResponse groups a node's containers with a verdict rollup. TunnelUp
 // is present only for agent-mode clusters.
 type NodeHealthResponse struct {
-	NodeID      string                    `json:"node_id"`
-	Hostname    string                    `json:"hostname,omitempty"`
-	Role        string                    `json:"role,omitempty"`
-	Reachable   bool                      `json:"reachable"`
-	TunnelUp    *bool                     `json:"tunnel_up,omitempty"`
-	CPUs        float64                   `json:"cpus"`         // total cores (capacity, not usage)
-	MemoryBytes uint64                    `json:"memory_bytes"` // total RAM (capacity, not usage)
-	Worst       string                    `json:"worst"`        // highest severity among containers
-	OK          int                       `json:"ok"`
-	Warning     int                       `json:"warning"`
-	Critical    int                       `json:"critical"`
-	Containers  []ContainerHealthResponse `json:"containers"`
+	NodeID      string  `json:"node_id"`
+	Hostname    string  `json:"hostname,omitempty"`
+	Role        string  `json:"role,omitempty"`
+	Reachable   bool    `json:"reachable"`
+	TunnelUp    *bool   `json:"tunnel_up,omitempty"`
+	CPUs        float64 `json:"cpus"`         // total cores (capacity, not usage)
+	MemoryBytes uint64  `json:"memory_bytes"` // total RAM (capacity, not usage)
+	// HostUsage is the node's real host-level usage (whole node, from the agent's
+	// /proc reading). Present only in agent mode with a recent heartbeat.
+	HostUsage  *HostUsageDTO             `json:"host_usage,omitempty"`
+	Worst      string                    `json:"worst"` // highest severity among containers
+	OK         int                       `json:"ok"`
+	Warning    int                       `json:"warning"`
+	Critical   int                       `json:"critical"`
+	Containers []ContainerHealthResponse `json:"containers"`
+}
+
+// HostUsageDTO is a node's real host-level resource usage (not just containers).
+type HostUsageDTO struct {
+	CPUPercent    float64 `json:"cpu_percent"`
+	MemUsedBytes  uint64  `json:"mem_used_bytes"`
+	MemTotalBytes uint64  `json:"mem_total_bytes"`
 }
 
 // ClusterHealthResponse is the per-node health snapshot of a cluster.

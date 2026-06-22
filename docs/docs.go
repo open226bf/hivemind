@@ -5313,6 +5313,9 @@ const docTemplate = `{
                 "agent_id": {
                     "type": "string"
                 },
+                "metrics": {
+                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeMetricsDTO"
+                },
                 "node": {
                     "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO"
                 }
@@ -6211,6 +6214,20 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_orange_hivemind_internal_adapters_api_dto.HostUsageDTO": {
+            "type": "object",
+            "properties": {
+                "cpu_percent": {
+                    "type": "number"
+                },
+                "mem_total_bytes": {
+                    "type": "integer"
+                },
+                "mem_used_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_orange_hivemind_internal_adapters_api_dto.ImpactedServiceResponse": {
             "type": "object",
             "properties": {
@@ -6471,6 +6488,14 @@ const docTemplate = `{
                 "critical": {
                     "type": "integer"
                 },
+                "host_usage": {
+                    "description": "HostUsage is the node's real host-level usage (whole node, from the agent's\n/proc reading). Present only in agent mode with a recent heartbeat.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HostUsageDTO"
+                        }
+                    ]
+                },
                 "hostname": {
                     "type": "string"
                 },
@@ -6499,6 +6524,23 @@ const docTemplate = `{
                 "worst": {
                     "description": "highest severity among containers",
                     "type": "string"
+                }
+            }
+        },
+        "github_com_orange_hivemind_internal_adapters_api_dto.NodeMetricsDTO": {
+            "type": "object",
+            "properties": {
+                "cpu_count": {
+                    "type": "integer"
+                },
+                "cpu_percent": {
+                    "type": "number"
+                },
+                "mem_total_bytes": {
+                    "type": "integer"
+                },
+                "mem_used_bytes": {
+                    "type": "integer"
                 }
             }
         },

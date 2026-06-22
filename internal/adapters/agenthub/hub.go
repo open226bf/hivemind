@@ -44,9 +44,10 @@ type nodeSession struct {
 type Hub struct {
 	offlineAfter time.Duration
 
-	mu       sync.RWMutex
-	presence map[string]NodePresence            // agentID -> last reported node
-	sessions map[string]map[string]*nodeSession // agentID -> nodeID -> session
+	mu          sync.RWMutex
+	presence    map[string]NodePresence                 // agentID -> last reported node
+	sessions    map[string]map[string]*nodeSession      // agentID -> nodeID -> session
+	nodeMetrics map[string]map[string]ports.NodeMetrics // agentID -> nodeID -> host usage
 }
 
 // New builds a hub. offlineAfter is how long after the last heartbeat an agent
@@ -59,6 +60,7 @@ func New(offlineAfter time.Duration) *Hub {
 		offlineAfter: offlineAfter,
 		presence:     make(map[string]NodePresence),
 		sessions:     make(map[string]map[string]*nodeSession),
+		nodeMetrics:  make(map[string]map[string]ports.NodeMetrics),
 	}
 }
 
@@ -137,6 +139,12 @@ func (h *Hub) hasLiveSession(agentID string) bool {
 func (h *Hub) MarkSeen(agentID string, node ports.AgentNode) {
 	h.mu.Lock()
 	h.presence[agentID] = NodePresence{AgentNode: node, LastSeen: time.Now().UTC()}
+	if node.Metrics != nil && node.NodeID != "" {
+		if h.nodeMetrics[agentID] == nil {
+			h.nodeMetrics[agentID] = make(map[string]ports.NodeMetrics)
+		}
+		h.nodeMetrics[agentID][node.NodeID] = *node.Metrics
+	}
 	h.mu.Unlock()
 }
 
@@ -148,6 +156,7 @@ func (h *Hub) Forget(agentID string) {
 		_ = ns.session.Close()
 	}
 	delete(h.sessions, agentID)
+	delete(h.nodeMetrics, agentID)
 	h.mu.Unlock()
 }
 
@@ -171,6 +180,19 @@ func (h *Hub) ConnectedNodeIDs(agentID string) map[string]bool {
 		if !ns.session.IsClosed() && nodeID != "" {
 			out[nodeID] = true
 		}
+	}
+	return out
+}
+
+// NodeMetricsByNode returns a copy of the latest host usage per node id reported
+// by an agent's heartbeats.
+func (h *Hub) NodeMetricsByNode(agentID string) map[string]ports.NodeMetrics {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	src := h.nodeMetrics[agentID]
+	out := make(map[string]ports.NodeMetrics, len(src))
+	for k, v := range src {
+		out[k] = v
 	}
 	return out
 }
