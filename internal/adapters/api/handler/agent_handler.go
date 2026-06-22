@@ -103,10 +103,17 @@ func (h *AgentHandler) Connect(c *gin.Context) {
 		return
 	}
 
+	// Parse the full node identity the agent advertises on the URL. is_manager is
+	// what lets the hub route control-plane calls to a manager session (health,
+	// /tasks, /nodes); without it a worker tunnel could be picked and those calls
+	// would fail. Mirrors the mTLS listener's agentNodeFromQuery.
 	node := toAgentNode(dto.AgentNodeDTO{
-		NodeID:   c.Query("node_id"),
-		Role:     c.Query("role"),
-		Hostname: c.Query("hostname"),
+		NodeID:        c.Query("node_id"),
+		Hostname:      c.Query("hostname"),
+		Role:          c.Query("role"),
+		IsManager:     c.Query("is_manager") == "true",
+		IsLeader:      c.Query("is_leader") == "true",
+		EngineVersion: c.Query("engine_version"),
 	})
 	slog.Info("agent tunnel attached", "agent_id", agentID, "node", node.NodeID)
 	if err := h.hub.Attach(agentID, node.NodeID, node, conn); err != nil {
