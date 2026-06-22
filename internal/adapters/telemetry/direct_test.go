@@ -67,6 +67,56 @@ func node(id, host, role string, state swarm.NodeState) swarm.Node {
 	}
 }
 
+// Unscheduled tasks (empty NodeID — pending or crash-looping between placements)
+// must NOT become a phantom unreachable node: they go to a clearly-labelled,
+// reachable bucket, so the crash-loop still alerts but no false node-down does.
+func TestDirectCollector_UnscheduledTasksBucket(t *testing.T) {
+	fake := fakeSwarm{
+		nodes: []swarm.Node{node("node-a", "alpha", "manager", swarm.NodeStateReady)},
+		services: []swarm.Service{
+			{ID: "svc-x", Spec: swarm.ServiceSpec{Annotations: swarm.Annotations{Name: "x"}}},
+		},
+		// A slot that never schedules: 3 recent failures + a current "new" task, all
+		// with an empty NodeID — a crash loop with no node.
+		tasks: []swarm.Task{
+			task("u-h1", "svc-x", 1, "", swarm.TaskStateFailed, swarm.TaskStateRunning, "boom", 2),
+			task("u-h2", "svc-x", 1, "", swarm.TaskStateFailed, swarm.TaskStateRunning, "boom", 1),
+			task("u-h3", "svc-x", 1, "", swarm.TaskStateFailed, swarm.TaskStateRunning, "boom", 1),
+			task("u-cur", "svc-x", 1, "", swarm.TaskStateNew, swarm.TaskStateRunning, "", 0),
+		},
+	}
+
+	c := NewDirectCollector(fake, uuid.New())
+	got, err := c.CollectHealth(context.Background())
+	require.NoError(t, err)
+
+	var bucket *monitoring.NodeHealth
+	for i := range got.Nodes {
+		if got.Nodes[i].NodeID == "" {
+			bucket = &got.Nodes[i]
+		}
+	}
+	require.NotNil(t, bucket, "expected an unscheduled-tasks bucket for empty NodeID")
+	assert.True(t, bucket.Reachable, "the bucket must not look like a node-down")
+	assert.Equal(t, "Tâches non planifiées", bucket.Hostname)
+	require.Len(t, bucket.Containers, 1)
+	assert.Equal(t, monitoring.SeverityCritical, bucket.Containers[0].Verdict)
+	assert.Contains(t, bucket.Containers[0].Reason, "crash-looping")
+
+	// The crash-loop alerts, but no false node-unreachable does.
+	var crashLoop, nodeDown bool
+	for _, f := range monitoring.Evaluate(*got) {
+		switch f.Kind {
+		case monitoring.RuleCrashLoop:
+			crashLoop = true
+		case monitoring.RuleNodeUnreachable:
+			nodeDown = true
+		}
+	}
+	assert.True(t, crashLoop, "crash-loop finding should still fire")
+	assert.False(t, nodeDown, "unscheduled tasks must not raise a node-unreachable alert")
+}
+
 func TestDirectCollector_CollectHealth(t *testing.T) {
 	webID := uuid.New()
 
