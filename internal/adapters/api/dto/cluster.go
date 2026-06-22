@@ -91,10 +91,20 @@ type AgentRegisterResponse struct {
 	ClusterName string `json:"cluster_name"`
 }
 
-// AgentHeartbeatRequest reports liveness and current node role.
+// NodeMetricsDTO is the host-level resource usage an agent reports with its
+// heartbeat (read from /proc on the node).
+type NodeMetricsDTO struct {
+	MemTotalBytes uint64  `json:"mem_total_bytes"`
+	MemUsedBytes  uint64  `json:"mem_used_bytes"`
+	CPUPercent    float64 `json:"cpu_percent"`
+	CPUCount      int     `json:"cpu_count"`
+}
+
+// AgentHeartbeatRequest reports liveness, the current node role, and host usage.
 type AgentHeartbeatRequest struct {
-	AgentID string       `json:"agent_id" binding:"required"`
-	Node    AgentNodeDTO `json:"node"`
+	AgentID string          `json:"agent_id" binding:"required"`
+	Node    AgentNodeDTO    `json:"node"`
+	Metrics *NodeMetricsDTO `json:"metrics,omitempty"`
 }
 
 // ClusterListResponse wraps a paginated list of clusters.

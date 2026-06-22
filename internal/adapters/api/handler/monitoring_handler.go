@@ -140,6 +140,17 @@ func toAlertResponse(a monitoring.Alert) dto.AlertResponse {
 	}
 }
 
+func toHostUsageDTO(u *monitoring.HostUsage) *dto.HostUsageDTO {
+	if u == nil {
+		return nil
+	}
+	return &dto.HostUsageDTO{
+		CPUPercent:    u.CPUPercent,
+		MemUsedBytes:  u.MemUsedBytes,
+		MemTotalBytes: u.MemTotalBytes,
+	}
+}
+
 func toClusterHealthResponse(h *monitoring.ClusterHealth, caps ports.CollectorCapabilities) dto.ClusterHealthResponse {
 	resp := dto.ClusterHealthResponse{
 		ClusterID:       clusterIDString(h.ClusterID),
@@ -156,6 +167,7 @@ func toClusterHealthResponse(h *monitoring.ClusterHealth, caps ports.CollectorCa
 			TunnelUp:    n.TunnelUp,
 			CPUs:        n.CPUs,
 			MemoryBytes: n.MemoryBytes,
+			HostUsage:   toHostUsageDTO(n.HostUsage),
 			Worst:       string(n.Worst()),
 			OK:          n.OK,
 			Warning:     n.Warning,

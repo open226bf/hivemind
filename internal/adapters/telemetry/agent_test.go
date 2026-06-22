@@ -31,6 +31,7 @@ func (o nodeOrch) Collector(id uuid.UUID) ports.TelemetryCollector {
 type fakeHub struct {
 	manager swarmAPI
 	nodes   map[string]swarmAPI
+	metrics map[string]ports.NodeMetrics
 }
 
 func (h fakeHub) Orchestrator(context.Context, string) (ports.Orchestrator, error) {
@@ -50,6 +51,7 @@ func (h fakeHub) ConnectedNodeIDs(string) map[string]bool {
 	}
 	return m
 }
+func (h fakeHub) NodeMetricsByNode(string) map[string]ports.NodeMetrics { return h.metrics }
 
 func TestAgentCollector(t *testing.T) {
 	const frames = `{}` + `
@@ -66,7 +68,10 @@ func TestAgentCollector(t *testing.T) {
 	n1 := fakeSwarm{containers: []types.Container{{ID: "c-n1", Labels: map[string]string{"com.docker.swarm.node.id": "n1"}}}, statsJSON: frames}
 	n2 := fakeSwarm{containers: []types.Container{{ID: "c-n2", Labels: map[string]string{"com.docker.swarm.node.id": "n2"}}}, statsJSON: frames}
 
-	hub := fakeHub{manager: mgr, nodes: map[string]swarmAPI{"n1": n1, "n2": n2}}
+	hub := fakeHub{manager: mgr, nodes: map[string]swarmAPI{"n1": n1, "n2": n2},
+		metrics: map[string]ports.NodeMetrics{
+			"n1": {CPUPercent: 30, MemUsedBytes: 2 << 30, MemTotalBytes: 8 << 30},
+		}}
 	c := NewAgentCollector(hub, "agent-x", uuid.New())
 
 	caps := c.Capabilities()
@@ -80,6 +85,11 @@ func TestAgentCollector(t *testing.T) {
 	for _, n := range h.Nodes {
 		require.NotNil(t, n.TunnelUp)
 		assert.True(t, *n.TunnelUp)
+		if n.NodeID == "n1" {
+			require.NotNil(t, n.HostUsage, "host usage should be stamped from heartbeat metrics")
+			assert.InDelta(t, 30.0, n.HostUsage.CPUPercent, 0.01)
+			assert.Equal(t, uint64(2<<30), n.HostUsage.MemUsedBytes)
+		}
 	}
 
 	// Metrics: aggregated across BOTH nodes — the cluster-wide coverage.
