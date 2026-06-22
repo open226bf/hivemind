@@ -225,7 +225,9 @@ func (h *AgentHandler) AgentHeartbeat(c *gin.Context) {
 		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
 		return
 	}
-	if err := h.svc.Heartbeat(c.Request.Context(), req.AgentID, toAgentNode(req.Node)); err != nil {
+	node := toAgentNode(req.Node)
+	node.Metrics = toNodeMetrics(req.Metrics)
+	if err := h.svc.Heartbeat(c.Request.Context(), req.AgentID, node); err != nil {
 		writeAgentError(c, err)
 		return
 	}
@@ -242,6 +244,19 @@ func toAgentNode(n dto.AgentNodeDTO) ports.AgentNode {
 		IsManager:     n.IsManager,
 		IsLeader:      n.IsLeader,
 		EngineVersion: n.EngineVersion,
+	}
+}
+
+// toNodeMetrics maps the heartbeat's host-usage payload (nil when not reported).
+func toNodeMetrics(m *dto.NodeMetricsDTO) *ports.NodeMetrics {
+	if m == nil {
+		return nil
+	}
+	return &ports.NodeMetrics{
+		CPUPercent:    m.CPUPercent,
+		MemUsedBytes:  m.MemUsedBytes,
+		MemTotalBytes: m.MemTotalBytes,
+		CPUCount:      m.CPUCount,
 	}
 }
 
