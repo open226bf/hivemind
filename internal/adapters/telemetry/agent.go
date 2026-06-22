@@ -57,6 +57,9 @@ func (c *AgentCollector) CollectHealth(ctx context.Context) (*monitoring.Cluster
 
 	connected := c.hub.ConnectedNodeIDs(c.agentID)
 	for i := range h.Nodes {
+		if h.Nodes[i].NodeID == "" {
+			continue // unscheduled-tasks bucket — not a real node, so no tunnel status
+		}
 		up := connected[h.Nodes[i].NodeID]
 		h.Nodes[i].TunnelUp = &up
 	}
@@ -83,6 +86,14 @@ func (c *AgentCollector) CollectMetrics(ctx context.Context) ([]monitoring.Metri
 		samples, err := tp.Collector(c.clusterID).CollectMetrics(ctx)
 		if err != nil {
 			continue
+		}
+		// This batch is the node's local containers; standalone (non-swarm)
+		// containers carry no node label, so stamp the known node id where it's
+		// missing — otherwise they collapse under an empty id into a phantom node.
+		for i := range samples {
+			if samples[i].NodeID == "" {
+				samples[i].NodeID = nodeID
+			}
 		}
 		all = append(all, samples...)
 	}
