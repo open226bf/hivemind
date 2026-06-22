@@ -113,6 +113,9 @@ type AgentHub interface {
 	// ConnectedNodeIDs returns the set of Swarm node ids that currently have a
 	// live agent tunnel, used to flag per-node tunnel health on the dashboard.
 	ConnectedNodeIDs(agentID string) map[string]bool
+	// NodeMetricsByNode returns the latest host-level usage (CPU/memory) per node
+	// id, from the agents' heartbeats. Powers real node-usage gauges in agent mode.
+	NodeMetricsByNode(agentID string) map[string]NodeMetrics
 }
 
 // AgentNode is a node identity reported by an agent task (transport-neutral).
@@ -123,6 +126,18 @@ type AgentNode struct {
 	IsManager     bool
 	IsLeader      bool
 	EngineVersion string
+	// Metrics is the node's host-level resource usage from the agent's last
+	// heartbeat. Nil for tunnel attaches (which don't carry it).
+	Metrics *NodeMetrics
+}
+
+// NodeMetrics is a node's host-level resource usage (the agent reads it from
+// /proc), reported with the heartbeat — real node usage, not just its containers.
+type NodeMetrics struct {
+	CPUPercent    float64
+	MemUsedBytes  uint64
+	MemTotalBytes uint64
+	CPUCount      int
 }
 
 // AgentPresence records the liveness of agents from their heartbeats. It is the

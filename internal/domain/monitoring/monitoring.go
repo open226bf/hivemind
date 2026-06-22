@@ -66,11 +66,15 @@ type NodeHealth struct {
 	Reachable bool
 	TunnelUp  *bool
 
-	// Capacity advertised by the node — total resources, not live usage. Usage
-	// metrics arrive in phase 2 (agent) / phase 3 (direct exporter); these come
-	// for free from the node list. CPUs is whole cores, MemoryBytes is total RAM.
+	// Capacity advertised by the node — total resources, not live usage. CPUs is
+	// whole cores, MemoryBytes is total RAM.
 	CPUs        float64
 	MemoryBytes uint64
+
+	// HostUsage is the node's real host-level usage (CPU/memory of the whole
+	// node, not just its containers), reported by the agent from /proc. Set only
+	// in agent mode with a recent heartbeat; nil otherwise.
+	HostUsage *HostUsage
 
 	Containers []ContainerHealth
 
@@ -79,6 +83,14 @@ type NodeHealth struct {
 	OK       int
 	Warning  int
 	Critical int
+}
+
+// HostUsage is a node's real host-level resource usage (the whole node, from the
+// agent reading /proc) — distinct from the per-container metric rollup.
+type HostUsage struct {
+	CPUPercent    float64 // 0..100, whole-node CPU utilisation
+	MemUsedBytes  uint64  // used = total - available (excludes reclaimable cache)
+	MemTotalBytes uint64
 }
 
 // ClusterHealth is the full per-node health snapshot of a cluster — the data

@@ -16,6 +16,7 @@ type agentHub interface {
 	Orchestrator(ctx context.Context, agentID string) (ports.Orchestrator, error)
 	OrchestratorForNode(ctx context.Context, agentID, nodeID string) (ports.Orchestrator, error)
 	ConnectedNodeIDs(agentID string) map[string]bool
+	NodeMetricsByNode(agentID string) map[string]ports.NodeMetrics
 }
 
 // AgentCollector implements ports.TelemetryCollector for an agent-mode cluster.
@@ -56,12 +57,20 @@ func (c *AgentCollector) CollectHealth(ctx context.Context) (*monitoring.Cluster
 	}
 
 	connected := c.hub.ConnectedNodeIDs(c.agentID)
+	usage := c.hub.NodeMetricsByNode(c.agentID)
 	for i := range h.Nodes {
 		if h.Nodes[i].NodeID == "" {
 			continue // unscheduled-tasks bucket — not a real node, so no tunnel status
 		}
 		up := connected[h.Nodes[i].NodeID]
 		h.Nodes[i].TunnelUp = &up
+		if m, ok := usage[h.Nodes[i].NodeID]; ok {
+			h.Nodes[i].HostUsage = &monitoring.HostUsage{
+				CPUPercent:    m.CPUPercent,
+				MemUsedBytes:  m.MemUsedBytes,
+				MemTotalBytes: m.MemTotalBytes,
+			}
+		}
 	}
 	return h, nil
 }

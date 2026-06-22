@@ -26,6 +26,8 @@ definitions:
     properties:
       agent_id:
         type: string
+      metrics:
+        $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeMetricsDTO'
       node:
         $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO'
     required:
@@ -630,6 +632,15 @@ definitions:
       updated_at:
         type: string
     type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.HostUsageDTO:
+    properties:
+      cpu_percent:
+        type: number
+      mem_total_bytes:
+        type: integer
+      mem_used_bytes:
+        type: integer
+    type: object
   github_com_orange_hivemind_internal_adapters_api_dto.ImpactedServiceResponse:
     properties:
       name:
@@ -804,6 +815,12 @@ definitions:
         type: number
       critical:
         type: integer
+      host_usage:
+        allOf:
+        - $ref: '#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HostUsageDTO'
+        description: |-
+          HostUsage is the node's real host-level usage (whole node, from the agent's
+          /proc reading). Present only in agent mode with a recent heartbeat.
       hostname:
         type: string
       memory_bytes:
@@ -824,6 +841,17 @@ definitions:
       worst:
         description: highest severity among containers
         type: string
+    type: object
+  github_com_orange_hivemind_internal_adapters_api_dto.NodeMetricsDTO:
+    properties:
+      cpu_count:
+        type: integer
+      cpu_percent:
+        type: number
+      mem_total_bytes:
+        type: integer
+      mem_used_bytes:
+        type: integer
     type: object
   github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO:
     properties:
