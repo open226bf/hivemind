@@ -86,6 +86,11 @@ func keyOf(t swarm.Task) instanceKey {
 // CollectHealth returns the per-node health snapshot for the cluster: the current
 // task of every service instance, classified and grouped by node — including
 // nodes that currently run nothing.
+// unscheduledNodeLabel is the display name given to the synthetic bucket that
+// holds tasks not yet placed on any node (empty Swarm NodeID), so the UI shows a
+// clear "unscheduled" group instead of a phantom unreachable node.
+const unscheduledNodeLabel = "Tâches non planifiées"
+
 func (c *DirectCollector) CollectHealth(ctx context.Context) (*monitoring.ClusterHealth, error) {
 	tasks, err := c.api.TaskList(ctx, types.TaskListOptions{})
 	if err != nil {
@@ -170,10 +175,20 @@ func (c *DirectCollector) CollectHealth(ctx context.Context) (*monitoring.Cluste
 		out.Nodes = append(out.Nodes, nh)
 		delete(byNode, n.ID)
 	}
-	// Tasks pinned to a node that NodeList didn't return (e.g. a node that just
-	// left the cluster) — surface them rather than silently drop.
+	// Tasks whose node isn't in NodeList fall into two cases. A non-empty node id
+	// is a node that left the cluster with tasks still pinned — surface it as
+	// unreachable so it stays visible. An empty node id means the tasks aren't
+	// scheduled on any node yet (pending, or a crash-looping task between
+	// placements): that is NOT a node-down condition, so bucket it under a clear
+	// label and keep it reachable. The per-task critical verdicts (crash-loop /
+	// unschedulable) still alert on their own — without a phantom "unreachable
+	// node" and its false node-down alert.
 	for nodeID, chs := range byNode {
 		nh := monitoring.NodeHealth{NodeID: nodeID, Reachable: false, Containers: chs}
+		if nodeID == "" {
+			nh.Hostname = unscheduledNodeLabel
+			nh.Reachable = true
+		}
 		nh.Recount()
 		out.Nodes = append(out.Nodes, nh)
 	}
