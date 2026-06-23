@@ -13,6 +13,7 @@ import (
 	"github.com/orange/hivemind/internal/adapters/api/dto"
 	"github.com/orange/hivemind/internal/adapters/api/middleware"
 	"github.com/orange/hivemind/internal/application"
+	"github.com/orange/hivemind/internal/domain/acl"
 	"github.com/orange/hivemind/internal/domain/deployment"
 	"github.com/orange/hivemind/internal/domain/user"
 	"github.com/orange/hivemind/internal/ports"
@@ -26,14 +27,18 @@ func NewDeploymentHandler(svc *application.DeploymentService) *DeploymentHandler
 	return &DeploymentHandler{svc: svc}
 }
 
-// Register wires deployment routes.
-func (h *DeploymentHandler) Register(protected *gin.RouterGroup) {
-	protected.POST("/services/:id/deploy", middleware.RequireRole(user.RoleOperator), h.Deploy)
-	protected.POST("/services/:id/undeploy", middleware.RequireRole(user.RoleOperator), h.Undeploy)
-	protected.GET("/services/:id/deployments", middleware.RequireRole(user.RoleViewer), h.ListForService)
-	protected.GET("/services/:id/status", middleware.RequireRole(user.RoleViewer), h.Status)
-	protected.GET("/services/:id/tasks", middleware.RequireRole(user.RoleViewer), h.Tasks)
-	protected.GET("/services/:id/logs", middleware.RequireRole(user.RoleViewer), h.Logs)
+// Register wires deployment routes. Service-scoped routes (:id is a service id)
+// are also ACL-gated: deploy/undeploy need write on the service, reads need
+// read (ADR 0003). The /deployments collection routes stay role-gated.
+func (h *DeploymentHandler) Register(protected *gin.RouterGroup, resolver middleware.ResourceResolver, cfg middleware.ACLConfig) {
+	read := middleware.RequireVerb(middleware.TargetService, "id", acl.VerbRead, resolver, cfg)
+	write := middleware.RequireVerb(middleware.TargetService, "id", acl.VerbWrite, resolver, cfg)
+	protected.POST("/services/:id/deploy", middleware.RequireRole(user.RoleOperator), write, h.Deploy)
+	protected.POST("/services/:id/undeploy", middleware.RequireRole(user.RoleOperator), write, h.Undeploy)
+	protected.GET("/services/:id/deployments", middleware.RequireRole(user.RoleViewer), read, h.ListForService)
+	protected.GET("/services/:id/status", middleware.RequireRole(user.RoleViewer), read, h.Status)
+	protected.GET("/services/:id/tasks", middleware.RequireRole(user.RoleViewer), read, h.Tasks)
+	protected.GET("/services/:id/logs", middleware.RequireRole(user.RoleViewer), read, h.Logs)
 	protected.GET("/deployments", middleware.RequireRole(user.RoleViewer), h.List)
 	protected.GET("/deployments/:id", middleware.RequireRole(user.RoleViewer), h.Get)
 }

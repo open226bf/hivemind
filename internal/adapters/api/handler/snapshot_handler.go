@@ -10,6 +10,7 @@ import (
 	"github.com/orange/hivemind/internal/adapters/api/dto"
 	"github.com/orange/hivemind/internal/adapters/api/middleware"
 	"github.com/orange/hivemind/internal/application"
+	"github.com/orange/hivemind/internal/domain/acl"
 	"github.com/orange/hivemind/internal/domain/deployment"
 	"github.com/orange/hivemind/internal/domain/snapshot"
 	"github.com/orange/hivemind/internal/domain/user"
@@ -23,10 +24,14 @@ func NewSnapshotHandler(svc *application.SnapshotService) *SnapshotHandler {
 	return &SnapshotHandler{svc: svc}
 }
 
-// Register wires snapshot routes onto the protected router group.
-func (h *SnapshotHandler) Register(protected *gin.RouterGroup) {
-	protected.POST("/services/:id/snapshots", middleware.RequireRole(user.RoleOperator), h.Create)
-	protected.GET("/services/:id/snapshots", middleware.RequireRole(user.RoleViewer), h.ListForService)
+// Register wires snapshot routes onto the protected router group. Service-scoped
+// routes (:id is a service id) are ACL-gated: create needs write, list needs
+// read on the service (ADR 0003). Routes keyed by snapshot id stay role-gated.
+func (h *SnapshotHandler) Register(protected *gin.RouterGroup, resolver middleware.ResourceResolver, cfg middleware.ACLConfig) {
+	protected.POST("/services/:id/snapshots", middleware.RequireRole(user.RoleOperator),
+		middleware.RequireVerb(middleware.TargetService, "id", acl.VerbWrite, resolver, cfg), h.Create)
+	protected.GET("/services/:id/snapshots", middleware.RequireRole(user.RoleViewer),
+		middleware.RequireVerb(middleware.TargetService, "id", acl.VerbRead, resolver, cfg), h.ListForService)
 	protected.GET("/snapshots/:id", middleware.RequireRole(user.RoleViewer), h.Get)
 	protected.DELETE("/snapshots/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
 	protected.POST("/snapshots/:id/rollback", middleware.RequireRole(user.RoleOperator), h.Rollback)

@@ -117,7 +117,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 
 	handler.NewAuthHandler(deps.Auth).Register(public, protected)
 	handler.NewUserHandler(deps.Users).Register(protected)
-	handler.NewServiceHandler(deps.Services).Register(protected)
+	handler.NewServiceHandler(deps.Services).Register(protected, resolver, aclCfg)
 	handler.NewHiveHandler(deps.Hives).Register(protected, resolver, aclCfg)
 	if deps.Acl != nil {
 		handler.NewGrantHandler(deps.Acl, resolver, aclCfg).Register(protected)
@@ -127,8 +127,8 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewSecretHandler(deps.Secrets).Register(protected)
 	handler.NewConfigHandler(deps.Configs).Register(protected)
 	handler.NewTemplateHandler(deps.Templates).Register(protected)
-	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
-	handler.NewSnapshotHandler(deps.Snapshots).Register(protected)
+	handler.NewDeploymentHandler(deps.Deployments).Register(protected, resolver, aclCfg)
+	handler.NewSnapshotHandler(deps.Snapshots).Register(protected, resolver, aclCfg)
 	handler.NewClusterHandler(deps.Cluster).Register(protected)
 	handler.NewAgentHandler(deps.Agent, deps.AgentHub, deps.BaseURL).Register(public, protected)
 	handler.NewMonitoringHandler(deps.Collectors, deps.Alerts).Register(protected)
