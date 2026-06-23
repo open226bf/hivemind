@@ -60,7 +60,7 @@ func (r *SecretRepository) List(ctx context.Context, clusterID uuid.UUID, p pagi
 	var models []secretModel
 	var count int64
 
-	q := scopeCluster(r.db.WithContext(ctx).Model(&secretModel{}), clusterID)
+	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&secretModel{}), clusterID), "")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count secrets: %w", err)
 	}

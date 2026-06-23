@@ -25,5 +25,17 @@ func main() {
 		log.Fatalf("migrate: %v", err)
 	}
 
+	// Seed ACL grants for existing non-admins so enabling HIVEMIND_ACL_ENFORCED
+	// preserves their access (ADR 0003). Only runs once a default cluster exists;
+	// idempotent otherwise.
+	var defaultClusterID string
+	db.Table("clusters").Where("is_default = ?", true).Limit(1).Pluck("id", &defaultClusterID)
+	if defaultClusterID != "" {
+		if err := persistence.SeedDefaultGrants(db, defaultClusterID); err != nil {
+			log.Fatalf("seed default grants: %v", err)
+		}
+		log.Println("seeded default ACL grants")
+	}
+
 	log.Println("migrations completed successfully")
 }

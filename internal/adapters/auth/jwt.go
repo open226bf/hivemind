@@ -9,17 +9,28 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
+	"github.com/orange/hivemind/internal/domain/acl"
 	"github.com/orange/hivemind/internal/domain/user"
 	"github.com/orange/hivemind/internal/ports"
 )
 
 var ErrInvalidToken = errors.New("invalid token")
 
+// scopeClaim is the compact wire form of a ports.Scope (t/i/v keys keep the
+// token small).
+type scopeClaim struct {
+	Type string `json:"t"`
+	ID   string `json:"i"`
+	Verb string `json:"v"`
+}
+
 // claims is the on-the-wire JWT payload.
 type claims struct {
 	Email     string          `json:"email"`
 	Role      string          `json:"role"`
 	TokenType ports.TokenType `json:"typ"`
+	TokenVer  int             `json:"tv,omitempty"`
+	Scopes    []scopeClaim    `json:"scp,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -61,15 +72,16 @@ func NewTokenService(cfg Config) *TokenService {
 	}
 }
 
-func (s *TokenService) GenerateAccessToken(u *user.User) (string, time.Time, error) {
-	return s.generate(u, ports.TokenTypeAccess, s.accessTTL)
+func (s *TokenService) GenerateAccessToken(u *user.User, scopes []ports.Scope) (string, time.Time, error) {
+	return s.generate(u, ports.TokenTypeAccess, s.accessTTL, scopes)
 }
 
 func (s *TokenService) GenerateRefreshToken(u *user.User) (string, time.Time, error) {
-	return s.generate(u, ports.TokenTypeRefresh, s.refreshTTL)
+	// Refresh tokens stay light: scopes are recomputed on every refresh.
+	return s.generate(u, ports.TokenTypeRefresh, s.refreshTTL, nil)
 }
 
-func (s *TokenService) generate(u *user.User, typ ports.TokenType, ttl time.Duration) (string, time.Time, error) {
+func (s *TokenService) generate(u *user.User, typ ports.TokenType, ttl time.Duration, scopes []ports.Scope) (string, time.Time, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
 
@@ -77,6 +89,8 @@ func (s *TokenService) generate(u *user.User, typ ports.TokenType, ttl time.Dura
 		Email:     u.Email,
 		Role:      string(u.Role),
 		TokenType: typ,
+		TokenVer:  u.TokenVersion,
+		Scopes:    toScopeClaims(scopes),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   u.ID.String(),
 			Issuer:    s.issuer,
@@ -118,5 +132,36 @@ func (s *TokenService) Parse(tokenString string) (*ports.TokenClaims, error) {
 		Email:     c.Email,
 		Role:      c.Role,
 		TokenType: c.TokenType,
+		TokenVer:  c.TokenVer,
+		Scopes:    fromScopeClaims(c.Scopes),
 	}, nil
+}
+
+// toScopeClaims encodes ports.Scope values into their compact wire form.
+func toScopeClaims(scopes []ports.Scope) []scopeClaim {
+	if len(scopes) == 0 {
+		return nil
+	}
+	out := make([]scopeClaim, 0, len(scopes))
+	for _, s := range scopes {
+		out = append(out, scopeClaim{Type: string(s.Type), ID: s.ID.String(), Verb: string(s.Verb)})
+	}
+	return out
+}
+
+// fromScopeClaims decodes wire scopes back into ports.Scope, dropping any
+// entry with an unparseable id (defensive: a malformed scope grants nothing).
+func fromScopeClaims(scopes []scopeClaim) []ports.Scope {
+	if len(scopes) == 0 {
+		return nil
+	}
+	out := make([]ports.Scope, 0, len(scopes))
+	for _, s := range scopes {
+		id, err := uuid.Parse(s.ID)
+		if err != nil {
+			continue
+		}
+		out = append(out, ports.Scope{Type: acl.ResourceType(s.Type), ID: id, Verb: acl.Verb(s.Verb)})
+	}
+	return out
 }

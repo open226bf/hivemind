@@ -36,7 +36,7 @@ func setup(t *testing.T) (*auth.TokenService, *gin.Engine) {
 func tokenFor(t *testing.T, tokens *auth.TokenService, role user.Role) string {
 	t.Helper()
 	u, _ := user.New("x@b.c", "h", role)
-	tok, _, err := tokens.GenerateAccessToken(u)
+	tok, _, err := tokens.GenerateAccessToken(u, nil)
 	require.NoError(t, err)
 	return tok
 }

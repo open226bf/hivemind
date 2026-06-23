@@ -25,7 +25,7 @@ func TestAccessToken_RoundTrip(t *testing.T) {
 	svc := newService(t)
 	u, _ := user.New("op@hivemind.local", "h", user.RoleOperator)
 
-	token, exp, err := svc.GenerateAccessToken(u)
+	token, exp, err := svc.GenerateAccessToken(u, nil)
 	require.NoError(t, err)
 	assert.True(t, exp.After(time.Now()))
 
@@ -60,7 +60,7 @@ func TestParse_RejectsTokenFromAnotherKey(t *testing.T) {
 	svc2 := newService(t)
 	u, _ := user.New("a@b.c", "h", user.RoleAdmin)
 
-	token, _, _ := svc1.GenerateAccessToken(u)
+	token, _, _ := svc1.GenerateAccessToken(u, nil)
 	_, err := svc2.Parse(token) // different key
 	assert.ErrorIs(t, err, auth.ErrInvalidToken)
 }
@@ -97,7 +97,7 @@ func TestAccessTTL_CappedAt15Min(t *testing.T) {
 	})
 	u, _ := user.New("a@b.c", "h", user.RoleAdmin)
 
-	_, exp, err := svc.GenerateAccessToken(u)
+	_, exp, err := svc.GenerateAccessToken(u, nil)
 	require.NoError(t, err)
 	assert.LessOrEqual(t, time.Until(exp), 15*time.Minute+time.Second)
 }

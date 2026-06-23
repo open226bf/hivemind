@@ -62,6 +62,13 @@ func (r *fakeUserRepo) List(context.Context, pagination.Page) ([]*user.User, int
 }
 func (r *fakeUserRepo) Delete(context.Context, uuid.UUID) error { return nil }
 
+func (r *fakeUserRepo) TokenVersion(_ context.Context, id uuid.UUID) (int, error) {
+	if u, ok := r.byID[id]; ok {
+		return u.TokenVersion, nil
+	}
+	return 0, domainerrors.ErrNotFound
+}
+
 func (r *fakeUserRepo) CountActiveAdmins(context.Context) (int64, error) {
 	var n int64
 	for _, u := range r.byID {
@@ -75,7 +82,7 @@ func (r *fakeUserRepo) CountActiveAdmins(context.Context) (int64, error) {
 // fakeTokens returns deterministic tokens encoding the user id + type.
 type fakeTokens struct{}
 
-func (fakeTokens) GenerateAccessToken(u *user.User) (string, time.Time, error) {
+func (fakeTokens) GenerateAccessToken(u *user.User, _ []ports.Scope) (string, time.Time, error) {
 	return "access:" + u.ID.String(), time.Now().Add(time.Minute), nil
 }
 func (fakeTokens) GenerateRefreshToken(u *user.User) (string, time.Time, error) {
@@ -123,7 +130,7 @@ func fixedClock() ports.Clock {
 func TestLogin_Success(t *testing.T) {
 	repo := newFakeUserRepo()
 	repo.add(mkUser(t, "a@b.c", "secret123", user.RoleOperator))
-	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock())
+	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock(), nil)
 
 	pair, err := svc.Login(context.Background(), "a@b.c", "secret123")
 	require.NoError(t, err)
@@ -135,14 +142,14 @@ func TestLogin_Success(t *testing.T) {
 func TestLogin_WrongPassword(t *testing.T) {
 	repo := newFakeUserRepo()
 	repo.add(mkUser(t, "a@b.c", "secret123", user.RoleOperator))
-	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock())
+	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock(), nil)
 
 	_, err := svc.Login(context.Background(), "a@b.c", "wrong")
 	assert.ErrorIs(t, err, application.ErrInvalidCredentials)
 }
 
 func TestLogin_UnknownEmail_DoesNotLeak(t *testing.T) {
-	svc := application.NewAuthService(newFakeUserRepo(), fakeTokens{}, fixedClock())
+	svc := application.NewAuthService(newFakeUserRepo(), fakeTokens{}, fixedClock(), nil)
 	_, err := svc.Login(context.Background(), "ghost@b.c", "whatever")
 	assert.ErrorIs(t, err, application.ErrInvalidCredentials)
 }
@@ -150,7 +157,7 @@ func TestLogin_UnknownEmail_DoesNotLeak(t *testing.T) {
 func TestLogin_LocksAfterFiveFailures(t *testing.T) {
 	repo := newFakeUserRepo()
 	repo.add(mkUser(t, "a@b.c", "secret123", user.RoleOperator))
-	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock())
+	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock(), nil)
 
 	for i := 0; i < user.MaxFailedLogins; i++ {
 		_, _ = svc.Login(context.Background(), "a@b.c", "wrong")
@@ -165,7 +172,7 @@ func TestLogin_InactiveUser(t *testing.T) {
 	u := mkUser(t, "a@b.c", "secret123", user.RoleOperator)
 	u.Active = false
 	repo.add(u)
-	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock())
+	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock(), nil)
 
 	_, err := svc.Login(context.Background(), "a@b.c", "secret123")
 	assert.ErrorIs(t, err, application.ErrInactiveUser)
@@ -175,7 +182,7 @@ func TestRefresh_Success(t *testing.T) {
 	repo := newFakeUserRepo()
 	u := mkUser(t, "a@b.c", "secret123", user.RoleOperator)
 	repo.add(u)
-	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock())
+	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock(), nil)
 
 	pair, err := svc.Refresh(context.Background(), "refresh:"+u.ID.String())
 	require.NoError(t, err)
@@ -186,7 +193,7 @@ func TestRefresh_RejectsAccessToken(t *testing.T) {
 	repo := newFakeUserRepo()
 	u := mkUser(t, "a@b.c", "secret123", user.RoleOperator)
 	repo.add(u)
-	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock())
+	svc := application.NewAuthService(repo, fakeTokens{}, fixedClock(), nil)
 
 	_, err := svc.Refresh(context.Background(), "access:"+u.ID.String())
 	assert.ErrorIs(t, err, application.ErrInvalidToken)

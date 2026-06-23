@@ -10,6 +10,7 @@ import (
 	"github.com/orange/hivemind/internal/adapters/api/dto"
 	"github.com/orange/hivemind/internal/adapters/api/middleware"
 	"github.com/orange/hivemind/internal/application"
+	"github.com/orange/hivemind/internal/domain/acl"
 	"github.com/orange/hivemind/internal/domain/hive"
 	"github.com/orange/hivemind/internal/domain/user"
 )
@@ -23,17 +24,28 @@ func NewHiveHandler(svc *application.HiveService) *HiveHandler {
 }
 
 // Register wires hive (project) routes and the service-assignment route.
-func (h *HiveHandler) Register(protected *gin.RouterGroup) {
+//
+// Scoped routes are gated by ACL verbs (ADR 0003): list/get need read, create
+// needs write on the target cluster, update needs write on the hive, delete
+// needs manage. The global RoleViewer floor still applies via the route group;
+// admins bypass the verbs. In shadow mode the verbs evaluate but never block.
+func (h *HiveHandler) Register(protected *gin.RouterGroup, resolver middleware.ResourceResolver, cfg middleware.ACLConfig) {
 	g := protected.Group("/hives")
 	g.GET("", middleware.RequireRole(user.RoleViewer), h.List)
-	g.POST("", middleware.RequireRole(user.RoleOperator), h.Create)
-	g.GET("/:id", middleware.RequireRole(user.RoleViewer), h.Get)
-	g.GET("/:id/services", middleware.RequireRole(user.RoleViewer), h.ListServices)
-	g.PUT("/:id", middleware.RequireRole(user.RoleOperator), h.Update)
-	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
+	g.POST("", middleware.RequireRole(user.RoleOperator),
+		middleware.RequireVerb(middleware.TargetCluster, "", acl.VerbWrite, resolver, cfg), h.Create)
+	g.GET("/:id", middleware.RequireRole(user.RoleViewer),
+		middleware.RequireVerb(middleware.TargetHive, "id", acl.VerbRead, resolver, cfg), h.Get)
+	g.GET("/:id/services", middleware.RequireRole(user.RoleViewer),
+		middleware.RequireVerb(middleware.TargetHive, "id", acl.VerbRead, resolver, cfg), h.ListServices)
+	g.PUT("/:id", middleware.RequireRole(user.RoleOperator),
+		middleware.RequireVerb(middleware.TargetHive, "id", acl.VerbWrite, resolver, cfg), h.Update)
+	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator),
+		middleware.RequireVerb(middleware.TargetHive, "id", acl.VerbManage, resolver, cfg), h.Delete)
 
-	// Assign/move/unassign a service to a hive.
-	protected.PUT("/services/:id/hive", middleware.RequireRole(user.RoleOperator), h.AssignService)
+	// Assign/move/unassign a service to a hive (write on the service's hive).
+	protected.PUT("/services/:id/hive", middleware.RequireRole(user.RoleOperator),
+		middleware.RequireVerb(middleware.TargetService, "id", acl.VerbWrite, resolver, cfg), h.AssignService)
 }
 
 // List godoc
