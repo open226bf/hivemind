@@ -24,6 +24,10 @@ type MeResponse struct {
 	Role    string     `json:"role"`
 	IsAdmin bool       `json:"is_admin"`
 	Scopes  []ScopeDTO `json:"scopes"`
+	// AclEnforced mirrors HIVEMIND_ACL_ENFORCED so the UI gates on grants only
+	// when enforcement is live. In shadow mode (false) the server doesn't filter
+	// or block, so the UI must keep its pre-ACL behaviour (no lock-out).
+	AclEnforced bool `json:"acl_enforced"`
 }
 
 // ScopeDTO is one effective ACL grant carried in /auth/me so the UI can gate

@@ -12,11 +12,12 @@ import (
 )
 
 type AuthHandler struct {
-	auth *application.AuthService
+	auth        *application.AuthService
+	aclEnforced bool
 }
 
-func NewAuthHandler(auth *application.AuthService) *AuthHandler {
-	return &AuthHandler{auth: auth}
+func NewAuthHandler(auth *application.AuthService, aclEnforced bool) *AuthHandler {
+	return &AuthHandler{auth: auth, aclEnforced: aclEnforced}
 }
 
 // Register wires auth routes. publicGroup is unauthenticated; protected requires a valid token.
@@ -125,11 +126,12 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		scopes = append(scopes, dto.ScopeDTO{Type: string(s.Type), ID: s.ID.String(), Verb: string(s.Verb)})
 	}
 	c.JSON(http.StatusOK, dto.MeResponse{
-		ID:      u.ID.String(),
-		Email:   u.Email,
-		Role:    string(u.Role),
-		IsAdmin: u.IsAdmin(),
-		Scopes:  scopes,
+		ID:          u.ID.String(),
+		Email:       u.Email,
+		Role:        string(u.Role),
+		IsAdmin:     u.IsAdmin(),
+		Scopes:      scopes,
+		AclEnforced: h.aclEnforced,
 	})
 }
 
