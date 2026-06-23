@@ -12,13 +12,15 @@ import (
 	"github.com/open226bf/hivemind/internal/adapters/api/web"
 )
 
-func engine(t *testing.T) *gin.Engine {
+func engine(t *testing.T) *gin.Engine { return engineBase(t, "") }
+
+func engineBase(t *testing.T, basePath string) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	// A representative API route so the /api namespace is owned by handlers.
 	r.GET("/api/v1/ping", func(c *gin.Context) { c.String(http.StatusOK, "pong") })
-	require.NoError(t, web.Register(r))
+	require.NoError(t, web.Register(r, basePath))
 	return r
 }
 
@@ -53,4 +55,19 @@ func TestApiRouteStillWins(t *testing.T) {
 	w := get(engine(t), "/api/v1/ping")
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "pong", w.Body.String())
+}
+
+func TestInjectsBaseHrefForSubPath(t *testing.T) {
+	// Under a sub-path the shell's <base href> must carry the prefix so the
+	// browser emits prefixed asset/API URLs (the proxy strips it before us).
+	w := get(engineBase(t, "/hivemind"), "/")
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `<base href="/hivemind/">`)
+	assert.NotContains(t, w.Body.String(), `<base href="/">`)
+}
+
+func TestRootBaseHrefUnchanged(t *testing.T) {
+	// Default (no base path) keeps the root base href untouched.
+	w := get(engine(t), "/")
+	assert.Contains(t, w.Body.String(), `<base href="/">`)
 }
