@@ -43,7 +43,7 @@ func (r *HiveRepository) List(ctx context.Context, clusterID uuid.UUID, p pagina
 	var models []hiveModel
 	var count int64
 
-	q := scopeCluster(r.db.WithContext(ctx).Model(&hiveModel{}), clusterID)
+	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&hiveModel{}), clusterID), "id")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count hives: %w", err)
 	}

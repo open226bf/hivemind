@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/open226bf/hivemind/internal/domain/acl"
 	"github.com/open226bf/hivemind/internal/domain/auditlog"
 	"github.com/open226bf/hivemind/internal/domain/cluster"
 	"github.com/open226bf/hivemind/internal/domain/config"
@@ -53,6 +54,29 @@ type UserRepository interface {
 	// CountActiveAdmins returns the number of active users with the admin role.
 	// Used to enforce the "last admin" invariant (F-V1-01).
 	CountActiveAdmins(ctx context.Context) (int64, error)
+	// TokenVersion returns just the revocation epoch for a user (a single
+	// indexed read), used by the Auth middleware to reject stale tokens
+	// without loading the whole row.
+	TokenVersion(ctx context.Context, id uuid.UUID) (int, error)
+}
+
+// ─── ACL grant ───────────────────────────────────────────────────────────────
+
+type AclRepository interface {
+	// Save upserts a grant: a new (subject, resource) pair is inserted, an
+	// existing one has its verb/expiry replaced.
+	Save(ctx context.Context, g *acl.Grant) error
+	FindByID(ctx context.Context, id uuid.UUID) (*acl.Grant, error)
+	DeleteByID(ctx context.Context, id uuid.UUID) error
+	// ListBySubject returns every grant held by a user (used to build the JWT
+	// scopes at login/refresh).
+	ListBySubject(ctx context.Context, subjectID uuid.UUID) ([]*acl.Grant, error)
+	// ListByResource returns every grant on a resource (the "who has access"
+	// management view).
+	ListByResource(ctx context.Context, rt acl.ResourceType, resourceID uuid.UUID) ([]*acl.Grant, error)
+	// DeleteByResource removes every grant on a resource — used to garbage
+	// collect when a cluster or hive is deleted.
+	DeleteByResource(ctx context.Context, rt acl.ResourceType, resourceID uuid.UUID) error
 }
 
 // ─── Service ─────────────────────────────────────────────────────────────────

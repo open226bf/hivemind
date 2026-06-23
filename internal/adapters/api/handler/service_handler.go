@@ -12,6 +12,7 @@ import (
 	"github.com/open226bf/hivemind/internal/adapters/api/dto"
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
 	"github.com/open226bf/hivemind/internal/application"
+	"github.com/open226bf/hivemind/internal/domain/acl"
 	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/domain/user"
 	"github.com/open226bf/hivemind/internal/ports"
@@ -26,19 +27,31 @@ func NewServiceHandler(svc *application.ServiceService) *ServiceHandler {
 }
 
 // Register wires service routes onto a protected (authenticated) router group.
-func (h *ServiceHandler) Register(protected *gin.RouterGroup) {
+//
+// Scoped routes are also gated by ACL verbs (ADR 0003): reads need read, writes
+// need write on the service's hive/cluster, create needs write on the active
+// cluster. The global role floor still applies; admins bypass; shadow mode
+// evaluates without blocking. List is not verb-gated — scopeACL filters it.
+func (h *ServiceHandler) Register(protected *gin.RouterGroup, resolver middleware.ResourceResolver, cfg middleware.ACLConfig) {
+	read := func() gin.HandlerFunc {
+		return middleware.RequireVerb(middleware.TargetService, "id", acl.VerbRead, resolver, cfg)
+	}
+	write := func() gin.HandlerFunc {
+		return middleware.RequireVerb(middleware.TargetService, "id", acl.VerbWrite, resolver, cfg)
+	}
 	g := protected.Group("/services")
 	g.GET("", middleware.RequireRole(user.RoleViewer), h.List)
-	g.POST("", middleware.RequireRole(user.RoleOperator), h.Create)
-	g.GET("/:id", middleware.RequireRole(user.RoleViewer), h.Get)
-	g.PUT("/:id", middleware.RequireRole(user.RoleOperator), h.Update)
-	g.PUT("/:id/resources", middleware.RequireRole(user.RoleOperator), h.SetResources)
-	g.PUT("/:id/placement", middleware.RequireRole(user.RoleOperator), h.SetPlacement)
-	g.GET("/:id/env", middleware.RequireRole(user.RoleViewer), h.GetEnvVars)
-	g.PUT("/:id/env", middleware.RequireRole(user.RoleOperator), h.SetEnvVars)
-	g.GET("/:id/ports", middleware.RequireRole(user.RoleViewer), h.GetPorts)
-	g.PUT("/:id/ports", middleware.RequireRole(user.RoleOperator), h.SetPorts)
-	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator), h.Delete)
+	g.POST("", middleware.RequireRole(user.RoleOperator),
+		middleware.RequireVerb(middleware.TargetCluster, "", acl.VerbWrite, resolver, cfg), h.Create)
+	g.GET("/:id", middleware.RequireRole(user.RoleViewer), read(), h.Get)
+	g.PUT("/:id", middleware.RequireRole(user.RoleOperator), write(), h.Update)
+	g.PUT("/:id/resources", middleware.RequireRole(user.RoleOperator), write(), h.SetResources)
+	g.PUT("/:id/placement", middleware.RequireRole(user.RoleOperator), write(), h.SetPlacement)
+	g.GET("/:id/env", middleware.RequireRole(user.RoleViewer), read(), h.GetEnvVars)
+	g.PUT("/:id/env", middleware.RequireRole(user.RoleOperator), write(), h.SetEnvVars)
+	g.GET("/:id/ports", middleware.RequireRole(user.RoleViewer), read(), h.GetPorts)
+	g.PUT("/:id/ports", middleware.RequireRole(user.RoleOperator), write(), h.SetPorts)
+	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator), write(), h.Delete)
 }
 
 // List godoc

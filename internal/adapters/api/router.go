@@ -44,6 +44,12 @@ type Dependencies struct {
 	Collectors  ports.TelemetryCollectorRegistry
 	Alerts      *application.AlertEngine
 	AuditLog    ports.AuditLogRepository
+	// Acl manages fine-grained access grants (ADR 0003). AclEnforced flips the
+	// access middlewares from shadow mode to real enforcement. TokenVersions
+	// reads a user's revocation epoch for immediate grant revocation.
+	Acl           *application.AclService
+	AclEnforced   bool
+	TokenVersions middleware.TokenVersionReader
 	// WSTickets mints single-use tickets that authenticate the exec WebSocket
 	// upgrade without putting the access token in the URL.
 	WSTickets *auth.TicketStore
@@ -98,17 +104,31 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	// The cluster service resolves the default cluster for header-less writes.
 	protected.Use(middleware.ClusterContext(deps.Cluster))
 
+	// ─── Fine-grained ACL (ADR 0003) ─────────────────────────────────────────
+	// CheckRevocation rejects tokens minted before a grant change; InjectListScope
+	// bounds every list to the caller's authorized resources. Both no-op for
+	// admins and in shadow mode (AclEnforced=false).
+	aclCfg := middleware.ACLConfig{Enforced: deps.AclEnforced}
+	if deps.TokenVersions != nil {
+		protected.Use(middleware.CheckRevocation(deps.TokenVersions, aclCfg))
+	}
+	protected.Use(middleware.InjectListScope(aclCfg))
+	resolver := handler.NewAclResolver(deps.Hives, deps.Services)
+
 	handler.NewAuthHandler(deps.Auth).Register(public, protected)
 	handler.NewUserHandler(deps.Users).Register(protected)
-	handler.NewServiceHandler(deps.Services).Register(protected)
-	handler.NewHiveHandler(deps.Hives).Register(protected)
+	handler.NewServiceHandler(deps.Services).Register(protected, resolver, aclCfg)
+	handler.NewHiveHandler(deps.Hives).Register(protected, resolver, aclCfg)
+	if deps.Acl != nil {
+		handler.NewGrantHandler(deps.Acl, resolver, aclCfg).Register(protected)
+	}
 	handler.NewNetworkHandler(deps.Networks, deps.Registry).Register(protected)
 	handler.NewVolumeHandler(deps.Volumes, deps.Registry, deps.AuditLog).Register(protected)
 	handler.NewSecretHandler(deps.Secrets).Register(protected)
 	handler.NewConfigHandler(deps.Configs).Register(protected)
 	handler.NewTemplateHandler(deps.Templates).Register(protected)
-	handler.NewDeploymentHandler(deps.Deployments).Register(protected)
-	handler.NewSnapshotHandler(deps.Snapshots).Register(protected)
+	handler.NewDeploymentHandler(deps.Deployments).Register(protected, resolver, aclCfg)
+	handler.NewSnapshotHandler(deps.Snapshots).Register(protected, resolver, aclCfg)
 	handler.NewClusterHandler(deps.Cluster).Register(protected)
 	handler.NewAgentHandler(deps.Agent, deps.AgentHub, deps.BaseURL).Register(public, protected)
 	handler.NewMonitoringHandler(deps.Collectors, deps.Alerts).Register(protected)

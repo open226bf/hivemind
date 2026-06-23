@@ -120,10 +120,16 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
+	scopes := make([]dto.ScopeDTO, 0, len(claims.Scopes))
+	for _, s := range claims.Scopes {
+		scopes = append(scopes, dto.ScopeDTO{Type: string(s.Type), ID: s.ID.String(), Verb: string(s.Verb)})
+	}
 	c.JSON(http.StatusOK, dto.MeResponse{
-		ID:    u.ID.String(),
-		Email: u.Email,
-		Role:  string(u.Role),
+		ID:      u.ID.String(),
+		Email:   u.Email,
+		Role:    string(u.Role),
+		IsAdmin: u.IsAdmin(),
+		Scopes:  scopes,
 	})
 }
 

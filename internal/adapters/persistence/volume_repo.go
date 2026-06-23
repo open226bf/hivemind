@@ -55,7 +55,7 @@ func (r *VolumeRepository) List(ctx context.Context, clusterID uuid.UUID, p pagi
 	var models []volumeModel
 	var count int64
 
-	q := scopeCluster(r.db.WithContext(ctx).Model(&volumeModel{}), clusterID)
+	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&volumeModel{}), clusterID), "")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count volumes: %w", err)
 	}

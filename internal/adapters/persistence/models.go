@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	"github.com/open226bf/hivemind/internal/ports"
 )
 
 // clusterIDColumn renders a cluster id for storage. The zero UUID (meaning "the
@@ -37,6 +39,33 @@ func scopeCluster(q *gorm.DB, id uuid.UUID) *gorm.DB {
 		return q
 	}
 	return q.Where("cluster_id = ?", id.String())
+}
+
+// scopeACL narrows a list query to the resources the caller is allowed to see,
+// reading the per-request ACL scope from the query's context (ADR 0003). It is
+// ANDed with scopeCluster, so a selected cluster still applies. hiveCol is the
+// column carrying a per-hive grant — "id" on the hives table, "hive_id" on
+// services, and "" on tables with no hive dimension (networks/volumes/…). A nil
+// scope (admin / shadow mode) is a no-op; a non-nil scope with nothing allowed
+// denies every row (deny-by-default).
+func scopeACL(q *gorm.DB, hiveCol string) *gorm.DB {
+	s := ports.ACLListScopeFrom(q.Statement.Context)
+	if s == nil {
+		return q
+	}
+	hasClusters := len(s.Clusters) > 0
+	hasHives := hiveCol != "" && len(s.Hives) > 0
+
+	switch {
+	case hasClusters && hasHives:
+		return q.Where("cluster_id IN ? OR "+hiveCol+" IN ?", s.Clusters, s.Hives)
+	case hasClusters:
+		return q.Where("cluster_id IN ?", s.Clusters)
+	case hasHives:
+		return q.Where(hiveCol+" IN ?", s.Hives)
+	default:
+		return q.Where("1 = 0")
+	}
 }
 
 // stringSlice serialises []string as a JSON text column.
@@ -116,6 +145,7 @@ type userModel struct {
 	Active              bool       `gorm:"default:true;column:active"`
 	FailedLoginAttempts int        `gorm:"default:0;column:failed_login_attempts"`
 	LockedUntil         *time.Time `gorm:"column:locked_until"`
+	TokenVersion        int        `gorm:"default:0;not null;column:token_version"`
 	CreatedAt           time.Time  `gorm:"column:created_at;autoCreateTime:false"`
 	UpdatedAt           time.Time  `gorm:"column:updated_at;autoUpdateTime:false"`
 }
@@ -400,3 +430,22 @@ type auditLogModel struct {
 }
 
 func (auditLogModel) TableName() string { return "audit_logs" }
+
+// ─── ACL grant ────────────────────────────────────────────────────────────────
+
+// aclGrantModel persists a fine-grained access grant (ADR 0003). The unique
+// index keeps one grant per (subject, resource); the resource index answers
+// "who has access to this resource"; the expires_at index prunes/filters
+// time-bound grants.
+type aclGrantModel struct {
+	ID           string     `gorm:"type:uuid;primaryKey;column:id"`
+	SubjectID    string     `gorm:"type:uuid;not null;uniqueIndex:idx_acl_unique,priority:1;column:subject_id"`
+	ResourceType string     `gorm:"not null;uniqueIndex:idx_acl_unique,priority:2;index:idx_acl_resource,priority:1;column:resource_type"`
+	ResourceID   string     `gorm:"type:uuid;not null;uniqueIndex:idx_acl_unique,priority:3;index:idx_acl_resource,priority:2;column:resource_id"`
+	Verb         string     `gorm:"not null;column:verb"`
+	CreatedBy    string     `gorm:"type:uuid;column:created_by"`
+	CreatedAt    time.Time  `gorm:"column:created_at;autoCreateTime:false"`
+	ExpiresAt    *time.Time `gorm:"index;column:expires_at"`
+}
+
+func (aclGrantModel) TableName() string { return "acl_grants" }

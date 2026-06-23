@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/open226bf/hivemind/internal/domain/acl"
 	"github.com/open226bf/hivemind/internal/domain/deployment"
 	"github.com/open226bf/hivemind/internal/domain/user"
 )
@@ -20,7 +21,10 @@ var ErrSwarmServiceNotFound = errors.New("swarm service not found")
 // reference implementation). Kept behind a port so the auth use case stays
 // independent of the signing technology.
 type TokenService interface {
-	GenerateAccessToken(u *user.User) (token string, expiresAt time.Time, err error)
+	// GenerateAccessToken embeds the user's effective ACL scopes so per-request
+	// authorization needs no grant lookup (ADR 0003). Pass nil for admins
+	// (they bypass scopes via Role).
+	GenerateAccessToken(u *user.User, scopes []Scope) (token string, expiresAt time.Time, err error)
 	GenerateRefreshToken(u *user.User) (token string, expiresAt time.Time, err error)
 	Parse(tokenString string) (*TokenClaims, error)
 }
@@ -32,11 +36,42 @@ const (
 	TokenTypeRefresh TokenType = "refresh"
 )
 
+// Scope is one access grant carried in an access token: the verb the user holds
+// on a given cluster or hive (after cascade compaction).
+type Scope struct {
+	Type acl.ResourceType
+	ID   uuid.UUID
+	Verb acl.Verb
+}
+
+// EffectiveVerb resolves the cascade for a resource located at (clusterID,
+// hiveID) against a set of scopes: the effective verb is the highest of the
+// matching cluster grant and the matching hive grant. A nil/empty result verb
+// (rank 0) means no access. hiveID may be uuid.Nil for cluster-level or
+// hive-less resources.
+func EffectiveVerb(scopes []Scope, clusterID, hiveID uuid.UUID) acl.Verb {
+	var best acl.Verb
+	for _, s := range scopes {
+		switch {
+		case s.Type == acl.ResourceCluster && clusterID != uuid.Nil && s.ID == clusterID:
+			best = acl.MaxVerb(best, s.Verb)
+		case s.Type == acl.ResourceHive && hiveID != uuid.Nil && s.ID == hiveID:
+			best = acl.MaxVerb(best, s.Verb)
+		}
+	}
+	return best
+}
+
 type TokenClaims struct {
 	UserID    uuid.UUID
 	Email     string
 	Role      string
 	TokenType TokenType
+	// TokenVer is the revocation epoch the token was minted at; the Auth
+	// middleware rejects it once the stored user.TokenVersion moves past it.
+	TokenVer int
+	// Scopes are the effective ACL grants (empty for admins, who bypass).
+	Scopes []Scope
 }
 
 // UpdateServiceOptions tweaks how UpdateService applies the spec on Swarm.

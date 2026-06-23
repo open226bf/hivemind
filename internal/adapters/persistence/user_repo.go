@@ -89,6 +89,20 @@ func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// TokenVersion returns the user's revocation epoch via a single indexed read.
+func (r *UserRepository) TokenVersion(ctx context.Context, id uuid.UUID) (int, error) {
+	var m userModel
+	err := r.db.WithContext(ctx).Select("token_version").
+		Where("id = ?", id.String()).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, domainerrors.ErrNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("read token version: %w", err)
+	}
+	return m.TokenVersion, nil
+}
+
 func (r *UserRepository) CountActiveAdmins(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&userModel{}).
@@ -111,6 +125,7 @@ func userToModel(u *user.User) *userModel {
 		Active:              u.Active,
 		FailedLoginAttempts: u.FailedLoginAttempts,
 		LockedUntil:         u.LockedUntil,
+		TokenVersion:        u.TokenVersion,
 		CreatedAt:           u.CreatedAt,
 		UpdatedAt:           u.UpdatedAt,
 	}
@@ -129,6 +144,7 @@ func userToDomain(m *userModel) (*user.User, error) {
 		Active:              m.Active,
 		FailedLoginAttempts: m.FailedLoginAttempts,
 		LockedUntil:         m.LockedUntil,
+		TokenVersion:        m.TokenVersion,
 		CreatedAt:           m.CreatedAt,
 		UpdatedAt:           m.UpdatedAt,
 	}, nil

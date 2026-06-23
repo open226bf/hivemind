@@ -26,19 +26,28 @@ type TokenPair struct {
 	TokenType       string // always "Bearer"
 }
 
+// Scoper computes the effective ACL scopes embedded in an access token. Kept as
+// a narrow interface so the auth use case doesn't depend on the full AclService.
+type Scoper interface {
+	ScopesFor(ctx context.Context, u *user.User) ([]ports.Scope, error)
+}
+
 type AuthService struct {
 	users        ports.UserRepository
 	tokens       ports.TokenService
 	clock        ports.Clock
+	scoper       Scoper
 	sentinelHash string
 }
 
-func NewAuthService(users ports.UserRepository, tokens ports.TokenService, clock ports.Clock) *AuthService {
+// NewAuthService builds the auth use case. scoper may be nil (e.g. in tests or
+// before ACLs are wired), in which case tokens carry no scopes.
+func NewAuthService(users ports.UserRepository, tokens ports.TokenService, clock ports.Clock, scoper Scoper) *AuthService {
 	sentinel, err := crypto.HashPassword("hivemind-sentinel-do-not-use")
 	if err != nil {
 		panic("auth: cannot compute sentinel hash: " + err.Error())
 	}
-	return &AuthService{users: users, tokens: tokens, clock: clock, sentinelHash: sentinel}
+	return &AuthService{users: users, tokens: tokens, clock: clock, scoper: scoper, sentinelHash: sentinel}
 }
 
 // Login authenticates by email/password, enforcing the account lockout policy.
@@ -79,7 +88,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*Token
 		}
 	}
 
-	return s.issuePair(u)
+	return s.issuePair(ctx, u)
 }
 
 // Refresh exchanges a valid refresh token for a fresh token pair.
@@ -100,7 +109,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*TokenP
 		return nil, ErrInactiveUser
 	}
 
-	return s.issuePair(u)
+	return s.issuePair(ctx, u)
 }
 
 // Me returns the authenticated user.
@@ -108,8 +117,16 @@ func (s *AuthService) Me(ctx context.Context, claims *ports.TokenClaims) (*user.
 	return s.users.FindByID(ctx, claims.UserID)
 }
 
-func (s *AuthService) issuePair(u *user.User) (*TokenPair, error) {
-	access, accessExp, err := s.tokens.GenerateAccessToken(u)
+func (s *AuthService) issuePair(ctx context.Context, u *user.User) (*TokenPair, error) {
+	var scopes []ports.Scope
+	if s.scoper != nil {
+		sc, err := s.scoper.ScopesFor(ctx, u)
+		if err != nil {
+			return nil, err
+		}
+		scopes = sc
+	}
+	access, accessExp, err := s.tokens.GenerateAccessToken(u, scopes)
 	if err != nil {
 		return nil, err
 	}

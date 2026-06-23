@@ -78,6 +78,8 @@ func (r *ServiceRepository) List(ctx context.Context, filter ports.ServiceFilter
 	if filter.ClusterID != nil {
 		q = scopeCluster(q, *filter.ClusterID)
 	}
+	// Bound the listing to the caller's authorized clusters/hives (ADR 0003).
+	q = scopeACL(q, "hive_id")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count services: %w", err)
 	}

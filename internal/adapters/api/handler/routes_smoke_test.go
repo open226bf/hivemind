@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/open226bf/hivemind/internal/adapters/api/handler"
+	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
 	"github.com/open226bf/hivemind/internal/application"
 )
 
@@ -24,9 +25,11 @@ func TestRouteRegistration_NoWildcardConflict(t *testing.T) {
 		}
 	}()
 
-	handler.NewServiceHandler(application.NewServiceService(nil, nil)).Register(g)
+	var resolver middleware.ResourceResolver
+	cfg := middleware.ACLConfig{}
+	handler.NewServiceHandler(application.NewServiceService(nil, nil)).Register(g, resolver, cfg)
 	handler.NewNetworkHandler(application.NewNetworkService(nil, nil), nil).Register(g)
 	handler.NewSecretHandler(application.NewSecretService(nil, nil)).Register(g)
 	handler.NewConfigHandler(application.NewConfigService(nil, nil)).Register(g)
-	handler.NewDeploymentHandler(application.NewDeploymentService(nil, nil, nil, nil, nil, nil, nil)).Register(g)
+	handler.NewDeploymentHandler(application.NewDeploymentService(nil, nil, nil, nil, nil, nil, nil)).Register(g, resolver, cfg)
 }

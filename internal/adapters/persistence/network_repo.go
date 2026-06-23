@@ -43,7 +43,7 @@ func (r *NetworkRepository) List(ctx context.Context, clusterID uuid.UUID, p pag
 	var models []networkModel
 	var count int64
 
-	q := scopeCluster(r.db.WithContext(ctx).Model(&networkModel{}), clusterID)
+	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&networkModel{}), clusterID), "")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count networks: %w", err)
 	}
