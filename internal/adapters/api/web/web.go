@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -18,12 +19,23 @@ import (
 //go:embed all:dist
 var embedded embed.FS
 
+// baseHrefRe matches the SPA shell's <base href="…"> tag so a sub-path
+// deployment can have the prefix injected (Angular emits <base href="/">).
+var baseHrefRe = regexp.MustCompile(`<base href="[^"]*"\s*/?>`)
+
 // Register mounts the embedded SPA on the engine. Static assets are served from
 // the build output; any other GET that doesn't match a file falls back to
 // index.html so client-side routes (deep links, refresh) resolve. API, health
 // and swagger routes keep their own handlers, and unmatched /api paths stay JSON
 // 404s rather than returning the SPA shell.
-func Register(r *gin.Engine) error {
+//
+// basePath is the public URL prefix Hivemind is served under (HIVEMIND_BASE_PATH,
+// e.g. "/hivemind") when a reverse proxy hosts it on a sub-path and strips the
+// prefix before forwarding. It is injected into the shell's <base href> so every
+// relative asset/API/WebSocket URL the browser builds carries the prefix; the
+// proxy strips it back off, so the engine itself still serves at the root with no
+// other route changes. Empty (the default) serves at the root, unchanged.
+func Register(r *gin.Engine, basePath string) error {
 	dist, err := fs.Sub(embedded, "dist")
 	if err != nil {
 		return err
@@ -31,6 +43,9 @@ func Register(r *gin.Engine) error {
 	index, err := fs.ReadFile(dist, "index.html")
 	if err != nil {
 		return err
+	}
+	if href := normalizeBaseHref(basePath); href != "/" {
+		index = baseHrefRe.ReplaceAllLiteral(index, []byte(`<base href="`+href+`">`))
 	}
 	fileServer := http.FileServer(http.FS(dist))
 
@@ -61,4 +76,15 @@ func Register(r *gin.Engine) error {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", index)
 	})
 	return nil
+}
+
+// normalizeBaseHref turns a configured base path ("", "/hivemind", "hivemind/")
+// into a base href with exactly one leading and trailing slash ("/hivemind/"),
+// or "/" when unset.
+func normalizeBaseHref(basePath string) string {
+	p := strings.Trim(strings.TrimSpace(basePath), "/")
+	if p == "" {
+		return "/"
+	}
+	return "/" + p + "/"
 }

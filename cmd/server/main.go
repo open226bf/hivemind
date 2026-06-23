@@ -253,6 +253,7 @@ func main() {
 		WSTickets:     wsTickets,
 		StreamTickets: streamTickets,
 		BaseURL:       os.Getenv("HIVEMIND_BASE_URL"),
+		BasePath:      os.Getenv("HIVEMIND_BASE_PATH"),
 	})
 
 	port := os.Getenv("PORT")
