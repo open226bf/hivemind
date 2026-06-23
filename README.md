@@ -106,6 +106,7 @@ The server is configured via environment variables (see [`.env.example`](.env.ex
 | `AGENT_HUB_ADDR` / `AGENT_HUB_PUBLIC_ADDR` | — | Enable the mutual-TLS agent hub and advertise its address. |
 | `AGENT_IMAGE` | — | Agent image baked into generated install scripts. |
 | `HIVEMIND_BASE_URL` | — | Canonical external URL used in rendered commands. |
+| `HIVEMIND_BASE_PATH` | — | URL sub-path prefix when served behind a prefix-stripping reverse proxy (e.g. `/hivemind`); injected into the SPA `<base href>`. |
 
 ## Testing
 

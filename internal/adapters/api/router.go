@@ -54,6 +54,10 @@ type Dependencies struct {
 	// BaseURL is the canonical external URL (HIVEMIND_BASE_URL) used to render
 	// agent install/deploy commands.
 	BaseURL string
+	// BasePath is the URL prefix (HIVEMIND_BASE_PATH) the SPA is served under when
+	// a reverse proxy hosts Hivemind on a sub-path; injected into the SPA's base
+	// href. Empty serves at the root.
+	BasePath string
 }
 
 // NewRouter builds the Gin engine with health endpoints and the /api/v1 group.
@@ -133,7 +137,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	// Serve the bundled Angular SPA from the same engine so one container exposes
 	// both the API and the UI. Registered last: it only handles routes no API
 	// handler matched (NoRoute), and keeps /api 404s as JSON.
-	if err := web.Register(r); err != nil {
+	if err := web.Register(r, deps.BasePath); err != nil {
 		slog.Error("register embedded web UI", "err", err)
 	}
 
