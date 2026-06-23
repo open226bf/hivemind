@@ -115,7 +115,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	protected.Use(middleware.InjectListScope(aclCfg))
 	resolver := handler.NewAclResolver(deps.Hives, deps.Services)
 
-	handler.NewAuthHandler(deps.Auth).Register(public, protected)
+	handler.NewAuthHandler(deps.Auth, deps.AclEnforced).Register(public, protected)
 	handler.NewUserHandler(deps.Users).Register(protected)
 	handler.NewServiceHandler(deps.Services).Register(protected, resolver, aclCfg)
 	handler.NewHiveHandler(deps.Hives).Register(protected, resolver, aclCfg)
