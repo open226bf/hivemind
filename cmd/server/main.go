@@ -129,6 +129,7 @@ func main() {
 	deploymentRepo := persistence.NewDeploymentRepository(db)
 	snapshotRepo := persistence.NewSnapshotRepository(db, cipher)
 	auditRepo := persistence.NewAuditLogRepository(db)
+	aclRepo := persistence.NewAclRepository(db)
 
 	// ─── Cleanup orphaned deployments ────────────────────────────────────────
 	if n, err := deploymentRepo.FailOrphaned(context.Background()); err != nil {
@@ -182,7 +183,8 @@ func main() {
 	hubPublic := os.Getenv("AGENT_HUB_PUBLIC_ADDR")
 
 	// ─── Use cases ──────────────────────────────────────────────────────────
-	authSvc := application.NewAuthService(userRepo, tokens, clock.System{})
+	aclSvc := application.NewAclService(aclRepo, userRepo, clock.System{})
+	authSvc := application.NewAuthService(userRepo, tokens, clock.System{}, aclSvc)
 	userSvc := application.NewUserService(userRepo)
 	serviceSvc := application.NewServiceService(serviceRepo, registry)
 	hiveSvc := application.NewHiveService(hiveRepo, serviceRepo)
@@ -250,6 +252,9 @@ func main() {
 		Collectors:    collectorRegistry,
 		Alerts:        alertEngine,
 		AuditLog:      auditRepo,
+		Acl:           aclSvc,
+		AclEnforced:   os.Getenv("HIVEMIND_ACL_ENFORCED") == "true",
+		TokenVersions: userRepo,
 		WSTickets:     wsTickets,
 		StreamTickets: streamTickets,
 		BaseURL:       os.Getenv("HIVEMIND_BASE_URL"),

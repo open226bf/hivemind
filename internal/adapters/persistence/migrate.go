@@ -2,7 +2,9 @@ package persistence
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -31,6 +33,7 @@ func Migrate(db *gorm.DB) error {
 		&deploymentModel{},
 		&serviceSnapshotModel{},
 		&auditLogModel{},
+		&aclGrantModel{},
 	); err != nil {
 		return fmt.Errorf("auto migrate: %w", err)
 	}
@@ -52,6 +55,46 @@ func Migrate(db *gorm.DB) error {
 			if err := db.Migrator().DropIndex(model, idx); err != nil {
 				return fmt.Errorf("drop legacy index %s: %w", idx, err)
 			}
+		}
+	}
+	return nil
+}
+
+// SeedDefaultGrants maps each non-admin user's global role to an ACL grant on
+// the default cluster (operator→write, viewer→read), so flipping
+// HIVEMIND_ACL_ENFORCED to true preserves everyone's current access (ADR 0003).
+// Idempotent: a user who already has a grant on the default cluster is skipped.
+// Admins are never seeded — they bypass grants entirely.
+func SeedDefaultGrants(db *gorm.DB, defaultClusterID string) error {
+	var users []userModel
+	if err := db.Where("role <> ?", "admin").Find(&users).Error; err != nil {
+		return fmt.Errorf("seed grants: list users: %w", err)
+	}
+	now := time.Now().UTC()
+	for _, u := range users {
+		verb := "read"
+		if u.Role == "operator" {
+			verb = "write"
+		}
+		var count int64
+		if err := db.Model(&aclGrantModel{}).
+			Where("subject_id = ? AND resource_type = ? AND resource_id = ?", u.ID, "cluster", defaultClusterID).
+			Count(&count).Error; err != nil {
+			return fmt.Errorf("seed grants: check existing: %w", err)
+		}
+		if count > 0 {
+			continue
+		}
+		g := aclGrantModel{
+			ID:           uuid.NewString(),
+			SubjectID:    u.ID,
+			ResourceType: "cluster",
+			ResourceID:   defaultClusterID,
+			Verb:         verb,
+			CreatedAt:    now,
+		}
+		if err := db.Create(&g).Error; err != nil {
+			return fmt.Errorf("seed grants: create for %s: %w", u.ID, err)
 		}
 	}
 	return nil

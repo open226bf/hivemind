@@ -31,8 +31,13 @@ type User struct {
 	Active              bool
 	FailedLoginAttempts int
 	LockedUntil         *time.Time
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	// TokenVersion is the revocation epoch embedded in issued access tokens and
+	// bumped whenever the user's effective access changes (e.g. an ACL grant is
+	// added or revoked). The Auth middleware rejects a token whose version is
+	// stale, making revocation immediate (ADR 0003).
+	TokenVersion int
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func New(email, passwordHash string, role Role) (*User, error) {
@@ -81,3 +86,10 @@ func (r Role) IsValid() bool {
 func (u *User) IsAdmin() bool    { return u.Role == RoleAdmin }
 func (u *User) IsOperator() bool { return u.Role == RoleOperator || u.Role == RoleAdmin }
 func (u *User) CanView() bool    { return u.Active }
+
+// BumpTokenVersion advances the revocation epoch, invalidating every access
+// token issued before this point.
+func (u *User) BumpTokenVersion() {
+	u.TokenVersion++
+	u.UpdatedAt = time.Now().UTC()
+}

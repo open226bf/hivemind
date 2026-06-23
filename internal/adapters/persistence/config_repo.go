@@ -63,7 +63,7 @@ func (r *ConfigRepository) List(ctx context.Context, clusterID uuid.UUID, p pagi
 	var models []configModel
 	var count int64
 
-	q := scopeCluster(r.db.WithContext(ctx).Model(&configModel{}), clusterID)
+	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&configModel{}), clusterID), "")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count configs: %w", err)
 	}
