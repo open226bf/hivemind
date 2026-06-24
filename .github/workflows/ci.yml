@@ -56,6 +56,11 @@ jobs:
   coverage:
     name: Tests & coverage
     runs-on: ubuntu-latest
+    # Expose the secret as an env var so the Codecov step can be gated in `if:`.
+    # The `secrets` context is NOT allowed in `if:` — using it there fails the
+    # whole workflow at startup (0s run, no jobs).
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -110,8 +115,9 @@ jobs:
           retention-days: 14
 
       - name: Upload to Codecov
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v4
         with:
+          token: ${{ env.CODECOV_TOKEN }}
           files: coverage.out
           fail_ci_if_error: false
