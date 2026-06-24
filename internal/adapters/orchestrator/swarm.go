@@ -180,6 +180,32 @@ func (o *SwarmOrchestrator) RemoveService(ctx context.Context, swarmServiceID st
 	return nil
 }
 
+// ListServices enumerates every Swarm service on the cluster for brownfield
+// discovery (ADR 0004). It reads the hivemind.service.id label off each service
+// spec so the application layer can tell managed services from foreign ones; it
+// does not fetch task state (that stays per-service via GetServiceState).
+func (o *SwarmOrchestrator) ListServices(ctx context.Context) ([]ports.SwarmServiceInfo, error) {
+	list, err := o.cli.ServiceList(ctx, types.ServiceListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("service list: %w", err)
+	}
+	out := make([]ports.SwarmServiceInfo, 0, len(list))
+	for _, svc := range list {
+		info := ports.SwarmServiceInfo{
+			SwarmServiceID: svc.ID,
+			Name:           svc.Spec.Name,
+			HivemindLabel:  svc.Spec.Annotations.Labels[hivemindLabelKey],
+			CreatedAt:      svc.CreatedAt,
+		}
+		if r := svc.Spec.Mode.Replicated; r != nil && r.Replicas != nil {
+			info.Replicas = *r.Replicas
+		}
+		info.Image = svc.Spec.TaskTemplate.ContainerSpec.Image
+		out = append(out, info)
+	}
+	return out, nil
+}
+
 func (o *SwarmOrchestrator) GetServiceState(ctx context.Context, swarmServiceID string) (*ports.ServiceState, error) {
 	svc, _, err := o.cli.ServiceInspectWithRaw(ctx, swarmServiceID, types.ServiceInspectOptions{})
 	if err != nil {

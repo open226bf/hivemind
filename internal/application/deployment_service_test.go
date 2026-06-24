@@ -170,6 +170,9 @@ func (o *fakeOrchestrator) RemoveVolume(context.Context, string) error         {
 func (o *fakeOrchestrator) ListVolumes(context.Context) ([]ports.SwarmVolumeInfo, error) {
 	return nil, nil
 }
+func (o *fakeOrchestrator) ListServices(context.Context) ([]ports.SwarmServiceInfo, error) {
+	return nil, nil
+}
 func (o *fakeOrchestrator) ClusterInfo(context.Context) (*ports.ClusterInfo, error) {
 	return &ports.ClusterInfo{}, nil
 }

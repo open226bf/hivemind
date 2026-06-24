@@ -90,6 +90,12 @@ type Orchestrator interface {
 	UpdateService(ctx context.Context, swarmServiceID string, spec ServiceSpec, opts UpdateServiceOptions) error
 	RemoveService(ctx context.Context, swarmServiceID string) error
 	GetServiceState(ctx context.Context, swarmServiceID string) (*ServiceState, error)
+
+	// ListServices returns every Swarm service visible on the cluster, each with
+	// the value of its hivemind.service.id label (empty when the label is absent),
+	// so the application layer can classify managed / foreign / orphan services
+	// for brownfield discovery and adoption (ADR 0004).
+	ListServices(ctx context.Context) ([]SwarmServiceInfo, error)
 	WaitConvergence(ctx context.Context, swarmServiceID string, timeout time.Duration) error
 
 	// ServiceLogs returns a stream of the service's aggregated container logs
@@ -242,6 +248,20 @@ type SwarmVolumeInfo struct {
 	Driver     string
 	Mountpoint string
 	Scope      string
+}
+
+// SwarmServiceInfo is a lightweight snapshot of a Swarm service as it actually
+// runs on the cluster, used by brownfield discovery (ADR 0004). HivemindLabel
+// carries the value of the hivemind.service.id label ("" when the service was
+// not created or adopted by Hivemind), so the application layer can classify it
+// as managed / foreign / orphan.
+type SwarmServiceInfo struct {
+	SwarmServiceID string
+	Name           string
+	Image          string
+	Replicas       uint64
+	HivemindLabel  string
+	CreatedAt      time.Time
 }
 
 type ServiceSpec struct {
