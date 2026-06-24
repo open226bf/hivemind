@@ -29,6 +29,7 @@ type Dependencies struct {
 	Auth        *application.AuthService
 	Users       *application.UserService
 	Services    *application.ServiceService
+	Discovery   *application.DiscoveryService
 	Hives       *application.HiveService
 	Networks    *application.NetworkService
 	Volumes     *application.VolumeService
@@ -118,6 +119,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewAuthHandler(deps.Auth, deps.AclEnforced).Register(public, protected)
 	handler.NewUserHandler(deps.Users).Register(protected)
 	handler.NewServiceHandler(deps.Services).Register(protected, resolver, aclCfg)
+	handler.NewDiscoveryHandler(deps.Discovery).Register(protected)
 	handler.NewHiveHandler(deps.Hives).Register(protected, resolver, aclCfg)
 	if deps.Acl != nil {
 		handler.NewGrantHandler(deps.Acl, resolver, aclCfg).Register(protected)

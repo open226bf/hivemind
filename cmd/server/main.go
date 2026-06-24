@@ -187,6 +187,7 @@ func main() {
 	authSvc := application.NewAuthService(userRepo, tokens, clock.System{}, aclSvc)
 	userSvc := application.NewUserService(userRepo)
 	serviceSvc := application.NewServiceService(serviceRepo, registry)
+	discoverySvc := application.NewDiscoveryService(registry, serviceRepo)
 	hiveSvc := application.NewHiveService(hiveRepo, serviceRepo)
 	networkSvc := application.NewNetworkService(networkRepo, serviceRepo)
 	volumeSvc := application.NewVolumeService(volumeRepo, serviceRepo)
@@ -237,6 +238,7 @@ func main() {
 		Auth:          authSvc,
 		Users:         userSvc,
 		Services:      serviceSvc,
+		Discovery:     discoverySvc,
 		Hives:         hiveSvc,
 		Networks:      networkSvc,
 		Volumes:       volumeSvc,

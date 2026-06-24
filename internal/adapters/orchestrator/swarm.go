@@ -194,7 +194,7 @@ func (o *SwarmOrchestrator) ListServices(ctx context.Context) ([]ports.SwarmServ
 		info := ports.SwarmServiceInfo{
 			SwarmServiceID: svc.ID,
 			Name:           svc.Spec.Name,
-			HivemindLabel:  svc.Spec.Annotations.Labels[hivemindLabelKey],
+			HivemindLabel:  svc.Spec.Labels[hivemindLabelKey],
 			CreatedAt:      svc.CreatedAt,
 		}
 		if r := svc.Spec.Mode.Replicated; r != nil && r.Replicas != nil {
