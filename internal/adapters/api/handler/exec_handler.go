@@ -123,7 +123,7 @@ func (h *ExecHandler) Exec(c *gin.Context) {
 	if err != nil {
 		return // upgrader already wrote the error
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()

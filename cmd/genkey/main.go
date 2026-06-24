@@ -35,7 +35,7 @@ func main() {
 	}
 
 	if *out == "" {
-		os.Stdout.Write(pemBytes)
+		_, _ = os.Stdout.Write(pemBytes)
 		return
 	}
 
