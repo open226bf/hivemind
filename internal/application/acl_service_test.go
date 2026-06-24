@@ -104,8 +104,8 @@ func TestAclService_ScopesFor_DropsExpired(t *testing.T) {
 	cluster := uuid.New()
 	hive := uuid.New()
 	past := now.Add(-time.Hour)
-	repo.Save(context.Background(), &acl.Grant{ID: uuid.New(), SubjectID: u.ID, ResourceType: acl.ResourceCluster, ResourceID: cluster, Verb: acl.VerbWrite})
-	repo.Save(context.Background(), &acl.Grant{ID: uuid.New(), SubjectID: u.ID, ResourceType: acl.ResourceHive, ResourceID: hive, Verb: acl.VerbManage, ExpiresAt: &past})
+	_ = repo.Save(context.Background(), &acl.Grant{ID: uuid.New(), SubjectID: u.ID, ResourceType: acl.ResourceCluster, ResourceID: cluster, Verb: acl.VerbWrite})
+	_ = repo.Save(context.Background(), &acl.Grant{ID: uuid.New(), SubjectID: u.ID, ResourceType: acl.ResourceHive, ResourceID: hive, Verb: acl.VerbManage, ExpiresAt: &past})
 
 	svc := application.NewAclService(repo, users, fixedClockNow(now))
 	scopes, err := svc.ScopesFor(context.Background(), u)

@@ -305,7 +305,7 @@ func (o *SwarmOrchestrator) ServiceLogs(ctx context.Context, swarmServiceID stri
 	pr, pw := io.Pipe()
 	go func() {
 		_, copyErr := stdcopy.StdCopy(pw, pw, stream)
-		stream.Close()
+		_ = stream.Close()
 		pw.CloseWithError(copyErr)
 	}()
 	return pr, nil

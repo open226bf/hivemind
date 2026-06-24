@@ -322,7 +322,7 @@ func (h *DeploymentHandler) Logs(c *gin.Context) {
 		h.writeDeploymentError(c, err)
 		return
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
@@ -339,7 +339,7 @@ func (h *DeploymentHandler) Logs(c *gin.Context) {
 	ctx := c.Request.Context()
 	go func() {
 		<-ctx.Done()
-		stream.Close()
+		_ = stream.Close()
 	}()
 
 	scanner := bufio.NewScanner(stream)
@@ -351,7 +351,7 @@ func (h *DeploymentHandler) Logs(c *gin.Context) {
 		flusher.Flush()
 	}
 	// Signal completion for non-follow streams.
-	fmt.Fprint(c.Writer, "event: end\ndata: \n\n")
+	_, _ = fmt.Fprint(c.Writer, "event: end\ndata: \n\n")
 	flusher.Flush()
 }
 
