@@ -21,3 +21,17 @@ type DiscoveredService struct {
 	HiveID         string    `json:"hive_id,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 }
+
+// AdoptServiceRequest takes over a foreign Swarm service (ADR 0004), optionally
+// attaching the created Hivemind service to a hive.
+type AdoptServiceRequest struct {
+	HiveID string `json:"hive_id,omitempty"`
+}
+
+// AdoptServiceResponse identifies the created Hivemind service and lists any
+// fidelity warnings raised while reconstructing its spec (e.g. referenced
+// secrets/configs that were not imported).
+type AdoptServiceResponse struct {
+	ServiceID string   `json:"service_id"`
+	Warnings  []string `json:"warnings"`
+}

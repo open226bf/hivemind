@@ -1,13 +1,16 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/open226bf/hivemind/internal/adapters/api/dto"
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
 	"github.com/open226bf/hivemind/internal/application"
+	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/domain/user"
 )
 
@@ -21,10 +24,14 @@ func NewDiscoveryHandler(svc *application.DiscoveryService) *DiscoveryHandler {
 	return &DiscoveryHandler{svc: svc}
 }
 
-// Register wires the read-only discovery route. Listing is Viewer-level, in line
-// with the other Swarm-discovery endpoints (e.g. GET /networks/swarm).
+// Register wires discovery routes. Listing is Viewer-level (like other
+// Swarm-discovery endpoints, e.g. GET /networks/swarm); adopt/release mutate
+// state and require Operator.
 func (h *DiscoveryHandler) Register(protected *gin.RouterGroup) {
-	protected.GET("/discovered-services", middleware.RequireRole(user.RoleViewer), h.List)
+	g := protected.Group("/discovered-services")
+	g.GET("", middleware.RequireRole(user.RoleViewer), h.List)
+	g.POST("/:swarmId/adopt", middleware.RequireRole(user.RoleOperator), h.Adopt)
+	g.POST("/:swarmId/release", middleware.RequireRole(user.RoleOperator), h.Release)
 }
 
 // List godoc
@@ -63,4 +70,92 @@ func (h *DiscoveryHandler) List(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// Adopt godoc
+//
+//	@Summary		Adopt a foreign service
+//	@Description	Takes over a service running on the cluster: reconstructs its spec, creates a deployed Hivemind service (optionally in a hive), seals the ownership label, and snapshots it. The live service keeps running. Returns warnings for anything not fully reconstructed.
+//	@Tags			discovery
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			swarmId	path		string						true	"Swarm service ID"
+//	@Param			body	body		dto.AdoptServiceRequest		false	"Target hive"
+//	@Success		201		{object}	dto.AdoptServiceResponse
+//	@Failure		400		{object}	dto.ErrorResponse
+//	@Failure		409		{object}	dto.ErrorResponse	"already managed"
+//	@Failure		422		{object}	dto.ErrorResponse	"spec cannot be adopted (e.g. invalid name)"
+//	@Failure		503		{object}	dto.ErrorResponse	"orchestrator unavailable"
+//	@Router			/discovered-services/{swarmId}/adopt [post]
+func (h *DiscoveryHandler) Adopt(c *gin.Context) {
+	swarmID := c.Param("swarmId")
+	var req dto.AdoptServiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	var hiveID *uuid.UUID
+	if req.HiveID != "" {
+		id, ok := parseUUIDValue(c, req.HiveID, "hive_id")
+		if !ok {
+			return
+		}
+		hiveID = &id
+	}
+
+	in := application.AdoptInput{
+		ClusterID:      writeCluster(c),
+		SwarmServiceID: swarmID,
+		HiveID:         hiveID,
+	}
+	if claims, ok := middleware.ClaimsFrom(c); ok {
+		uid := claims.UserID
+		in.UserID = &uid
+	}
+
+	res, err := h.svc.Adopt(c.Request.Context(), in)
+	if err != nil {
+		h.writeAdoptError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, dto.AdoptServiceResponse{
+		ServiceID: res.ServiceID.String(),
+		Warnings:  res.Warnings,
+	})
+}
+
+// Release godoc
+//
+//	@Summary		Release an adopted service
+//	@Description	Hands an adopted service back to unmanaged: clears the Hivemind ownership label and deletes the Hivemind record. The live service keeps running untouched.
+//	@Tags			discovery
+//	@Security		BearerAuth
+//	@Param			swarmId	path	string	true	"Swarm service ID"
+//	@Success		204
+//	@Failure		404	{object}	dto.ErrorResponse	"no managed service owns this Swarm service"
+//	@Failure		503	{object}	dto.ErrorResponse	"orchestrator unavailable"
+//	@Router			/discovered-services/{swarmId}/release [post]
+func (h *DiscoveryHandler) Release(c *gin.Context) {
+	if err := h.svc.Release(c.Request.Context(), writeCluster(c), c.Param("swarmId")); err != nil {
+		if errors.Is(err, application.ErrServiceNotAdopted) {
+			dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, err.Error())
+			return
+		}
+		writeError(c, err, "service not found")
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (h *DiscoveryHandler) writeAdoptError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, application.ErrAlreadyManaged):
+		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
+	case errors.Is(err, service.ErrInvalidName), errors.Is(err, service.ErrInvalidImage):
+		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
+	default:
+		writeError(c, err, "service not found")
+	}
 }

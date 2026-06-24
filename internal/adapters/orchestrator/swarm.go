@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"path"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -204,6 +205,104 @@ func (o *SwarmOrchestrator) ListServices(ctx context.Context) ([]ports.SwarmServ
 		out = append(out, info)
 	}
 	return out, nil
+}
+
+// InspectService reconstructs a running service's spec into a ports.ServiceSpec
+// for adoption (ADR 0004). Cleanly-mappable fields (image, replicas, command,
+// env, resources, placement, update config, ports) are carried over; anything
+// without a ServiceSpec equivalent is reported in Warnings rather than silently
+// dropped, so the caller can surface it to the operator.
+func (o *SwarmOrchestrator) InspectService(ctx context.Context, swarmServiceID string) (*ports.InspectedService, error) {
+	svc, _, err := o.cli.ServiceInspectWithRaw(ctx, swarmServiceID, types.ServiceInspectOptions{})
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil, ports.ErrSwarmServiceNotFound
+		}
+		return nil, fmt.Errorf("service inspect: %w", err)
+	}
+
+	cs := svc.Spec.TaskTemplate.ContainerSpec
+	spec := ports.ServiceSpec{
+		Name:         svc.Spec.Name,
+		UpdateConfig: fromUpdateConfig(svc.Spec.UpdateConfig),
+	}
+	var warnings []string
+	if cs != nil {
+		spec.Image = cs.Image
+		spec.Entrypoint = cs.Command // Swarm Command is the entrypoint override
+		spec.Command = cs.Args       // Swarm Args are the command arguments
+		spec.Env = envMap(cs.Env)
+		if len(cs.Secrets) > 0 {
+			warnings = append(warnings, fmt.Sprintf("%d secret reference(s) not imported — re-attach after adoption", len(cs.Secrets)))
+		}
+		if len(cs.Configs) > 0 {
+			warnings = append(warnings, fmt.Sprintf("%d config reference(s) not imported — re-attach after adoption", len(cs.Configs)))
+		}
+		if len(cs.Mounts) > 0 {
+			warnings = append(warnings, fmt.Sprintf("%d mount(s) not imported — re-declare after adoption", len(cs.Mounts)))
+		}
+		if cs.Healthcheck != nil {
+			warnings = append(warnings, "container healthcheck not imported")
+		}
+	}
+
+	if r := svc.Spec.Mode.Replicated; r != nil && r.Replicas != nil {
+		spec.Replicas = *r.Replicas
+	} else if svc.Spec.Mode.Global != nil {
+		warnings = append(warnings, "service runs in global mode; adopted as a single-replica replicated service")
+		spec.Replicas = 1
+	}
+
+	spec.Resources = fromResources(svc.Spec.TaskTemplate.Resources)
+	spec.Placement = fromPlacement(svc.Spec.TaskTemplate.Placement)
+	if len(svc.Spec.TaskTemplate.Networks) > 0 {
+		warnings = append(warnings, fmt.Sprintf("%d network attachment(s) not imported — re-attach after adoption", len(svc.Spec.TaskTemplate.Networks)))
+	}
+	if svc.Spec.EndpointSpec != nil {
+		spec.Ports = fromPorts(svc.Spec.EndpointSpec.Ports)
+	}
+
+	return &ports.InspectedService{Spec: spec, Warnings: warnings}, nil
+}
+
+// SetHivemindLabel stamps hivemind.service.id onto an existing service without
+// otherwise changing its spec (adoption seal, ADR 0004): it re-applies the
+// service's CURRENT raw spec with only the label added, so nothing else drifts.
+func (o *SwarmOrchestrator) SetHivemindLabel(ctx context.Context, swarmServiceID, hivemindServiceID string) error {
+	return o.updateLabel(ctx, swarmServiceID, func(labels map[string]string) map[string]string {
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		labels[hivemindLabelKey] = hivemindServiceID
+		return labels
+	})
+}
+
+// ClearHivemindLabel removes hivemind.service.id, leaving the rest of the spec
+// intact (adoption release, ADR 0004).
+func (o *SwarmOrchestrator) ClearHivemindLabel(ctx context.Context, swarmServiceID string) error {
+	return o.updateLabel(ctx, swarmServiceID, func(labels map[string]string) map[string]string {
+		delete(labels, hivemindLabelKey)
+		return labels
+	})
+}
+
+// updateLabel re-applies a service's current raw spec with its labels rewritten
+// by mutate — a lossless, label-only ServiceUpdate.
+func (o *SwarmOrchestrator) updateLabel(ctx context.Context, swarmServiceID string, mutate func(map[string]string) map[string]string) error {
+	current, _, err := o.cli.ServiceInspectWithRaw(ctx, swarmServiceID, types.ServiceInspectOptions{})
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return ports.ErrSwarmServiceNotFound
+		}
+		return fmt.Errorf("service inspect: %w", err)
+	}
+	spec := current.Spec
+	spec.Labels = mutate(spec.Labels)
+	if _, err := o.cli.ServiceUpdate(ctx, swarmServiceID, current.Version, spec, types.ServiceUpdateOptions{}); err != nil {
+		return fmt.Errorf("service update (label): %w", err)
+	}
+	return nil
 }
 
 func (o *SwarmOrchestrator) GetServiceState(ctx context.Context, swarmServiceID string) (*ports.ServiceState, error) {
@@ -745,6 +844,80 @@ func toUpdateConfig(uc ports.UpdateConfigSpec) *swarm.UpdateConfig {
 		MaxFailureRatio: float32(uc.MaxFailureRatio),
 		Order:           uc.Order,
 	}
+}
+
+// ─── Reverse spec translation (adoption inspect, ADR 0004) ─────────────────────
+
+func fromResources(req *swarm.ResourceRequirements) ports.ResourceSpec {
+	var out ports.ResourceSpec
+	if req == nil {
+		return out
+	}
+	if l := req.Limits; l != nil {
+		out.CPULimit = float64(l.NanoCPUs) / 1e9
+		out.MemLimit = l.MemoryBytes
+	}
+	if r := req.Reservations; r != nil {
+		out.CPUReservation = float64(r.NanoCPUs) / 1e9
+		out.MemReservation = r.MemoryBytes
+	}
+	return out
+}
+
+func fromPlacement(p *swarm.Placement) ports.PlacementSpec {
+	var out ports.PlacementSpec
+	if p == nil {
+		return out
+	}
+	out.Constraints = p.Constraints
+	out.MaxReplicas = p.MaxReplicas
+	for _, pref := range p.Preferences {
+		if pref.Spread != nil {
+			out.Preferences = append(out.Preferences, pref.Spread.SpreadDescriptor)
+		}
+	}
+	return out
+}
+
+func fromUpdateConfig(uc *swarm.UpdateConfig) ports.UpdateConfigSpec {
+	if uc == nil {
+		return ports.UpdateConfigSpec{}
+	}
+	return ports.UpdateConfigSpec{
+		Parallelism:     uc.Parallelism,
+		Delay:           uc.Delay,
+		FailureAction:   uc.FailureAction,
+		Monitor:         uc.Monitor,
+		MaxFailureRatio: float64(uc.MaxFailureRatio),
+		Order:           uc.Order,
+	}
+}
+
+func fromPorts(ports_ []swarm.PortConfig) []ports.PortSpec {
+	out := make([]ports.PortSpec, 0, len(ports_))
+	for _, p := range ports_ {
+		out = append(out, ports.PortSpec{
+			TargetPort:    p.TargetPort,
+			PublishedPort: p.PublishedPort,
+			Protocol:      string(p.Protocol),
+			Mode:          string(p.PublishMode),
+		})
+	}
+	return out
+}
+
+// envMap parses Swarm's "KEY=VALUE" env entries back into a map. Entries without
+// a '=' are kept as a bare key with an empty value.
+func envMap(env []string) map[string]string {
+	if len(env) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(env))
+	for _, e := range env {
+		k, v, _ := strings.Cut(e, "=")
+		out[k] = v
+	}
+	return out
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

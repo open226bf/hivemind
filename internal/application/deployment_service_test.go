@@ -173,6 +173,11 @@ func (o *fakeOrchestrator) ListVolumes(context.Context) ([]ports.SwarmVolumeInfo
 func (o *fakeOrchestrator) ListServices(context.Context) ([]ports.SwarmServiceInfo, error) {
 	return nil, nil
 }
+func (o *fakeOrchestrator) InspectService(context.Context, string) (*ports.InspectedService, error) {
+	return &ports.InspectedService{}, nil
+}
+func (o *fakeOrchestrator) SetHivemindLabel(context.Context, string, string) error { return nil }
+func (o *fakeOrchestrator) ClearHivemindLabel(context.Context, string) error       { return nil }
 func (o *fakeOrchestrator) ClusterInfo(context.Context) (*ports.ClusterInfo, error) {
 	return &ports.ClusterInfo{}, nil
 }

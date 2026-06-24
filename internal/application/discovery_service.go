@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/open226bf/hivemind/internal/domain/snapshot"
 	"github.com/open226bf/hivemind/internal/ports"
 	"github.com/open226bf/hivemind/pkg/pagination"
 )
@@ -40,29 +41,48 @@ type DiscoveredService struct {
 	CreatedAt      time.Time
 }
 
+// SnapshotCapturer records a point-in-time snapshot of a service. It is the
+// subset of SnapshotService that adoption needs, kept as an interface so the
+// dependency stays optional (nil = skip) and testable.
+type SnapshotCapturer interface {
+	Capture(ctx context.Context, serviceID uuid.UUID, label string, userID *uuid.UUID) (*snapshot.ServiceSnapshot, error)
+}
+
 // DiscoveryService merges the live Swarm service inventory with Hivemind's
 // persisted services and classifies each as managed / foreign / orphan, so
-// operators can see and (later) adopt services that already run on a cluster
-// (ADR 0004). It is read-only: it neither writes the DB nor mutates the cluster.
+// operators can see and adopt services that already run on a cluster (ADR 0004).
+// Discovery is read-only; adoption/release write the DB and seal/clear the
+// hivemind.service.id label on the live service.
 type DiscoveryService struct {
-	registry ports.OrchestratorRegistry
-	services ports.ServiceRepository
+	registry  ports.OrchestratorRegistry
+	services  ports.ServiceRepository
+	snapshots SnapshotCapturer // optional: nil skips the initial adoption snapshot
 }
 
-func NewDiscoveryService(registry ports.OrchestratorRegistry, services ports.ServiceRepository) *DiscoveryService {
-	return &DiscoveryService{registry: registry, services: services}
+func NewDiscoveryService(registry ports.OrchestratorRegistry, services ports.ServiceRepository, snapshots SnapshotCapturer) *DiscoveryService {
+	return &DiscoveryService{registry: registry, services: services, snapshots: snapshots}
 }
 
-// Discover lists every Swarm service on the cluster and classifies it. The
-// returned slice mirrors the live cluster order. A nil registry or an
-// unreachable orchestrator surfaces as ErrOrchestratorUnavailable.
-func (s *DiscoveryService) Discover(ctx context.Context, clusterID uuid.UUID) ([]DiscoveredService, error) {
+// orchFor resolves the live orchestrator for a cluster, mapping a nil registry
+// or an unreachable backend to ErrOrchestratorUnavailable.
+func (s *DiscoveryService) orchFor(ctx context.Context, clusterID uuid.UUID) (ports.Orchestrator, error) {
 	if s.registry == nil {
 		return nil, ErrOrchestratorUnavailable
 	}
 	orch, err := s.registry.For(ctx, clusterID)
 	if err != nil || orch == nil {
 		return nil, ErrOrchestratorUnavailable
+	}
+	return orch, nil
+}
+
+// Discover lists every Swarm service on the cluster and classifies it. The
+// returned slice mirrors the live cluster order. A nil registry or an
+// unreachable orchestrator surfaces as ErrOrchestratorUnavailable.
+func (s *DiscoveryService) Discover(ctx context.Context, clusterID uuid.UUID) ([]DiscoveredService, error) {
+	orch, err := s.orchFor(ctx, clusterID)
+	if err != nil {
+		return nil, err
 	}
 
 	live, err := orch.ListServices(ctx)
@@ -107,9 +127,13 @@ type knownService struct {
 	hiveID *uuid.UUID
 }
 
+// pageAll fetches an internal listing in one shot, matching the existing
+// convention for non-paginated internal reads (see HiveService.List).
+func pageAll() pagination.Page { return pagination.Page{Number: 1, Size: 1000} }
+
 func (s *DiscoveryService) knownByID(ctx context.Context, clusterID uuid.UUID) (map[string]knownService, error) {
 	filter := ports.ServiceFilter{ClusterID: &clusterID}
-	items, _, err := s.services.List(ctx, filter, pagination.Page{Number: 1, Size: 1000})
+	items, _, err := s.services.List(ctx, filter, pageAll())
 	if err != nil {
 		return nil, fmt.Errorf("list known services: %w", err)
 	}

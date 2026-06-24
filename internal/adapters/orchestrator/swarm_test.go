@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/assert"
@@ -80,6 +81,52 @@ func TestListServices_MapsFieldsAndLabel(t *testing.T) {
 	assert.Equal(t, "app:v2", managed.Image)
 	assert.Equal(t, uint64(1), managed.Replicas)
 	assert.Equal(t, "11111111-1111-1111-1111-111111111111", managed.HivemindLabel)
+}
+
+func TestInspectService_ReconstructsSpecAndWarns(t *testing.T) {
+	svc := swarm.Service{
+		ID: "svc-1",
+		Spec: swarm.ServiceSpec{
+			Annotations: swarm.Annotations{Name: "legacy"},
+			TaskTemplate: swarm.TaskSpec{
+				ContainerSpec: &swarm.ContainerSpec{
+					Image:   "nginx:1.25",
+					Command: []string{"/entry"},
+					Args:    []string{"--flag"},
+					Env:     []string{"FOO=bar", "BARE"},
+					Secrets: []*swarm.SecretReference{{SecretName: "s1"}},
+					Mounts:  []mount.Mount{{Type: mount.TypeVolume, Source: "v", Target: "/data"}},
+				},
+			},
+			Mode: swarm.ServiceMode{Replicated: &swarm.ReplicatedService{Replicas: uint64p(2)}},
+			EndpointSpec: &swarm.EndpointSpec{Ports: []swarm.PortConfig{{
+				Protocol: swarm.PortConfigProtocolTCP, PublishMode: swarm.PortConfigPublishModeIngress,
+				TargetPort: 80, PublishedPort: 8080,
+			}}},
+		},
+	}
+	o := newTestOrchestrator(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.URL.Path, "/services/svc-1")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(svc)
+	})
+
+	got, err := o.InspectService(context.Background(), "svc-1")
+	require.NoError(t, err)
+	assert.Equal(t, "legacy", got.Spec.Name)
+	assert.Equal(t, "nginx:1.25", got.Spec.Image)
+	assert.Equal(t, []string{"--flag"}, got.Spec.Command)
+	assert.Equal(t, []string{"/entry"}, got.Spec.Entrypoint)
+	assert.Equal(t, uint64(2), got.Spec.Replicas)
+	assert.Equal(t, "bar", got.Spec.Env["FOO"])
+	assert.Equal(t, "", got.Spec.Env["BARE"])
+	require.Len(t, got.Spec.Ports, 1)
+	assert.Equal(t, uint32(8080), got.Spec.Ports[0].PublishedPort)
+
+	// Unmappable aspects are reported, not dropped silently.
+	joined := strings.Join(got.Warnings, " | ")
+	assert.Contains(t, joined, "secret")
+	assert.Contains(t, joined, "mount")
 }
 
 func TestListServices_Empty(t *testing.T) {

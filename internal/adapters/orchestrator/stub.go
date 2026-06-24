@@ -164,6 +164,23 @@ func (*StubOrchestrator) ListServices(_ context.Context) ([]ports.SwarmServiceIn
 	}, nil
 }
 
+func (*StubOrchestrator) InspectService(_ context.Context, swarmServiceID string) (*ports.InspectedService, error) {
+	slog.Info("stub: inspect service", "swarm_id", swarmServiceID)
+	return &ports.InspectedService{
+		Spec: ports.ServiceSpec{Name: "adopted-" + swarmServiceID, Image: "stub/image:latest", Replicas: 1},
+	}, nil
+}
+
+func (*StubOrchestrator) SetHivemindLabel(_ context.Context, swarmServiceID, hivemindServiceID string) error {
+	slog.Info("stub: set hivemind label", "swarm_id", swarmServiceID, "service_id", hivemindServiceID)
+	return nil
+}
+
+func (*StubOrchestrator) ClearHivemindLabel(_ context.Context, swarmServiceID string) error {
+	slog.Info("stub: clear hivemind label", "swarm_id", swarmServiceID)
+	return nil
+}
+
 // ClusterInfo returns a deterministic 3-node topology (one manager-leader plus
 // two workers) so the cluster dashboard is fully exercisable without a real
 // Swarm. Capacities are fixed sample values.

@@ -44,7 +44,7 @@ func TestDiscover_ClassifiesManagedForeignOrphan(t *testing.T) {
 		live:             live,
 	})
 
-	svc := application.NewDiscoveryService(registry, repo)
+	svc := application.NewDiscoveryService(registry, repo, nil)
 	out, err := svc.Discover(context.Background(), uuid.Nil)
 	require.NoError(t, err)
 	require.Len(t, out, 3)
@@ -63,7 +63,7 @@ func TestDiscover_ClassifiesManagedForeignOrphan(t *testing.T) {
 }
 
 func TestDiscover_NilRegistryUnavailable(t *testing.T) {
-	svc := application.NewDiscoveryService(nil, newFakeServiceRepo())
+	svc := application.NewDiscoveryService(nil, newFakeServiceRepo(), nil)
 	_, err := svc.Discover(context.Background(), uuid.Nil)
 	assert.ErrorIs(t, err, application.ErrOrchestratorUnavailable)
 }
