@@ -117,13 +117,13 @@ func (h *ExecHandler) Exec(c *gin.Context) {
 		writeExecError(c, err)
 		return
 	}
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		return // upgrader already wrote the error
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	ctx, cancel := context.WithCancel(c.Request.Context())
 	defer cancel()

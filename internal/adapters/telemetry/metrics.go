@@ -65,7 +65,7 @@ func (c *DirectCollector) sample(ctx context.Context, ctr types.Container) (moni
 	if err != nil {
 		return monitoring.MetricSample{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	dec := json.NewDecoder(resp.Body)
 	var v container.StatsResponse

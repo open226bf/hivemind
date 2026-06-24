@@ -82,7 +82,7 @@ func dialMarker(t *testing.T, dial func(context.Context, string, string) (net.Co
 	t.Helper()
 	conn, err := dial(context.Background(), "", "")
 	require.NoError(t, err)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	b := make([]byte, 1)
 	_, err = io.ReadFull(conn, b)
