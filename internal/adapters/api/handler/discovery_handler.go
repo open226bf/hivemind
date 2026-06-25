@@ -10,6 +10,7 @@ import (
 	"github.com/open226bf/hivemind/internal/adapters/api/dto"
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
 	"github.com/open226bf/hivemind/internal/application"
+	"github.com/open226bf/hivemind/internal/domain/acl"
 	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/domain/user"
 )
@@ -18,15 +19,18 @@ import (
 // Swarm services on the active cluster, classified as managed / foreign / orphan.
 type DiscoveryHandler struct {
 	svc *application.DiscoveryService
+	cfg middleware.ACLConfig
 }
 
-func NewDiscoveryHandler(svc *application.DiscoveryService) *DiscoveryHandler {
-	return &DiscoveryHandler{svc: svc}
+func NewDiscoveryHandler(svc *application.DiscoveryService, cfg middleware.ACLConfig) *DiscoveryHandler {
+	return &DiscoveryHandler{svc: svc, cfg: cfg}
 }
 
 // Register wires discovery routes. Listing is Viewer-level (like other
-// Swarm-discovery endpoints, e.g. GET /networks/swarm); adopt/release mutate
-// state and require Operator.
+// Swarm-discovery endpoints, e.g. GET /networks/swarm). Adopt/release mutate
+// state: a global Operator floor plus, under ACL enforcement, write on the
+// target hive — checked in the handler since the hive comes from the body /
+// the owning record, not a URL param (ADR 0003/0004).
 func (h *DiscoveryHandler) Register(protected *gin.RouterGroup) {
 	g := protected.Group("/discovered-services")
 	g.GET("", middleware.RequireRole(user.RoleViewer), h.List)
@@ -105,6 +109,17 @@ func (h *DiscoveryHandler) Adopt(c *gin.Context) {
 		hiveID = &id
 	}
 
+	// Adoption is a write on the target hive (ADR 0003/0004): a cluster grant
+	// cascades; a hive-less adoption needs write on the cluster. The hive comes
+	// from the body, so this is authorized here rather than via RequireVerb.
+	hiveCoord := uuid.Nil
+	if hiveID != nil {
+		hiveCoord = *hiveID
+	}
+	if !middleware.AuthorizeVerb(c, h.cfg, writeCluster(c), hiveCoord, acl.VerbWrite) {
+		return
+	}
+
 	in := application.AdoptInput{
 		ClusterID:      writeCluster(c),
 		SwarmServiceID: swarmID,
@@ -138,7 +153,29 @@ func (h *DiscoveryHandler) Adopt(c *gin.Context) {
 //	@Failure		503	{object}	dto.ErrorResponse	"orchestrator unavailable"
 //	@Router			/discovered-services/{swarmId}/release [post]
 func (h *DiscoveryHandler) Release(c *gin.Context) {
-	if err := h.svc.Release(c.Request.Context(), writeCluster(c), c.Param("swarmId")); err != nil {
+	cluster := writeCluster(c)
+	swarmID := c.Param("swarmId")
+
+	// Release is a write on the owning service's hive (ADR 0003/0004). Resolve the
+	// hive first so the check targets it, then act.
+	hive, err := h.svc.OwnedHive(c.Request.Context(), cluster, swarmID)
+	if err != nil {
+		if errors.Is(err, application.ErrServiceNotAdopted) {
+			dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, err.Error())
+			return
+		}
+		writeError(c, err, "service not found")
+		return
+	}
+	hiveCoord := uuid.Nil
+	if hive != nil {
+		hiveCoord = *hive
+	}
+	if !middleware.AuthorizeVerb(c, h.cfg, cluster, hiveCoord, acl.VerbWrite) {
+		return
+	}
+
+	if err := h.svc.Release(c.Request.Context(), cluster, swarmID); err != nil {
 		if errors.Is(err, application.ErrServiceNotAdopted) {
 			dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, err.Error())
 			return
