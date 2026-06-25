@@ -148,9 +148,9 @@ func TestAuthorizeVerb(t *testing.T) {
 	clusterRead := []ports.Scope{{Type: acl.ResourceCluster, ID: clusterID, Verb: acl.VerbRead}}
 
 	// Enforced.
-	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleAdmin, nil)))             // admin bypass
-	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, clusterWrite))) // cluster write cascades
-	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, hiveWrite)))    // hive-specific write
+	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleAdmin, nil)))                   // admin bypass
+	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, clusterWrite)))       // cluster write cascades
+	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, hiveWrite)))          // hive-specific write
 	assert.Equal(t, http.StatusForbidden, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, clusterRead))) // read < write
 	assert.Equal(t, http.StatusForbidden, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, nil)))         // no grant
 
