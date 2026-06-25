@@ -195,6 +195,7 @@ func main() {
 	templateSvc := application.NewTemplateService(templateRepo, serviceSvc, networkSvc)
 	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
 	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)
+	discoverySvc := application.NewDiscoveryService(registry, serviceRepo, snapshotSvc)
 	clusterSvc := application.NewClusterService(registry, clusterRepo, hub, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)
 	agentSvc := application.NewAgentService(clusterRepo, hub, registry, agentCA, hubPublic, os.Getenv("AGENT_IMAGE"))
 
@@ -237,6 +238,7 @@ func main() {
 		Auth:          authSvc,
 		Users:         userSvc,
 		Services:      serviceSvc,
+		Discovery:     discoverySvc,
 		Hives:         hiveSvc,
 		Networks:      networkSvc,
 		Volumes:       volumeSvc,

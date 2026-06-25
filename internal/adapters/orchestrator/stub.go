@@ -146,6 +146,41 @@ func (*StubOrchestrator) ListVolumes(_ context.Context) ([]ports.SwarmVolumeInfo
 	}, nil
 }
 
+// ListServices returns a deterministic mix so brownfield discovery (ADR 0004)
+// is exercisable without a real Swarm: one foreign service (no hivemind label,
+// as if created by `docker service create`) and one already-labelled service.
+func (*StubOrchestrator) ListServices(_ context.Context) ([]ports.SwarmServiceInfo, error) {
+	now := time.Now()
+	return []ports.SwarmServiceInfo{
+		{
+			SwarmServiceID: "stub-foreign-1", Name: "legacy-nginx", Image: "nginx:1.25",
+			Replicas: 2, HivemindLabel: "", CreatedAt: now.Add(-72 * time.Hour),
+		},
+		{
+			SwarmServiceID: "stub-labelled-1", Name: "orphan-redis", Image: "redis:7",
+			Replicas: 1, HivemindLabel: "00000000-0000-0000-0000-000000000000",
+			CreatedAt: now.Add(-24 * time.Hour),
+		},
+	}, nil
+}
+
+func (*StubOrchestrator) InspectService(_ context.Context, swarmServiceID string) (*ports.InspectedService, error) {
+	slog.Info("stub: inspect service", "swarm_id", swarmServiceID)
+	return &ports.InspectedService{
+		Spec: ports.ServiceSpec{Name: "adopted-" + swarmServiceID, Image: "stub/image:latest", Replicas: 1},
+	}, nil
+}
+
+func (*StubOrchestrator) SetHivemindLabel(_ context.Context, swarmServiceID, hivemindServiceID string) error {
+	slog.Info("stub: set hivemind label", "swarm_id", swarmServiceID, "service_id", hivemindServiceID)
+	return nil
+}
+
+func (*StubOrchestrator) ClearHivemindLabel(_ context.Context, swarmServiceID string) error {
+	slog.Info("stub: clear hivemind label", "swarm_id", swarmServiceID)
+	return nil
+}
+
 // ClusterInfo returns a deterministic 3-node topology (one manager-leader plus
 // two workers) so the cluster dashboard is fully exercisable without a real
 // Swarm. Capacities are fixed sample values.

@@ -90,6 +90,29 @@ type Orchestrator interface {
 	UpdateService(ctx context.Context, swarmServiceID string, spec ServiceSpec, opts UpdateServiceOptions) error
 	RemoveService(ctx context.Context, swarmServiceID string) error
 	GetServiceState(ctx context.Context, swarmServiceID string) (*ServiceState, error)
+
+	// ListServices returns every Swarm service visible on the cluster, each with
+	// the value of its hivemind.service.id label (empty when the label is absent),
+	// so the application layer can classify managed / foreign / orphan services
+	// for brownfield discovery and adoption (ADR 0004).
+	ListServices(ctx context.Context) ([]SwarmServiceInfo, error)
+
+	// InspectService reconstructs a running service's spec into a ServiceSpec for
+	// adoption (ADR 0004). The reconstruction is best-effort: Warnings names every
+	// Swarm-native aspect that has no ServiceSpec equivalent and was therefore not
+	// carried into the spec (e.g. referenced secrets/configs, mounts, global mode).
+	InspectService(ctx context.Context, swarmServiceID string) (*InspectedService, error)
+
+	// SetHivemindLabel stamps the hivemind.service.id label onto an existing Swarm
+	// service WITHOUT otherwise changing its spec, sealing Hivemind ownership when
+	// a foreign service is adopted (ADR 0004). It is a label-only update, so it
+	// does not restart tasks beyond the version bump Swarm always applies.
+	SetHivemindLabel(ctx context.Context, swarmServiceID, hivemindServiceID string) error
+
+	// ClearHivemindLabel removes the hivemind.service.id label from a service,
+	// leaving it otherwise untouched, when an adopted service is released back to
+	// unmanaged (ADR 0004).
+	ClearHivemindLabel(ctx context.Context, swarmServiceID string) error
 	WaitConvergence(ctx context.Context, swarmServiceID string, timeout time.Duration) error
 
 	// ServiceLogs returns a stream of the service's aggregated container logs
@@ -242,6 +265,27 @@ type SwarmVolumeInfo struct {
 	Driver     string
 	Mountpoint string
 	Scope      string
+}
+
+// SwarmServiceInfo is a lightweight snapshot of a Swarm service as it actually
+// runs on the cluster, used by brownfield discovery (ADR 0004). HivemindLabel
+// carries the value of the hivemind.service.id label ("" when the service was
+// not created or adopted by Hivemind), so the application layer can classify it
+// as managed / foreign / orphan.
+type SwarmServiceInfo struct {
+	SwarmServiceID string
+	Name           string
+	Image          string
+	Replicas       uint64
+	HivemindLabel  string
+	CreatedAt      time.Time
+}
+
+// InspectedService is a running service's spec reconstructed for adoption
+// (ADR 0004), together with warnings about anything that could not be mapped.
+type InspectedService struct {
+	Spec     ServiceSpec
+	Warnings []string
 }
 
 type ServiceSpec struct {
