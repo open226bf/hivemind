@@ -119,7 +119,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 	handler.NewAuthHandler(deps.Auth, deps.AclEnforced).Register(public, protected)
 	handler.NewUserHandler(deps.Users).Register(protected)
 	handler.NewServiceHandler(deps.Services).Register(protected, resolver, aclCfg)
-	handler.NewDiscoveryHandler(deps.Discovery).Register(protected)
+	handler.NewDiscoveryHandler(deps.Discovery, aclCfg).Register(protected)
 	handler.NewHiveHandler(deps.Hives).Register(protected, resolver, aclCfg)
 	if deps.Acl != nil {
 		handler.NewGrantHandler(deps.Acl, resolver, aclCfg).Register(protected)

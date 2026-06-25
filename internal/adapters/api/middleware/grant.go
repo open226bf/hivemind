@@ -142,6 +142,32 @@ func RequireVerb(target Target, param string, min acl.Verb, resolver ResourceRes
 	}
 }
 
+// AuthorizeVerb authorizes a request against an already-resolved (cluster, hive)
+// — for handlers whose target is not a URL path parameter (it comes from the
+// request body or a lookup), so RequireVerb does not fit. It mirrors RequireVerb's
+// policy: admins bypass; under enforcement an effective verb below min is a 403;
+// in shadow mode the shortfall is recorded but allowed. Returns false only when
+// it has denied the request (and already written the response).
+func AuthorizeVerb(c *gin.Context, cfg ACLConfig, clusterID, hiveID uuid.UUID, min acl.Verb) bool {
+	claims, ok := ClaimsFrom(c)
+	if !ok {
+		dto.Abort(c, http.StatusUnauthorized, dto.CodeUnauthorized, "authentication required")
+		return false
+	}
+	if claims.Role == string(user.RoleAdmin) {
+		return true
+	}
+	if ports.EffectiveVerb(claims.Scopes, clusterID, hiveID).AtLeast(min) {
+		return true
+	}
+	if cfg.Enforced {
+		dto.Abort(c, http.StatusForbidden, dto.CodeForbidden, "insufficient permissions")
+		return false
+	}
+	c.Set(shadowDenyKey, "insufficient_verb")
+	return true
+}
+
 // resolveTarget computes the (cluster, hive) the effective verb is evaluated
 // against. Returns ok=false when it cannot be determined.
 func resolveTarget(c *gin.Context, target Target, param string, resolver ResourceResolver) (uuid.UUID, uuid.UUID, bool) {

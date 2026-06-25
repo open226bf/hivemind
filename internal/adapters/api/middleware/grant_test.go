@@ -110,3 +110,50 @@ func TestRequireVerb_ShadowModeNeverBlocks(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
+
+// TestAuthorizeVerb covers the handler-level check used where the target hive
+// comes from the body / a lookup, not a URL param (discovery adopt/release, ADR
+// 0004): same policy as RequireVerb but evaluated on pre-resolved coordinates.
+func TestAuthorizeVerb(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	key, _, err := auth.LoadOrGenerateKey("")
+	require.NoError(t, err)
+	tokens := auth.NewTokenService(auth.Config{PrivateKey: key, Issuer: "hivemind"})
+
+	clusterID := uuid.New()
+	hiveID := uuid.New()
+
+	newRouter := func(cfg middleware.ACLConfig) *gin.Engine {
+		r := gin.New()
+		r.POST("/act", middleware.Auth(tokens), func(c *gin.Context) {
+			if !middleware.AuthorizeVerb(c, cfg, clusterID, hiveID, acl.VerbWrite) {
+				return
+			}
+			c.Status(http.StatusOK)
+		})
+		return r
+	}
+	call := func(cfg middleware.ACLConfig, bearer string) int {
+		req := httptest.NewRequest(http.MethodPost, "/act", nil)
+		req.Header.Set("Authorization", "Bearer "+bearer)
+		w := httptest.NewRecorder()
+		newRouter(cfg).ServeHTTP(w, req)
+		return w.Code
+	}
+
+	enforced := middleware.ACLConfig{Enforced: true}
+	shadow := middleware.ACLConfig{Enforced: false}
+	clusterWrite := []ports.Scope{{Type: acl.ResourceCluster, ID: clusterID, Verb: acl.VerbWrite}}
+	hiveWrite := []ports.Scope{{Type: acl.ResourceHive, ID: hiveID, Verb: acl.VerbWrite}}
+	clusterRead := []ports.Scope{{Type: acl.ResourceCluster, ID: clusterID, Verb: acl.VerbRead}}
+
+	// Enforced.
+	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleAdmin, nil)))                   // admin bypass
+	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, clusterWrite)))       // cluster write cascades
+	assert.Equal(t, http.StatusOK, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, hiveWrite)))          // hive-specific write
+	assert.Equal(t, http.StatusForbidden, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, clusterRead))) // read < write
+	assert.Equal(t, http.StatusForbidden, call(enforced, tokenWithScopes(t, tokens, user.RoleOperator, nil)))         // no grant
+
+	// Shadow mode never blocks, even with no grant.
+	assert.Equal(t, http.StatusOK, call(shadow, tokenWithScopes(t, tokens, user.RoleOperator, nil)))
+}

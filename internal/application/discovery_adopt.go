@@ -127,6 +127,21 @@ func (s *DiscoveryService) Release(ctx context.Context, clusterID uuid.UUID, swa
 // Hivemind record owns.
 var ErrServiceNotAdopted = errors.New("no managed Hivemind service owns this Swarm service")
 
+// OwnedHive returns the hive of the managed Hivemind service that owns swarmID on
+// the cluster (nil = no hive), or ErrServiceNotAdopted when none does. The API
+// uses it to authorize release against the owning hive (ADR 0003/0004) before
+// acting.
+func (s *DiscoveryService) OwnedHive(ctx context.Context, clusterID uuid.UUID, swarmServiceID string) (*uuid.UUID, error) {
+	svc, err := s.findBySwarmID(ctx, clusterID, swarmServiceID)
+	if err != nil {
+		return nil, err
+	}
+	if svc == nil {
+		return nil, ErrServiceNotAdopted
+	}
+	return svc.HiveID, nil
+}
+
 // findBySwarmID returns the cluster's persisted service that owns swarmID, or
 // nil when none does.
 func (s *DiscoveryService) findBySwarmID(ctx context.Context, clusterID uuid.UUID, swarmID string) (*service.Service, error) {
