@@ -190,7 +190,8 @@ func (h *DiscoveryHandler) writeAdoptError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, application.ErrAlreadyManaged):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
-	case errors.Is(err, service.ErrInvalidName), errors.Is(err, service.ErrInvalidImage):
+	case errors.Is(err, service.ErrInvalidName), errors.Is(err, service.ErrInvalidAdoptedName),
+		errors.Is(err, service.ErrInvalidImage):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
 		writeError(c, err, "service not found")

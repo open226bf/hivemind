@@ -163,7 +163,7 @@ func (s *DiscoveryService) findBySwarmID(ctx context.Context, clusterID uuid.UUI
 // report a complete one, so the record stays editable post-adoption.
 func buildAdoptedService(in AdoptInput, spec ports.ServiceSpec) (*service.Service, error) {
 	image, tag := splitImageTag(spec.Image)
-	svc, err := service.New(spec.Name, image, tag, spec.Replicas, in.HiveID)
+	svc, err := service.NewAdopted(spec.Name, image, tag, spec.Replicas, in.HiveID)
 	if err != nil {
 		return nil, err
 	}

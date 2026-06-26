@@ -11,6 +11,7 @@ import (
 
 var (
 	ErrInvalidName          = errors.New("service name must match ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
+	ErrInvalidAdoptedName   = errors.New("adopted service name is not a valid Docker Swarm service name")
 	ErrInvalidImage         = errors.New("image is required")
 	ErrInvalidReplicas      = errors.New("replicas must be >= 0")
 	ErrResourceConflict     = errors.New("resource limit must be >= reservation")
@@ -23,6 +24,12 @@ var (
 )
 
 var nameRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
+
+// swarmNameRegex matches what Docker Swarm itself permits for a service name
+// (uppercase, '_' and '.' included — e.g. a `docker stack deploy` "stack_svc").
+// Used when ADOPTING a pre-existing service whose name is a given fact, so the
+// stricter create-time nameRegex must not reject it (ADR 0004).
+var swarmNameRegex = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$`)
 
 type Status string
 
@@ -183,6 +190,21 @@ func New(name, image, tag string, replicas uint64, hiveId *uuid.UUID) (*Service,
 	if !nameRegex.MatchString(name) {
 		return nil, ErrInvalidName
 	}
+	return newService(name, image, tag, replicas, hiveId)
+}
+
+// NewAdopted builds a Service for a pre-existing Swarm service being adopted
+// (ADR 0004). It accepts the live service's real name — which may use the wider
+// Swarm charset (e.g. underscores from a stack deploy) that New rejects for the
+// names Hivemind generates itself.
+func NewAdopted(name, image, tag string, replicas uint64, hiveId *uuid.UUID) (*Service, error) {
+	if !swarmNameRegex.MatchString(name) {
+		return nil, ErrInvalidAdoptedName
+	}
+	return newService(name, image, tag, replicas, hiveId)
+}
+
+func newService(name, image, tag string, replicas uint64, hiveId *uuid.UUID) (*Service, error) {
 	if strings.TrimSpace(image) == "" {
 		return nil, ErrInvalidImage
 	}

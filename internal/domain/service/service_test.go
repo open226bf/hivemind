@@ -26,6 +26,22 @@ func TestNew_InvalidName(t *testing.T) {
 	}
 }
 
+func TestNewAdopted_AcceptsSwarmNames(t *testing.T) {
+	// `docker stack deploy` names (underscores, mixed case, dots) must be
+	// adoptable — New rejects them, NewAdopted accepts them (ADR 0004).
+	for _, name := range []string{"orange-gateway_virtual-card", "report-man_backend", "My-Service", "a.b_c-d"} {
+		_, err := service.NewAdopted(name, "nginx", "latest", 1, nil)
+		assert.NoError(t, err, "NewAdopted should accept Swarm name %q", name)
+	}
+}
+
+func TestNewAdopted_RejectsGarbage(t *testing.T) {
+	for _, name := range []string{"", "-leading", "trailing-", "has space"} {
+		_, err := service.NewAdopted(name, "nginx", "latest", 1, nil)
+		assert.ErrorIs(t, err, service.ErrInvalidAdoptedName, "expected error for name=%q", name)
+	}
+}
+
 func TestFullImage(t *testing.T) {
 	s, _ := service.New("my-api", "registry.example.com/my-api", "v1.0.0", 2, nil)
 	assert.Equal(t, "registry.example.com/my-api:v1.0.0", s.FullImage())
