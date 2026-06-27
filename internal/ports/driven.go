@@ -351,13 +351,20 @@ type NetworkAttachment struct {
 type SecretAttachment struct {
 	SwarmSecretID   string
 	SwarmSecretName string
-	TargetPath      string
+	// Name is the stable secret name (no _vN suffix). Used as the mount filename
+	// under /run/secrets when TargetPath is empty, so the file stays
+	// /run/secrets/<name> across rotations instead of moving to <name>_v<n>.
+	Name       string
+	TargetPath string
 }
 
 type ConfigAttachment struct {
 	SwarmConfigID   string
 	SwarmConfigName string
-	TargetPath      string
+	// Name is the stable config name (no _vN suffix); mount-filename fallback when
+	// TargetPath is empty (see SecretAttachment.Name).
+	Name       string
+	TargetPath string
 }
 
 // LogOptions controls a service log stream (F-V2-01).

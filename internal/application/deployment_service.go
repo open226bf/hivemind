@@ -485,6 +485,7 @@ func (s *DeploymentService) buildSpec(ctx context.Context, orch ports.Orchestrat
 		spec.Secrets = append(spec.Secrets, ports.SecretAttachment{
 			SwarmSecretID:   swarmID,
 			SwarmSecretName: swarmName,
+			Name:            sec.Name,
 			TargetPath:      a.TargetPath,
 		})
 	}
@@ -511,6 +512,7 @@ func (s *DeploymentService) buildSpec(ctx context.Context, orch ports.Orchestrat
 		spec.Configs = append(spec.Configs, ports.ConfigAttachment{
 			SwarmConfigID:   swarmID,
 			SwarmConfigName: swarmName,
+			Name:            cfg.Name,
 			TargetPath:      a.TargetPath,
 		})
 	}
