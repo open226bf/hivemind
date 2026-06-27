@@ -731,7 +731,7 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 			SecretID:   s.SwarmSecretID,
 			SecretName: s.SwarmSecretName,
 			File: &swarm.SecretReferenceFileTarget{
-				Name: secretFileName(s.TargetPath, s.SwarmSecretName),
+				Name: secretFileName(s.TargetPath, s.Name),
 				Mode: 0o444,
 			},
 		})
@@ -741,7 +741,7 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 			ConfigID:   c.SwarmConfigID,
 			ConfigName: c.SwarmConfigName,
 			File: &swarm.ConfigReferenceFileTarget{
-				Name: defaultStr(c.TargetPath, c.SwarmConfigName),
+				Name: defaultStr(c.TargetPath, c.Name),
 				Mode: 0o444,
 			},
 		})

@@ -13,6 +13,8 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/open226bf/hivemind/internal/ports"
 )
 
 // newTestOrchestrator points a real Docker client at an httptest server so the
@@ -136,4 +138,31 @@ func TestListServices_Empty(t *testing.T) {
 	out, err := o.ListServices(context.Background())
 	require.NoError(t, err)
 	assert.Empty(t, out)
+}
+
+func TestToSwarmSpec_SecretConfigMountFilenames(t *testing.T) {
+	o := &SwarmOrchestrator{}
+	spec := ports.ServiceSpec{
+		Name:     "app",
+		Image:    "nginx",
+		Replicas: 1,
+		Secrets: []ports.SecretAttachment{
+			// No target path → mount under the STABLE name, not the versioned
+			// SwarmSecretName, so /run/secrets/db_password is stable across rotations.
+			{SwarmSecretID: "sid1", SwarmSecretName: "db_password_v3", Name: "db_password"},
+			// Target path with a directory → basename only (Swarm mounts only under
+			// /run/secrets, it cannot honour an arbitrary directory).
+			{SwarmSecretID: "sid2", SwarmSecretName: "api_token_v1", Name: "api_token", TargetPath: "/app/conf/token"},
+		},
+		Configs: []ports.ConfigAttachment{
+			{SwarmConfigID: "cid1", SwarmConfigName: "nginx_conf_v2", Name: "nginx_conf"},
+		},
+	}
+
+	cs := o.toSwarmSpec(spec).TaskTemplate.ContainerSpec
+	require.Len(t, cs.Secrets, 2)
+	assert.Equal(t, "db_password", cs.Secrets[0].File.Name, "empty target path → stable name, not db_password_v3")
+	assert.Equal(t, "token", cs.Secrets[1].File.Name, "directory dropped to basename")
+	require.Len(t, cs.Configs, 1)
+	assert.Equal(t, "nginx_conf", cs.Configs[0].File.Name, "config: empty target path → stable name")
 }
