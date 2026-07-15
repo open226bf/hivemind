@@ -324,35 +324,67 @@ func (h *DeploymentHandler) Logs(c *gin.Context) {
 	}
 	defer func() { _ = stream.Close() }()
 
-	flusher, ok := c.Writer.(http.Flusher)
-	if !ok {
-		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "streaming unsupported")
-		return
-	}
-
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
 	c.Header("X-Accel-Buffering", "no") // disable proxy buffering (nginx)
+	c.Writer.WriteHeader(http.StatusOK)
 
-	// Close the stream when the client disconnects so the scanner unblocks.
+	// SSE is long-lived; clear the server's 30s WriteTimeout (see cmd/server) for
+	// this connection so a quiet follow stream is not severed mid-stream, exactly
+	// like the status stream. A heartbeat comment further keeps reverse proxies
+	// from idle-closing the connection during log lulls (F-V2-01).
+	rc := http.NewResponseController(c.Writer)
+	_ = rc.SetWriteDeadline(time.Time{})
+	_ = rc.Flush()
+
 	ctx := c.Request.Context()
+	// Close the upstream stream when the client disconnects so the scanner unblocks.
 	go func() {
 		<-ctx.Done()
 		_ = stream.Close()
 	}()
 
-	scanner := bufio.NewScanner(stream)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scanner.Scan() {
-		if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", scanner.Text()); err != nil {
-			return // client gone
+	// Scan log lines in a goroutine so the writer loop can also fire heartbeats
+	// during quiet periods instead of blocking on the next line.
+	lines := make(chan string, 64)
+	go func() {
+		defer close(lines)
+		scanner := bufio.NewScanner(stream)
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		for scanner.Scan() {
+			select {
+			case lines <- scanner.Text():
+			case <-ctx.Done():
+				return
+			}
 		}
-		flusher.Flush()
+	}()
+
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case line, ok := <-lines:
+			if !ok {
+				// Upstream ended (non-follow, or the service's log stream closed).
+				_, _ = fmt.Fprint(c.Writer, "event: end\ndata: \n\n")
+				_ = rc.Flush()
+				return
+			}
+			if _, err := fmt.Fprintf(c.Writer, "data: %s\n\n", line); err != nil {
+				return // client gone
+			}
+			_ = rc.Flush()
+		case <-heartbeat.C:
+			if _, err := fmt.Fprint(c.Writer, ": ping\n\n"); err != nil {
+				return // client gone
+			}
+			_ = rc.Flush()
+		}
 	}
-	// Signal completion for non-follow streams.
-	_, _ = fmt.Fprint(c.Writer, "event: end\ndata: \n\n")
-	flusher.Flush()
 }
 
 // Get godoc
