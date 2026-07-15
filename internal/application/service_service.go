@@ -291,13 +291,35 @@ func (s *ServiceService) SetPlacement(ctx context.Context, id uuid.UUID, p servi
 // SetEnvVars atomically replaces the full set of environment variables for a
 // service (F-MVP-04). Keys are validated and must be unique; secret values are
 // encrypted at rest by the repository. Returns the stored variables.
+//
+// Secret values are masked on read, so the client cannot echo them back. A
+// submitted secret with an empty value therefore means "keep the current
+// value", not "clear it": the existing stored value is substituted so an edit
+// that leaves a secret field blank never wipes it. A secret is only overwritten
+// when a new value is actually supplied.
 func (s *ServiceService) SetEnvVars(ctx context.Context, serviceID uuid.UUID, inputs []EnvVarInput) ([]service.EnvVar, error) {
 	if _, err := s.services.FindByID(ctx, serviceID); err != nil {
 		return nil, err
 	}
 
+	current, err := s.services.GetEnvVars(ctx, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	existingSecret := make(map[string]string, len(current))
+	for _, ev := range current {
+		if ev.IsSecret {
+			existingSecret[ev.Key] = ev.Value
+		}
+	}
+
 	vars := make([]service.EnvVar, 0, len(inputs))
 	for _, in := range inputs {
+		if in.IsSecret && in.Value == "" {
+			if prev, ok := existingSecret[in.Key]; ok {
+				in.Value = prev
+			}
+		}
 		ev, err := service.NewEnvVar(serviceID, in.Key, in.Value, in.IsSecret)
 		if err != nil {
 			return nil, err

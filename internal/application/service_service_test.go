@@ -522,6 +522,64 @@ func TestServiceSetEnvVars_Success(t *testing.T) {
 	assert.Len(t, stored, 2)
 }
 
+// A submitted secret with an empty value keeps its stored value: secrets are
+// masked on read, so a blank field means "unchanged", never "clear".
+func TestServiceSetEnvVars_BlankSecretKeepsStoredValue(t *testing.T) {
+	repo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	repo.add(s)
+	svc := newServiceSvc(repo)
+
+	_, err := svc.SetEnvVars(context.Background(), s.ID, []application.EnvVarInput{
+		{Key: "API_KEY", Value: "s3cr3t", IsSecret: true},
+		{Key: "LOG_LEVEL", Value: "info"},
+	})
+	require.NoError(t, err)
+
+	// Re-submit with the secret field blank (as the masked UI does) and a
+	// changed plain var. The secret must survive; the plain var updates.
+	vars, err := svc.SetEnvVars(context.Background(), s.ID, []application.EnvVarInput{
+		{Key: "API_KEY", Value: "", IsSecret: true},
+		{Key: "LOG_LEVEL", Value: "debug"},
+	})
+	require.NoError(t, err)
+
+	got := map[string]service.EnvVar{}
+	for _, v := range vars {
+		got[v.Key] = v
+	}
+	assert.Equal(t, "s3cr3t", got["API_KEY"].Value, "blank secret should keep its stored value")
+	assert.Equal(t, "debug", got["LOG_LEVEL"].Value)
+}
+
+// A supplied secret value overwrites the stored one; a plain var can still be
+// cleared to empty.
+func TestServiceSetEnvVars_SuppliedSecretOverwrites(t *testing.T) {
+	repo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	repo.add(s)
+	svc := newServiceSvc(repo)
+
+	_, err := svc.SetEnvVars(context.Background(), s.ID, []application.EnvVarInput{
+		{Key: "API_KEY", Value: "old", IsSecret: true},
+		{Key: "GREETING", Value: "hello"},
+	})
+	require.NoError(t, err)
+
+	vars, err := svc.SetEnvVars(context.Background(), s.ID, []application.EnvVarInput{
+		{Key: "API_KEY", Value: "new", IsSecret: true},
+		{Key: "GREETING", Value: ""},
+	})
+	require.NoError(t, err)
+
+	got := map[string]service.EnvVar{}
+	for _, v := range vars {
+		got[v.Key] = v
+	}
+	assert.Equal(t, "new", got["API_KEY"].Value, "a supplied secret value must overwrite")
+	assert.Equal(t, "", got["GREETING"].Value, "a plain var can still be cleared to empty")
+}
+
 func TestServiceSetEnvVars_InvalidKey(t *testing.T) {
 	repo := newFakeServiceRepo()
 	s := mkService(t, "my-service")
