@@ -37,6 +37,7 @@ const defaultConvergenceTimeout = 2 * time.Minute
 // the engine itself is unit-testable without Docker.
 type DeploymentService struct {
 	services    ports.ServiceRepository
+	hives       ports.HiveRepository
 	deployments ports.DeploymentRepository
 	networks    ports.NetworkRepository
 	secrets     ports.SecretRepository
@@ -49,6 +50,7 @@ type DeploymentService struct {
 
 func NewDeploymentService(
 	services ports.ServiceRepository,
+	hives ports.HiveRepository,
 	deployments ports.DeploymentRepository,
 	networks ports.NetworkRepository,
 	secrets ports.SecretRepository,
@@ -58,6 +60,7 @@ func NewDeploymentService(
 ) *DeploymentService {
 	return &DeploymentService{
 		services:    services,
+		hives:       hives,
 		deployments: deployments,
 		networks:    networks,
 		secrets:     secrets,
@@ -433,12 +436,23 @@ func (s *DeploymentService) buildSpec(ctx context.Context, orch ports.Orchestrat
 		Labels: map[string]string{"hivemind.service.id": svc.ID.String()},
 	}
 
-	// Environment variables.
+	// Environment variables: the hive's global vars form the base layer (applied
+	// to every service in the hive), then the service's own vars override on a
+	// key collision. Hive env var changes take effect on the next deploy.
+	spec.Env = map[string]string{}
+	if svc.HiveID != nil {
+		hiveEnv, err := s.hives.GetEnvVars(ctx, *svc.HiveID)
+		if err != nil {
+			return spec, err
+		}
+		for _, e := range hiveEnv {
+			spec.Env[e.Key] = e.Value
+		}
+	}
 	envVars, err := s.services.GetEnvVars(ctx, svc.ID)
 	if err != nil {
 		return spec, err
 	}
-	spec.Env = make(map[string]string, len(envVars))
 	for _, e := range envVars {
 		spec.Env[e.Key] = e.Value
 	}

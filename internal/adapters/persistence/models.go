@@ -216,6 +216,18 @@ type hiveModel struct {
 
 func (hiveModel) TableName() string { return "hives" }
 
+// hiveEnvVarModel holds a hive-scoped ("global") env var, applied to every
+// service in the hive at deploy time. Secret values are stored encrypted.
+type hiveEnvVarModel struct {
+	ID       string `gorm:"type:uuid;primaryKey;column:id"`
+	HiveID   string `gorm:"type:uuid;not null;index;column:hive_id"`
+	Key      string `gorm:"not null;column:key"`
+	Value    string `gorm:"column:value"`
+	IsSecret bool   `gorm:"column:is_secret"`
+}
+
+func (hiveEnvVarModel) TableName() string { return "hive_env_vars" }
+
 // ─── Volume ───────────────────────────────────────────────────────────────────
 
 type volumeModel struct {

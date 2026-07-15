@@ -16,6 +16,7 @@ func Migrate(db *gorm.DB) error {
 		&agentCAModel{},
 		&userModel{},
 		&hiveModel{},
+		&hiveEnvVarModel{},
 		&serviceModel{},
 		&envVarModel{},
 		&networkModel{},

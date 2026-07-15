@@ -217,6 +217,10 @@ type HiveRepository interface {
 	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*hive.Hive, int64, error)
 	Update(ctx context.Context, h *hive.Hive) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	// SetEnvVars replaces the hive's global env vars; GetEnvVars returns them with
+	// secret values decrypted. Applied to every service in the hive at deploy time.
+	SetEnvVars(ctx context.Context, hiveID uuid.UUID, vars []hive.EnvVar) error
+	GetEnvVars(ctx context.Context, hiveID uuid.UUID) ([]hive.EnvVar, error)
 }
 
 // ─── Template ─────────────────────────────────────────────────────────────────

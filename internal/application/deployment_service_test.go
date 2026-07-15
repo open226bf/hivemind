@@ -15,6 +15,7 @@ import (
 	"github.com/open226bf/hivemind/internal/adapters/orchestrator"
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/deployment"
+	"github.com/open226bf/hivemind/internal/domain/hive"
 	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/ports"
 	"github.com/open226bf/hivemind/pkg/domainerrors"
@@ -202,7 +203,7 @@ func newDeploymentSvc(t *testing.T) (*application.DeploymentService, *fakeServic
 	cfgRepo := newFakeConfigRepo()
 	orch := &fakeOrchestrator{}
 	notif := &fakeNotifier{}
-	svc := application.NewDeploymentService(svcRepo, depRepo, netRepo, secRepo, cfgRepo, orchestrator.NewStaticRegistry(orch), notif)
+	svc := application.NewDeploymentService(svcRepo, newFakeHiveRepo(), depRepo, netRepo, secRepo, cfgRepo, orchestrator.NewStaticRegistry(orch), notif)
 	return svc, svcRepo, depRepo, orch, notif
 }
 
@@ -241,7 +242,7 @@ func TestDeploymentBegin_OrchestratorUnavailable(t *testing.T) {
 	svcRepo := newFakeServiceRepo()
 	s := mkService(t, "api")
 	svcRepo.add(s)
-	svc := application.NewDeploymentService(svcRepo, newFakeDeploymentRepo(), newFakeNetworkRepo(), newFakeSecretRepo(), newFakeConfigRepo(), nil, nil)
+	svc := application.NewDeploymentService(svcRepo, newFakeHiveRepo(), newFakeDeploymentRepo(), newFakeNetworkRepo(), newFakeSecretRepo(), newFakeConfigRepo(), nil, nil)
 
 	_, err := svc.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
 	assert.ErrorIs(t, err, application.ErrOrchestratorUnavailable)
@@ -374,6 +375,39 @@ func TestDeploymentExecute_BuildsEnvAndSecrets(t *testing.T) {
 	require.NoError(t, svc.Execute(context.Background(), dep.ID, application.DeployOptions{}))
 
 	assert.Equal(t, "info", orch.lastSpec.Env["LOG_LEVEL"])
+}
+
+// A service in a hive inherits the hive's global env vars; its own vars override
+// on a key collision.
+func TestDeploymentExecute_MergesHiveGlobalEnv(t *testing.T) {
+	svcRepo := newFakeServiceRepo()
+	hiveRepo := newFakeHiveRepo()
+	orch := &fakeOrchestrator{}
+	dep := application.NewDeploymentService(
+		svcRepo, hiveRepo, newFakeDeploymentRepo(), newFakeNetworkRepo(),
+		newFakeSecretRepo(), newFakeConfigRepo(), orchestrator.NewStaticRegistry(orch), nil,
+	)
+
+	h, err := hive.New(uuid.Nil, "team", "", "")
+	require.NoError(t, err)
+	require.NoError(t, hiveRepo.Save(context.Background(), h))
+	require.NoError(t, hiveRepo.SetEnvVars(context.Background(), h.ID, []hive.EnvVar{
+		{Key: "LOG_LEVEL", Value: "warn"},   // overridden by the service
+		{Key: "REGION", Value: "eu-west-1"}, // hive-only
+	}))
+
+	s := mkService(t, "api")
+	s.HiveID = &h.ID
+	svcRepo.add(s)
+	require.NoError(t, svcRepo.SetEnvVars(context.Background(), s.ID, []service.EnvVar{
+		{Key: "LOG_LEVEL", Value: "debug"},
+	}))
+
+	d, _ := dep.Begin(context.Background(), application.BeginDeploymentInput{ServiceID: s.ID})
+	require.NoError(t, dep.Execute(context.Background(), d.ID, application.DeployOptions{}))
+
+	assert.Equal(t, "debug", orch.lastSpec.Env["LOG_LEVEL"], "service var overrides hive var")
+	assert.Equal(t, "eu-west-1", orch.lastSpec.Env["REGION"], "hive-only var is applied")
 }
 
 func TestDeploymentExecute_ConvergenceFailure(t *testing.T) {
