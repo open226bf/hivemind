@@ -43,6 +43,13 @@ func (h *HiveHandler) Register(protected *gin.RouterGroup, resolver middleware.R
 	g.DELETE("/:id", middleware.RequireRole(user.RoleOperator),
 		middleware.RequireVerb(middleware.TargetHive, "id", acl.VerbManage, resolver, cfg), h.Delete)
 
+	// Hive-global environment variables (applied to every service in the hive at
+	// deploy time). Read needs the read verb; replacing the set needs write.
+	g.GET("/:id/env", middleware.RequireRole(user.RoleViewer),
+		middleware.RequireVerb(middleware.TargetHive, "id", acl.VerbRead, resolver, cfg), h.GetEnvVars)
+	g.PUT("/:id/env", middleware.RequireRole(user.RoleOperator),
+		middleware.RequireVerb(middleware.TargetHive, "id", acl.VerbWrite, resolver, cfg), h.SetEnvVars)
+
 	// Assign/move/unassign a service to a hive (write on the service's hive).
 	protected.PUT("/services/:id/hive", middleware.RequireRole(user.RoleOperator),
 		middleware.RequireVerb(middleware.TargetService, "id", acl.VerbWrite, resolver, cfg), h.AssignService)
@@ -256,17 +263,92 @@ func (h *HiveHandler) AssignService(c *gin.Context) {
 	c.JSON(http.StatusOK, toServiceResponse(svc))
 }
 
+// GetEnvVars godoc
+//
+//	@Summary		Get a hive's global env vars
+//	@Description	Environment variables applied to every service in the hive at deploy time. Secret values are masked (empty string).
+//	@Tags			hives
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			id	path		string	true	"Hive ID (UUID)"
+//	@Success		200	{object}	dto.EnvVarsResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/hives/{id}/env [get]
+func (h *HiveHandler) GetEnvVars(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	vars, err := h.svc.GetEnvVars(c.Request.Context(), id)
+	if err != nil {
+		h.writeHiveError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toHiveEnvVarsResponse(vars))
+}
+
+// SetEnvVars godoc
+//
+//	@Summary		Replace a hive's global env vars
+//	@Description	Replaces the full set of hive-global env vars applied to every service in the hive. A service-level variable with the same key overrides the hive value. Changes take effect on the next deploy of each service. A secret submitted with an empty value keeps its stored value.
+//	@Tags			hives
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string					true	"Hive ID (UUID)"
+//	@Param			body	body		dto.SetEnvVarsRequest	true	"Full env var set"
+//	@Success		200		{object}	dto.EnvVarsResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		422		{object}	dto.ErrorResponse	"invalid or duplicate key"
+//	@Router			/hives/{id}/env [put]
+func (h *HiveHandler) SetEnvVars(c *gin.Context) {
+	id, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	var req dto.SetEnvVarsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+	inputs := make([]application.EnvVarInput, len(req.Vars))
+	for i, v := range req.Vars {
+		inputs[i] = application.EnvVarInput{Key: v.Key, Value: v.Value, IsSecret: v.IsSecret}
+	}
+	vars, err := h.svc.SetEnvVars(c.Request.Context(), id, inputs)
+	if err != nil {
+		h.writeHiveError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toHiveEnvVarsResponse(vars))
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func (h *HiveHandler) writeHiveError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, hive.ErrHiveNotEmpty):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
-	case errors.Is(err, hive.ErrInvalidName), errors.Is(err, hive.ErrInvalidColor):
+	case errors.Is(err, hive.ErrInvalidName), errors.Is(err, hive.ErrInvalidColor),
+		errors.Is(err, hive.ErrInvalidEnvKey), errors.Is(err, hive.ErrDuplicateKey):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
 		writeError(c, err, "resource not found")
 	}
+}
+
+// toHiveEnvVarsResponse maps hive env vars to the API response, masking secret
+// values (never echoed back, even to operators).
+func toHiveEnvVarsResponse(vars []hive.EnvVar) dto.EnvVarsResponse {
+	out := make([]dto.EnvVarDTO, len(vars))
+	for i, v := range vars {
+		value := v.Value
+		if v.IsSecret {
+			value = ""
+		}
+		out[i] = dto.EnvVarDTO{Key: v.Key, Value: value, IsSecret: v.IsSecret}
+	}
+	return dto.EnvVarsResponse{Vars: out, Count: len(out)}
 }
 
 func toHiveResponse(h *hive.Hive, serviceCount int64) dto.HiveResponse {

@@ -119,7 +119,7 @@ func main() {
 
 	clusterRepo := persistence.NewClusterRepository(db, cipher)
 	userRepo := persistence.NewUserRepository(db)
-	hiveRepo := persistence.NewHiveRepository(db)
+	hiveRepo := persistence.NewHiveRepository(db, cipher)
 	serviceRepo := persistence.NewServiceRepository(db, cipher)
 	networkRepo := persistence.NewNetworkRepository(db)
 	volumeRepo := persistence.NewVolumeRepository(db)
@@ -193,7 +193,7 @@ func main() {
 	secretSvc := application.NewSecretService(secretRepo, serviceRepo)
 	configSvc := application.NewConfigService(configRepo, serviceRepo)
 	templateSvc := application.NewTemplateService(templateRepo, serviceSvc, networkSvc)
-	deploymentSvc := application.NewDeploymentService(serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
+	deploymentSvc := application.NewDeploymentService(serviceRepo, hiveRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
 	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)
 	discoverySvc := application.NewDiscoveryService(registry, serviceRepo, snapshotSvc)
 	clusterSvc := application.NewClusterService(registry, clusterRepo, hub, serviceRepo, deploymentRepo, networkRepo, secretRepo, configRepo)

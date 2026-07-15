@@ -19,10 +19,23 @@ import (
 type fakeHiveRepo struct {
 	byID   map[uuid.UUID]*hive.Hive
 	byName map[string]bool
+	env    map[uuid.UUID][]hive.EnvVar
 }
 
 func newFakeHiveRepo() *fakeHiveRepo {
-	return &fakeHiveRepo{byID: map[uuid.UUID]*hive.Hive{}, byName: map[string]bool{}}
+	return &fakeHiveRepo{
+		byID:   map[uuid.UUID]*hive.Hive{},
+		byName: map[string]bool{},
+		env:    map[uuid.UUID][]hive.EnvVar{},
+	}
+}
+
+func (r *fakeHiveRepo) SetEnvVars(_ context.Context, hiveID uuid.UUID, vars []hive.EnvVar) error {
+	r.env[hiveID] = vars
+	return nil
+}
+func (r *fakeHiveRepo) GetEnvVars(_ context.Context, hiveID uuid.UUID) ([]hive.EnvVar, error) {
+	return r.env[hiveID], nil
 }
 
 func (r *fakeHiveRepo) Save(_ context.Context, h *hive.Hive) error {
@@ -151,4 +164,57 @@ func TestHiveListServices(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, services, 1)
 	assert.Equal(t, "in-hive", services[0].Name)
+}
+
+// ─── Global env vars ──────────────────────────────────────────────────────────
+
+func TestHiveSetEnvVars_Success(t *testing.T) {
+	svc := application.NewHiveService(newFakeHiveRepo(), newFakeServiceRepo())
+	h, _ := svc.Create(context.Background(), uuid.Nil, application.SaveHiveInput{Name: "Paiement"})
+
+	vars, err := svc.SetEnvVars(context.Background(), h.ID, []application.EnvVarInput{
+		{Key: "REGION", Value: "eu-west-1"},
+		{Key: "API_KEY", Value: "s3cr3t", IsSecret: true},
+	})
+	require.NoError(t, err)
+	require.Len(t, vars, 2)
+
+	stored, err := svc.GetEnvVars(context.Background(), h.ID)
+	require.NoError(t, err)
+	assert.Len(t, stored, 2)
+}
+
+func TestHiveSetEnvVars_InvalidKey(t *testing.T) {
+	svc := application.NewHiveService(newFakeHiveRepo(), newFakeServiceRepo())
+	h, _ := svc.Create(context.Background(), uuid.Nil, application.SaveHiveInput{Name: "Paiement"})
+
+	_, err := svc.SetEnvVars(context.Background(), h.ID, []application.EnvVarInput{
+		{Key: "lower-case", Value: "x"},
+	})
+	assert.ErrorIs(t, err, hive.ErrInvalidEnvKey)
+}
+
+// A secret submitted blank keeps its stored value (masked on read → blank means
+// "unchanged"), while a supplied value overwrites — same rule as service vars.
+func TestHiveSetEnvVars_BlankSecretKeepsStoredValue(t *testing.T) {
+	svc := application.NewHiveService(newFakeHiveRepo(), newFakeServiceRepo())
+	h, _ := svc.Create(context.Background(), uuid.Nil, application.SaveHiveInput{Name: "Paiement"})
+
+	_, err := svc.SetEnvVars(context.Background(), h.ID, []application.EnvVarInput{
+		{Key: "API_KEY", Value: "s3cr3t", IsSecret: true},
+	})
+	require.NoError(t, err)
+
+	vars, err := svc.SetEnvVars(context.Background(), h.ID, []application.EnvVarInput{
+		{Key: "API_KEY", Value: "", IsSecret: true},
+	})
+	require.NoError(t, err)
+	require.Len(t, vars, 1)
+	assert.Equal(t, "s3cr3t", vars[0].Value, "blank secret keeps its stored value")
+}
+
+func TestHiveSetEnvVars_HiveNotFound(t *testing.T) {
+	svc := application.NewHiveService(newFakeHiveRepo(), newFakeServiceRepo())
+	_, err := svc.SetEnvVars(context.Background(), uuid.New(), []application.EnvVarInput{{Key: "FOO", Value: "1"}})
+	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
 }

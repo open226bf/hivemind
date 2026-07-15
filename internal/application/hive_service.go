@@ -105,6 +105,60 @@ func (s *HiveService) ListServices(ctx context.Context, hiveID uuid.UUID) ([]*se
 	return items, err
 }
 
+// SetEnvVars replaces the hive's global environment variables, applied to every
+// service in the hive at deploy time (a service-level var with the same key
+// overrides it). Keys are validated and unique; secret values are encrypted at
+// rest. Like service env vars, a secret submitted blank keeps its stored value
+// (secrets are masked on read, so blank means "unchanged", not "clear").
+// Changes take effect on the next deploy of each affected service.
+func (s *HiveService) SetEnvVars(ctx context.Context, hiveID uuid.UUID, inputs []EnvVarInput) ([]hive.EnvVar, error) {
+	if _, err := s.hives.FindByID(ctx, hiveID); err != nil {
+		return nil, err
+	}
+
+	current, err := s.hives.GetEnvVars(ctx, hiveID)
+	if err != nil {
+		return nil, err
+	}
+	existingSecret := make(map[string]string, len(current))
+	for _, ev := range current {
+		if ev.IsSecret {
+			existingSecret[ev.Key] = ev.Value
+		}
+	}
+
+	vars := make([]hive.EnvVar, 0, len(inputs))
+	for _, in := range inputs {
+		if in.IsSecret && in.Value == "" {
+			if prev, ok := existingSecret[in.Key]; ok {
+				in.Value = prev
+			}
+		}
+		ev, err := hive.NewEnvVar(hiveID, in.Key, in.Value, in.IsSecret)
+		if err != nil {
+			return nil, err
+		}
+		vars = append(vars, *ev)
+	}
+	if err := hive.ValidateEnvVars(vars); err != nil {
+		return nil, err
+	}
+
+	if err := s.hives.SetEnvVars(ctx, hiveID, vars); err != nil {
+		return nil, err
+	}
+	return vars, nil
+}
+
+// GetEnvVars returns the hive's global env vars (secret values decrypted;
+// masking for API responses is the handler's responsibility).
+func (s *HiveService) GetEnvVars(ctx context.Context, hiveID uuid.UUID) ([]hive.EnvVar, error) {
+	if _, err := s.hives.FindByID(ctx, hiveID); err != nil {
+		return nil, err
+	}
+	return s.hives.GetEnvVars(ctx, hiveID)
+}
+
 // MoveService assigns a service to a hive, or clears its hive when hiveID is nil
 // (unassign). The target hive, when provided, must exist.
 func (s *HiveService) MoveService(ctx context.Context, serviceID uuid.UUID, hiveID *uuid.UUID) (*service.Service, error) {
