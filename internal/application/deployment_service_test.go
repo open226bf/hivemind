@@ -179,6 +179,7 @@ func (o *fakeOrchestrator) InspectService(context.Context, string) (*ports.Inspe
 }
 func (o *fakeOrchestrator) SetHivemindLabel(context.Context, string, string) error { return nil }
 func (o *fakeOrchestrator) ClearHivemindLabel(context.Context, string) error       { return nil }
+func (o *fakeOrchestrator) RestartService(context.Context, string, bool) error     { return nil }
 func (o *fakeOrchestrator) ClusterInfo(context.Context) (*ports.ClusterInfo, error) {
 	return &ports.ClusterInfo{}, nil
 }

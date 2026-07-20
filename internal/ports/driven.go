@@ -88,6 +88,19 @@ type UpdateServiceOptions struct {
 type Orchestrator interface {
 	DeployService(ctx context.Context, spec ServiceSpec) (swarmServiceID string, err error)
 	UpdateService(ctx context.Context, swarmServiceID string, spec ServiceSpec, opts UpdateServiceOptions) error
+
+	// RestartService forces a live Swarm service to recreate its tasks WITHOUT
+	// changing its spec: the current raw spec is re-applied with an incremented
+	// ForceUpdate, so everything the service references out-of-band (secrets,
+	// configs, mounts, networks, env, placement) is preserved exactly. It is the
+	// only safe way to restart a service Hivemind does not manage, whose spec it
+	// cannot faithfully reconstruct (ADR 0004).
+	//
+	// When pull is set, any digest pinned by Swarm is dropped from the image
+	// reference and the registry is re-queried, so the latest image for the tag
+	// is pulled. A digest-only reference (no tag) is left pinned.
+	RestartService(ctx context.Context, swarmServiceID string, pull bool) error
+
 	RemoveService(ctx context.Context, swarmServiceID string) error
 	GetServiceState(ctx context.Context, swarmServiceID string) (*ServiceState, error)
 

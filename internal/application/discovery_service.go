@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/google/uuid"
@@ -120,6 +121,31 @@ func (s *DiscoveryService) Discover(ctx context.Context, clusterID uuid.UUID) ([
 		out = append(out, d)
 	}
 	return out, nil
+}
+
+// ServiceLogs streams a live Swarm service's logs straight from the cluster, by
+// Swarm id. Unlike the managed-service log endpoint this needs no Hivemind
+// record, so operators can read the logs of a service Hivemind does not own
+// (foreign / orphan, ADR 0004). The caller owns the reader and must Close it.
+func (s *DiscoveryService) ServiceLogs(ctx context.Context, clusterID uuid.UUID, swarmServiceID string, opts ports.LogOptions) (io.ReadCloser, error) {
+	orch, err := s.orchFor(ctx, clusterID)
+	if err != nil {
+		return nil, err
+	}
+	return orch.ServiceLogs(ctx, swarmServiceID, opts)
+}
+
+// Restart forces a live Swarm service to recreate its tasks, re-pulling the
+// image. The service's spec is reused verbatim, so everything it references
+// out-of-band — secrets, configs, mounts, networks, env — keeps working exactly
+// as before; Hivemind only rolls the tasks. Safe for services it does not
+// manage, whose spec it could not faithfully rewrite (ADR 0004).
+func (s *DiscoveryService) Restart(ctx context.Context, clusterID uuid.UUID, swarmServiceID string) error {
+	orch, err := s.orchFor(ctx, clusterID)
+	if err != nil {
+		return err
+	}
+	return orch.RestartService(ctx, swarmServiceID, true)
 }
 
 type knownService struct {

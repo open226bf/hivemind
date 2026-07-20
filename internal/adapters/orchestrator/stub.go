@@ -40,6 +40,11 @@ func (*StubOrchestrator) UpdateService(_ context.Context, swarmServiceID string,
 	return nil
 }
 
+func (*StubOrchestrator) RestartService(_ context.Context, swarmServiceID string, pull bool) error {
+	slog.Info("stub: restart service", "swarm_id", swarmServiceID, "pull", pull)
+	return nil
+}
+
 func (*StubOrchestrator) RemoveService(_ context.Context, swarmServiceID string) error {
 	slog.Info("stub: remove service", "swarm_id", swarmServiceID)
 	return nil

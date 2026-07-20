@@ -36,6 +36,70 @@ func (h *DiscoveryHandler) Register(protected *gin.RouterGroup) {
 	g.GET("", middleware.RequireRole(user.RoleViewer), h.List)
 	g.POST("/:swarmId/adopt", middleware.RequireRole(user.RoleOperator), h.Adopt)
 	g.POST("/:swarmId/release", middleware.RequireRole(user.RoleOperator), h.Release)
+
+	// Supervision of services Hivemind does NOT manage: read their logs and force
+	// a restart. Both address the service by Swarm id, so they work without a
+	// Hivemind record. Authorized on the cluster (an unmanaged service has no
+	// hive): read for logs, write for restart.
+	g.GET("/:swarmId/logs", middleware.RequireRole(user.RoleViewer), h.Logs)
+	g.POST("/:swarmId/restart", middleware.RequireRole(user.RoleOperator), h.Restart)
+}
+
+// Logs godoc
+//
+//	@Summary		Stream a discovered service's logs (SSE)
+//	@Description	Streams the aggregated container logs of any service running on the cluster, addressed by Swarm id — including services Hivemind does not manage (foreign / orphan). Each line is a `data:` event; an `event: end` frame closes a non-follow stream. Authenticate with a Bearer token (use fetch/ReadableStream, not EventSource).
+//	@Tags			discovery
+//	@Security		BearerAuth
+//	@Produce		text/event-stream
+//	@Param			swarmId		path	string	true	"Swarm service ID"
+//	@Param			follow		query	bool	false	"Keep the stream open (default true)"
+//	@Param			tail		query	string	false	"Number of trailing lines, or 'all' (default 200)"
+//	@Param			timestamps	query	bool	false	"Prefix each line with an RFC3339 timestamp"
+//	@Param			since		query	string	false	"Only logs since this time (RFC3339 or duration like 10m)"
+//	@Success		200	{string}	string	"text/event-stream of log lines"
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse	"no such Swarm service"
+//	@Failure		503	{object}	dto.ErrorResponse	"orchestrator unavailable"
+//	@Router			/discovered-services/{swarmId}/logs [get]
+func (h *DiscoveryHandler) Logs(c *gin.Context) {
+	cluster := currentCluster(c)
+	if !middleware.AuthorizeVerb(c, h.cfg, cluster, uuid.Nil, acl.VerbRead) {
+		return
+	}
+	stream, err := h.svc.ServiceLogs(c.Request.Context(), cluster, c.Param("swarmId"), parseLogOptions(c))
+	if err != nil {
+		writeError(c, err, "service not found")
+		return
+	}
+	defer func() { _ = stream.Close() }()
+
+	streamLogs(c, stream)
+}
+
+// Restart godoc
+//
+//	@Summary		Force-restart a discovered service
+//	@Description	Rolls every task of a live Swarm service and re-pulls the image, WITHOUT changing its spec. The service's own definition is reused verbatim, so the secrets, configs, mounts, networks and environment it already uses keep working exactly as before — Hivemind only asks Swarm to recreate the tasks. Intended for services Hivemind does not manage; managed services should be redeployed through their own deployment flow.
+//	@Tags			discovery
+//	@Security		BearerAuth
+//	@Produce		json
+//	@Param			swarmId	path		string	true	"Swarm service ID"
+//	@Success		202		{object}	map[string]string	"restart accepted"
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse	"no such Swarm service"
+//	@Failure		503		{object}	dto.ErrorResponse	"orchestrator unavailable"
+//	@Router			/discovered-services/{swarmId}/restart [post]
+func (h *DiscoveryHandler) Restart(c *gin.Context) {
+	cluster := writeCluster(c)
+	if !middleware.AuthorizeVerb(c, h.cfg, cluster, uuid.Nil, acl.VerbWrite) {
+		return
+	}
+	if err := h.svc.Restart(c.Request.Context(), cluster, c.Param("swarmId")); err != nil {
+		writeError(c, err, "service not found")
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"status": "restarting"})
 }
 
 // List godoc

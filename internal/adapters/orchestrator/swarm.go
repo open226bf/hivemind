@@ -171,6 +171,50 @@ func (o *SwarmOrchestrator) UpdateService(ctx context.Context, swarmServiceID st
 	return nil
 }
 
+// RestartService re-applies a service's current raw spec with an incremented
+// ForceUpdate — Swarm's documented way to recreate every task without changing
+// anything else. Because the spec is reused verbatim, secrets, configs, mounts,
+// networks and env the service references stay exactly as they are; Hivemind
+// only asks Swarm to roll the tasks. With pull set, the digest Swarm pinned at
+// deploy time is stripped and the registry re-queried so the tag resolves to the
+// latest image.
+func (o *SwarmOrchestrator) RestartService(ctx context.Context, swarmServiceID string, pull bool) error {
+	current, _, err := o.cli.ServiceInspectWithRaw(ctx, swarmServiceID, types.ServiceInspectOptions{})
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return ports.ErrSwarmServiceNotFound
+		}
+		return fmt.Errorf("service inspect: %w", err)
+	}
+	spec := current.Spec
+	spec.TaskTemplate.ForceUpdate = current.Spec.TaskTemplate.ForceUpdate + 1
+	if pull && spec.TaskTemplate.ContainerSpec != nil {
+		spec.TaskTemplate.ContainerSpec.Image = stripPinnedDigest(spec.TaskTemplate.ContainerSpec.Image)
+	}
+	if _, err := o.cli.ServiceUpdate(ctx, swarmServiceID, current.Version, spec,
+		types.ServiceUpdateOptions{QueryRegistry: pull}); err != nil {
+		return fmt.Errorf("service update (restart): %w", err)
+	}
+	return nil
+}
+
+// stripPinnedDigest drops the "@sha256:…" Swarm appends once it has resolved an
+// image, so the tag is re-resolved against the registry on the next update.
+// A digest-only reference (no tag to re-resolve) is returned untouched rather
+// than silently downgraded to :latest.
+func stripPinnedDigest(image string) string {
+	at := strings.Index(image, "@")
+	if at <= 0 {
+		return image
+	}
+	base := image[:at]
+	// A tag is a ':' after the last '/' (which would otherwise be a registry port).
+	if strings.LastIndex(base, ":") > strings.LastIndex(base, "/") {
+		return base
+	}
+	return image
+}
+
 func (o *SwarmOrchestrator) RemoveService(ctx context.Context, swarmServiceID string) error {
 	if err := o.cli.ServiceRemove(ctx, swarmServiceID); err != nil {
 		if errdefs.IsNotFound(err) {
