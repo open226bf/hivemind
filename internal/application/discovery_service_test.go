@@ -67,3 +67,38 @@ func TestDiscover_NilRegistryUnavailable(t *testing.T) {
 	_, err := svc.Discover(context.Background(), uuid.Nil)
 	assert.ErrorIs(t, err, application.ErrOrchestratorUnavailable)
 }
+
+// Restarting a discovered service delegates a spec-preserving force-restart to
+// the orchestrator, always asking for a re-pull of the image.
+func TestDiscoveryRestart_ForcesRestartWithPull(t *testing.T) {
+	orch := newAdoptStub(ports.ServiceSpec{Name: "legacy-api", Image: "nginx:1.25"})
+	svc := application.NewDiscoveryService(orchestrator.NewStaticRegistry(orch), newFakeServiceRepo(), nil)
+
+	require.NoError(t, svc.Restart(context.Background(), uuid.New(), "swarm-xyz"))
+
+	assert.True(t, orch.restarted["swarm-xyz"], "the live service must be force-restarted")
+	assert.True(t, orch.restartPull, "a restart must re-pull the image")
+}
+
+// Logs of a discovered service are streamed straight from the cluster by Swarm
+// id — no Hivemind record required.
+func TestDiscoveryServiceLogs_StreamsBySwarmID(t *testing.T) {
+	orch := newAdoptStub(ports.ServiceSpec{Name: "legacy-api", Image: "nginx:1.25"})
+	svc := application.NewDiscoveryService(orchestrator.NewStaticRegistry(orch), newFakeServiceRepo(), nil)
+
+	stream, err := svc.ServiceLogs(context.Background(), uuid.New(), "swarm-xyz", ports.LogOptions{Tail: "10"})
+	require.NoError(t, err)
+	require.NotNil(t, stream)
+	defer func() { _ = stream.Close() }()
+}
+
+// With no orchestrator wired, both surface as ErrOrchestratorUnavailable.
+func TestDiscoveryRestartAndLogs_NoOrchestrator(t *testing.T) {
+	svc := application.NewDiscoveryService(nil, newFakeServiceRepo(), nil)
+
+	err := svc.Restart(context.Background(), uuid.New(), "swarm-xyz")
+	assert.ErrorIs(t, err, application.ErrOrchestratorUnavailable)
+
+	_, err = svc.ServiceLogs(context.Background(), uuid.New(), "swarm-xyz", ports.LogOptions{})
+	assert.ErrorIs(t, err, application.ErrOrchestratorUnavailable)
+}

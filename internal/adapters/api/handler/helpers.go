@@ -24,7 +24,7 @@ import (
 // mapping lives in one place instead of in a switch per handler.
 func writeError(c *gin.Context, err error, notFound string) {
 	switch {
-	case errors.Is(err, domainerrors.ErrNotFound):
+	case errors.Is(err, domainerrors.ErrNotFound), errors.Is(err, ports.ErrSwarmServiceNotFound):
 		dto.Abort(c, http.StatusNotFound, dto.CodeNotFound, notFound)
 	case errors.Is(err, domainerrors.ErrConflict), errors.Is(err, application.ErrClusterMismatch):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())

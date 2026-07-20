@@ -27,6 +27,9 @@ type adoptStub struct {
 
 	sealed   map[string]string // swarmID -> hivemind service id
 	released map[string]bool
+
+	restarted   map[string]bool // swarmID -> force-restarted
+	restartPull bool            // whether the last restart asked for a re-pull
 }
 
 func newAdoptStub(spec ports.ServiceSpec, warnings ...string) *adoptStub {
@@ -35,7 +38,14 @@ func newAdoptStub(spec ports.ServiceSpec, warnings ...string) *adoptStub {
 		inspected:        &ports.InspectedService{Spec: spec, Warnings: warnings},
 		sealed:           map[string]string{},
 		released:         map[string]bool{},
+		restarted:        map[string]bool{},
 	}
+}
+
+func (a *adoptStub) RestartService(_ context.Context, swarmServiceID string, pull bool) error {
+	a.restarted[swarmServiceID] = true
+	a.restartPull = pull
+	return nil
 }
 
 func (a *adoptStub) InspectService(context.Context, string) (*ports.InspectedService, error) {

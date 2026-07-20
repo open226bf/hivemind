@@ -166,3 +166,114 @@ func TestToSwarmSpec_SecretConfigMountFilenames(t *testing.T) {
 	require.Len(t, cs.Configs, 1)
 	assert.Equal(t, "nginx_conf", cs.Configs[0].File.Name, "config: empty target path → stable name")
 }
+
+func TestStripPinnedDigest(t *testing.T) {
+	cases := []struct{ in, want string }{
+		// A tag remains, so the digest is dropped and the tag re-resolves.
+		{"nginx:alpine@sha256:abc", "nginx:alpine"},
+		{"registry.example.com:5000/app:v1@sha256:abc", "registry.example.com:5000/app:v1"},
+		// Nothing pinned — untouched.
+		{"nginx:alpine", "nginx:alpine"},
+		{"nginx", "nginx"},
+		// Digest-only: no tag to re-resolve, so it stays pinned rather than
+		// being silently downgraded to :latest.
+		{"nginx@sha256:abc", "nginx@sha256:abc"},
+		{"registry.example.com:5000/app@sha256:abc", "registry.example.com:5000/app@sha256:abc"},
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, stripPinnedDigest(c.in), "input %q", c.in)
+	}
+}
+
+// Restarting a service Hivemind does not manage must roll its tasks and re-pull
+// the image while leaving everything it references out-of-band exactly as it is.
+func TestRestartService_ForcesRollAndPreservesSpec(t *testing.T) {
+	current := swarm.Service{
+		ID:   "svc-1",
+		Meta: swarm.Meta{Version: swarm.Version{Index: 42}},
+		Spec: swarm.ServiceSpec{
+			Annotations: swarm.Annotations{
+				Name:   "legacy-app",
+				Labels: map[string]string{"com.example.keep": "yes"},
+			},
+			TaskTemplate: swarm.TaskSpec{
+				ForceUpdate: 7,
+				ContainerSpec: &swarm.ContainerSpec{
+					Image:   "registry.example.com:5000/app:v1@sha256:aaaa",
+					Env:     []string{"FOO=bar"},
+					Secrets: []*swarm.SecretReference{{SecretID: "sec1", SecretName: "db-pw"}},
+					Configs: []*swarm.ConfigReference{{ConfigID: "cfg1", ConfigName: "app-conf"}},
+					Mounts:  []mount.Mount{{Type: mount.TypeVolume, Source: "data", Target: "/data"}},
+				},
+			},
+			Mode: swarm.ServiceMode{Replicated: &swarm.ReplicatedService{Replicas: uint64p(2)}},
+		},
+	}
+
+	var gotSpec swarm.ServiceSpec
+	var gotVersion string
+	updated := false
+
+	o := newTestOrchestrator(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/update") {
+			updated = true
+			gotVersion = r.URL.Query().Get("version")
+			_ = json.NewDecoder(r.Body).Decode(&gotSpec)
+			_, _ = w.Write([]byte("{}"))
+			return
+		}
+		_ = json.NewEncoder(w).Encode(current)
+	})
+
+	require.NoError(t, o.RestartService(context.Background(), "svc-1", true))
+	require.True(t, updated, "a service update must be issued")
+	assert.Equal(t, "42", gotVersion, "the update must target the inspected version")
+
+	// Rolls the tasks.
+	assert.Equal(t, uint64(8), gotSpec.TaskTemplate.ForceUpdate)
+	// Re-pull: the digest Swarm pinned is dropped so the tag resolves afresh.
+	assert.Equal(t, "registry.example.com:5000/app:v1", gotSpec.TaskTemplate.ContainerSpec.Image)
+
+	// Everything referenced out-of-band survives verbatim.
+	cs := gotSpec.TaskTemplate.ContainerSpec
+	require.Len(t, cs.Secrets, 1)
+	assert.Equal(t, "db-pw", cs.Secrets[0].SecretName)
+	require.Len(t, cs.Configs, 1)
+	assert.Equal(t, "app-conf", cs.Configs[0].ConfigName)
+	require.Len(t, cs.Mounts, 1)
+	assert.Equal(t, "/data", cs.Mounts[0].Target)
+	assert.Equal(t, []string{"FOO=bar"}, cs.Env)
+	assert.Equal(t, "legacy-app", gotSpec.Name)
+	assert.Equal(t, "yes", gotSpec.Labels["com.example.keep"])
+	require.NotNil(t, gotSpec.Mode.Replicated)
+	assert.Equal(t, uint64(2), *gotSpec.Mode.Replicated.Replicas)
+}
+
+// Without a re-pull the image reference is left exactly as-is (digest kept).
+func TestRestartService_NoPullKeepsPinnedImage(t *testing.T) {
+	current := swarm.Service{
+		ID:   "svc-1",
+		Meta: swarm.Meta{Version: swarm.Version{Index: 1}},
+		Spec: swarm.ServiceSpec{
+			Annotations: swarm.Annotations{Name: "app"},
+			TaskTemplate: swarm.TaskSpec{
+				ContainerSpec: &swarm.ContainerSpec{Image: "app:v1@sha256:aaaa"},
+			},
+		},
+	}
+	var gotSpec swarm.ServiceSpec
+	o := newTestOrchestrator(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/update") {
+			_ = json.NewDecoder(r.Body).Decode(&gotSpec)
+			_, _ = w.Write([]byte("{}"))
+			return
+		}
+		_ = json.NewEncoder(w).Encode(current)
+	})
+
+	require.NoError(t, o.RestartService(context.Background(), "svc-1", false))
+	assert.Equal(t, "app:v1@sha256:aaaa", gotSpec.TaskTemplate.ContainerSpec.Image)
+	assert.Equal(t, uint64(1), gotSpec.TaskTemplate.ForceUpdate, "still rolls the tasks")
+}
