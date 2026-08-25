@@ -18,6 +18,21 @@ import (
 // instead — the caller can retry that one.
 var ErrClusterRejected = errors.New("cluster refused the operation")
 
+// resolveCluster returns the orchestrator driving a resource's cluster, or an
+// error wrapping ErrOrchestratorUnavailable that names what could not be
+// reached. Both halves of the create/delete pair go through it so an
+// unreachable cluster reads the same either way.
+func resolveCluster(ctx context.Context, registry ports.OrchestratorRegistry, clusterID uuid.UUID, what string) (ports.Orchestrator, error) {
+	orch, err := registry.For(ctx, clusterID)
+	if err == nil && orch == nil {
+		err = errors.New("no orchestrator resolved")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %w", ErrOrchestratorUnavailable, what, err)
+	}
+	return orch, nil
+}
+
 // clusterResource describes a resource that exists on both sides — a row in the
 // database and an object on the orchestrator — and the four steps needed to
 // create it as one unit.
@@ -62,12 +77,9 @@ func (r clusterResource) create(
 		return r.Persist(ctx)
 	}
 
-	orch, err := registry.For(ctx, clusterID)
-	if err == nil && orch == nil {
-		err = errors.New("no orchestrator resolved")
-	}
+	orch, err := resolveCluster(ctx, registry, clusterID, what)
 	if err != nil {
-		return fmt.Errorf("%w: %s: %w", ErrOrchestratorUnavailable, what, err)
+		return err
 	}
 
 	var swarmID string
@@ -130,12 +142,9 @@ func (d clusterDeletion) run(
 		return d.Delete(ctx)
 	}
 
-	orch, err := registry.For(ctx, clusterID)
-	if err == nil && orch == nil {
-		err = errors.New("no orchestrator resolved")
-	}
+	orch, err := resolveCluster(ctx, registry, clusterID, what)
 	if err != nil {
-		return fmt.Errorf("%w: %s: %w", ErrOrchestratorUnavailable, what, err)
+		return err
 	}
 
 	return tx.WithinTx(ctx, func(ctx context.Context) error {
