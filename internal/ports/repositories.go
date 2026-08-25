@@ -181,6 +181,12 @@ type SecretRepository interface {
 	// Update rotates a secret: bumps the parent record and stores the new
 	// encrypted version value.
 	Update(ctx context.Context, s *secret.Secret, newVersion *secret.SecretVersion, value []byte) error
+	// SetVersionSwarmID records the orchestrator id of a version once it has
+	// been materialised on the cluster.
+	SetVersionSwarmID(ctx context.Context, secretID uuid.UUID, version int, swarmID string) error
+	// ListVersionSwarmIDs returns the orchestrator id of every version, so a
+	// delete can remove the objects the secret owns on the cluster.
+	ListVersionSwarmIDs(ctx context.Context, secretID uuid.UUID) ([]string, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
 	// GetValue returns the decrypted value of the secret's current version.
@@ -195,6 +201,9 @@ type NetworkRepository interface {
 	Save(ctx context.Context, n *network.Network) error
 	FindByID(ctx context.Context, id uuid.UUID) (*network.Network, error)
 	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*network.Network, int64, error)
+	// SetSwarmID records the orchestrator id of the overlay once it has been
+	// materialised on the cluster.
+	SetSwarmID(ctx context.Context, id uuid.UUID, swarmID string) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
 }
@@ -241,6 +250,9 @@ type ConfigRepository interface {
 	ListVersions(ctx context.Context, configID uuid.UUID) ([]*config.ConfigVersion, error)
 	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*config.Config, int64, error)
 	Update(ctx context.Context, c *config.Config, newVersion *config.ConfigVersion) error
+	// SetVersionSwarmID records the orchestrator id of a version once it has
+	// been materialised on the cluster.
+	SetVersionSwarmID(ctx context.Context, configID uuid.UUID, version int, swarmID string) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
 }

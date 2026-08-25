@@ -23,7 +23,7 @@ func NewHiveRepository(db *gorm.DB, cipher Cipher) *HiveRepository {
 }
 
 func (r *HiveRepository) Save(ctx context.Context, h *hive.Hive) error {
-	if err := r.db.WithContext(ctx).Create(hiveToModel(h)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(hiveToModel(h)).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: hive name %q already exists", domainerrors.ErrConflict, h.Name)
 		}
@@ -34,7 +34,7 @@ func (r *HiveRepository) Save(ctx context.Context, h *hive.Hive) error {
 
 func (r *HiveRepository) FindByID(ctx context.Context, id uuid.UUID) (*hive.Hive, error) {
 	var m hiveModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -48,7 +48,7 @@ func (r *HiveRepository) List(ctx context.Context, clusterID uuid.UUID, p pagina
 	var models []hiveModel
 	var count int64
 
-	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&hiveModel{}), clusterID), "id")
+	q := scopeACL(scopeCluster(dbFor(ctx, r.db).Model(&hiveModel{}), clusterID), "id")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count hives: %w", err)
 	}
@@ -64,7 +64,7 @@ func (r *HiveRepository) List(ctx context.Context, clusterID uuid.UUID, p pagina
 }
 
 func (r *HiveRepository) Update(ctx context.Context, h *hive.Hive) error {
-	if err := r.db.WithContext(ctx).Save(hiveToModel(h)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Save(hiveToModel(h)).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: hive name %q already exists", domainerrors.ErrConflict, h.Name)
 		}
@@ -74,7 +74,7 @@ func (r *HiveRepository) Update(ctx context.Context, h *hive.Hive) error {
 }
 
 func (r *HiveRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	res := r.db.WithContext(ctx).Where("id = ?", id.String()).Delete(&hiveModel{})
+	res := dbFor(ctx, r.db).Where("id = ?", id.String()).Delete(&hiveModel{})
 	if res.Error != nil {
 		return fmt.Errorf("delete hive: %w", res.Error)
 	}
@@ -89,7 +89,7 @@ func (r *HiveRepository) Delete(ctx context.Context, id uuid.UUID) error {
 // SetEnvVars atomically replaces the hive's global env vars. Secret values are
 // encrypted at rest, mirroring service env vars.
 func (r *HiveRepository) SetEnvVars(ctx context.Context, hiveID uuid.UUID, vars []hive.EnvVar) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("hive_id = ?", hiveID.String()).Delete(&hiveEnvVarModel{}).Error; err != nil {
 			return fmt.Errorf("clear hive env vars: %w", err)
 		}
@@ -120,7 +120,7 @@ func (r *HiveRepository) SetEnvVars(ctx context.Context, hiveID uuid.UUID, vars 
 
 func (r *HiveRepository) GetEnvVars(ctx context.Context, hiveID uuid.UUID) ([]hive.EnvVar, error) {
 	var models []hiveEnvVarModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("hive_id = ?", hiveID.String()).
 		Order("key ASC").
 		Find(&models).Error; err != nil {

@@ -77,7 +77,7 @@ func (h *ConfigHandler) List(c *gin.Context) {
 // Create godoc
 //
 //	@Summary		Create a config
-//	@Description	Stores a cleartext config file (UTF-8, max 500 KB) as version 1.
+//	@Description	Stores a cleartext config file (UTF-8, max 500 KB) as version 1 and creates it on the target cluster in the same transaction.
 //	@Tags			configs
 //	@Security		BearerAuth
 //	@Accept			json
@@ -89,6 +89,8 @@ func (h *ConfigHandler) List(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		409		{object}	dto.ErrorResponse	"name already taken"
 //	@Failure		422		{object}	dto.ErrorResponse	"invalid name, content too large or invalid UTF-8"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the config version"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/configs [post]
 func (h *ConfigHandler) Create(c *gin.Context) {
 	var req dto.CreateConfigRequest
@@ -178,7 +180,7 @@ func (h *ConfigHandler) ListVersions(c *gin.Context) {
 // AddVersion godoc
 //
 //	@Summary		Add a config version
-//	@Description	Stores new content as the next version. Attached services pick it up on their next deployment.
+//	@Description	Stores new content as the next version and creates it on the cluster in the same transaction. Attached services pick it up on their next deployment.
 //	@Tags			configs
 //	@Security		BearerAuth
 //	@Accept			json
@@ -191,6 +193,8 @@ func (h *ConfigHandler) ListVersions(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		404		{object}	dto.ErrorResponse
 //	@Failure		422		{object}	dto.ErrorResponse	"content too large or invalid UTF-8"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the config version"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/configs/{id}/versions [post]
 func (h *ConfigHandler) AddVersion(c *gin.Context) {
 	id, ok := parseUUID(c, "id")
@@ -266,6 +270,8 @@ func (h *ConfigHandler) Diff(c *gin.Context) {
 //	@Failure		401		{object}	dto.ErrorResponse
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		404		{object}	dto.ErrorResponse	"config or version not found"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the config version"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/configs/{id}/versions/{version}/restore [post]
 func (h *ConfigHandler) RestoreVersion(c *gin.Context) {
 	id, ok := parseUUID(c, "id")

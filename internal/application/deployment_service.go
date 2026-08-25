@@ -518,7 +518,7 @@ func (s *DeploymentService) buildSpec(ctx context.Context, orch ports.Orchestrat
 		if err != nil {
 			return spec, err
 		}
-		swarmName := fmt.Sprintf("%s_v%d", cfg.Name, cfg.CurrentVersion)
+		swarmName := SwarmConfigName(cfg.Name, cfg.CurrentVersion)
 		swarmID, err := orch.CreateConfig(ctx, swarmName, content)
 		if err != nil {
 			return spec, fmt.Errorf("ensure config %q: %w", cfg.Name, err)

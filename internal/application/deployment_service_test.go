@@ -105,13 +105,21 @@ func (r *fakeDeploymentRepo) FailOrphaned(_ context.Context) (int64, error) {
 // ─── Fake orchestrator ────────────────────────────────────────────────────────
 
 type fakeOrchestrator struct {
-	deployErr      error
-	convergeErr    error
-	deployCalls    int
-	updateCalls    int
-	stateCalls     int
-	lastSpec       ports.ServiceSpec
-	createdSecrets []string
+	deployErr   error
+	convergeErr error
+	deployCalls int
+	updateCalls int
+	stateCalls  int
+	lastSpec    ports.ServiceSpec
+
+	// Cluster-side catalog objects, as created and removed by the use cases
+	// that materialise secrets, configs and networks up front.
+	createErr       error // returned by every Create* below when set
+	removeErr       error // returned by every Remove* below when set
+	createdSecrets  []string
+	createdConfigs  []string
+	createdNetworks []string
+	removed         []string
 }
 
 func (o *fakeOrchestrator) DeployService(_ context.Context, spec ports.ServiceSpec) (string, error) {
@@ -151,18 +159,37 @@ func (o *fakeOrchestrator) ExecContainer(context.Context, string, ports.ExecOpti
 	return nil, nil
 }
 func (o *fakeOrchestrator) CreateSecret(_ context.Context, name string, _ []byte) (string, error) {
+	if o.createErr != nil {
+		return "", o.createErr
+	}
 	o.createdSecrets = append(o.createdSecrets, name)
 	return "swarm-secret-" + name, nil
 }
-func (o *fakeOrchestrator) RemoveSecret(context.Context, string) error { return nil }
+func (o *fakeOrchestrator) RemoveSecret(_ context.Context, id string) error { return o.remove(id) }
 func (o *fakeOrchestrator) CreateConfig(_ context.Context, name string, _ []byte) (string, error) {
+	if o.createErr != nil {
+		return "", o.createErr
+	}
+	o.createdConfigs = append(o.createdConfigs, name)
 	return "swarm-config-" + name, nil
 }
-func (o *fakeOrchestrator) RemoveConfig(context.Context, string) error { return nil }
+func (o *fakeOrchestrator) RemoveConfig(_ context.Context, id string) error { return o.remove(id) }
 func (o *fakeOrchestrator) CreateNetwork(_ context.Context, name string, _ ports.CreateNetworkOptions) (string, error) {
+	if o.createErr != nil {
+		return "", o.createErr
+	}
+	o.createdNetworks = append(o.createdNetworks, name)
 	return "swarm-net-" + name, nil
 }
-func (o *fakeOrchestrator) RemoveNetwork(context.Context, string) error { return nil }
+func (o *fakeOrchestrator) RemoveNetwork(_ context.Context, id string) error { return o.remove(id) }
+
+func (o *fakeOrchestrator) remove(id string) error {
+	if o.removeErr != nil {
+		return o.removeErr
+	}
+	o.removed = append(o.removed, id)
+	return nil
+}
 func (o *fakeOrchestrator) ListNetworks(context.Context) ([]ports.SwarmNetworkInfo, error) {
 	return nil, nil
 }

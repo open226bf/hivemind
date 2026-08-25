@@ -72,6 +72,16 @@ func (r *fakeConfigRepo) Update(_ context.Context, c *config.Config, newVersion 
 	return nil
 }
 
+func (r *fakeConfigRepo) SetVersionSwarmID(_ context.Context, configID uuid.UUID, version int, swarmID string) error {
+	for _, v := range r.versions[configID] {
+		if v.Version == version {
+			v.SwarmConfigID = swarmID
+			return nil
+		}
+	}
+	return domainerrors.ErrNotFound
+}
+
 func (r *fakeConfigRepo) Delete(_ context.Context, id uuid.UUID) error {
 	c, ok := r.byID[id]
 	if !ok {
@@ -90,7 +100,7 @@ func (r *fakeConfigRepo) IsAttachedToService(_ context.Context, id uuid.UUID) (b
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func newConfigSvc(configs *fakeConfigRepo, services *fakeServiceRepo) *application.ConfigService {
-	return application.NewConfigService(configs, services)
+	return application.NewConfigService(configs, services, nil, nil)
 }
 
 // ─── Create ───────────────────────────────────────────────────────────────────

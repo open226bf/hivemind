@@ -74,7 +74,7 @@ func (h *SecretHandler) List(c *gin.Context) {
 // Create godoc
 //
 //	@Summary		Create a secret
-//	@Description	Stores a write-only secret. The value is encrypted at rest and never returned by any endpoint.
+//	@Description	Stores a write-only secret and creates its first version on the target cluster in the same transaction. The value is encrypted at rest and never returned by any endpoint.
 //	@Tags			secrets
 //	@Security		BearerAuth
 //	@Accept			json
@@ -86,6 +86,8 @@ func (h *SecretHandler) List(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		409		{object}	dto.ErrorResponse	"name already taken"
 //	@Failure		422		{object}	dto.ErrorResponse	"invalid name or empty value"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the secret"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/secrets [post]
 func (h *SecretHandler) Create(c *gin.Context) {
 	var req dto.CreateSecretRequest
@@ -144,7 +146,7 @@ func (h *SecretHandler) Get(c *gin.Context) {
 // Rotate godoc
 //
 //	@Summary		Rotate a secret
-//	@Description	Stores a new encrypted version and increments the version counter. Attached services pick up the new version on their next deployment.
+//	@Description	Stores a new encrypted version, increments the version counter and pushes the version to the cluster in the same transaction. Attached services pick it up on their next deployment.
 //	@Tags			secrets
 //	@Security		BearerAuth
 //	@Accept			json
@@ -157,6 +159,8 @@ func (h *SecretHandler) Get(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		404		{object}	dto.ErrorResponse
 //	@Failure		422		{object}	dto.ErrorResponse	"empty value"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the secret version"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/secrets/{id}/rotate [post]
 func (h *SecretHandler) Rotate(c *gin.Context) {
 	id, ok := parseUUID(c, "id")

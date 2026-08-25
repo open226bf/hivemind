@@ -23,7 +23,7 @@ func (r *TemplateRepository) Save(ctx context.Context, t *template.Template) err
 	if err != nil {
 		return err
 	}
-	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(m).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: template name %q already exists", domainerrors.ErrConflict, t.Name)
 		}
@@ -34,7 +34,7 @@ func (r *TemplateRepository) Save(ctx context.Context, t *template.Template) err
 
 func (r *TemplateRepository) FindByID(ctx context.Context, id uuid.UUID) (*template.Template, error) {
 	var m templateModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -48,7 +48,7 @@ func (r *TemplateRepository) List(ctx context.Context, p pagination.Page) ([]*te
 	var models []templateModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&templateModel{})
+	q := dbFor(ctx, r.db).Model(&templateModel{})
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count templates: %w", err)
 	}
@@ -72,14 +72,14 @@ func (r *TemplateRepository) Update(ctx context.Context, t *template.Template) e
 	if err != nil {
 		return err
 	}
-	if err := r.db.WithContext(ctx).Save(m).Error; err != nil {
+	if err := dbFor(ctx, r.db).Save(m).Error; err != nil {
 		return fmt.Errorf("update template: %w", err)
 	}
 	return nil
 }
 
 func (r *TemplateRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	res := r.db.WithContext(ctx).Where("id = ?", id.String()).Delete(&templateModel{})
+	res := dbFor(ctx, r.db).Where("id = ?", id.String()).Delete(&templateModel{})
 	if res.Error != nil {
 		return fmt.Errorf("delete template: %w", res.Error)
 	}

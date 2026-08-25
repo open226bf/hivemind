@@ -130,6 +130,9 @@ func main() {
 	snapshotRepo := persistence.NewSnapshotRepository(db, cipher)
 	auditRepo := persistence.NewAuditLogRepository(db)
 	aclRepo := persistence.NewAclRepository(db)
+	// Lets a use case make its database writes and the orchestrator call that
+	// must succeed with them one unit (configs, secrets, networks).
+	txManager := persistence.NewTxManager(db)
 
 	// ─── Cleanup orphaned deployments ────────────────────────────────────────
 	if n, err := deploymentRepo.FailOrphaned(context.Background()); err != nil {
@@ -188,10 +191,10 @@ func main() {
 	userSvc := application.NewUserService(userRepo)
 	serviceSvc := application.NewServiceService(serviceRepo, registry)
 	hiveSvc := application.NewHiveService(hiveRepo, serviceRepo)
-	networkSvc := application.NewNetworkService(networkRepo, serviceRepo)
+	networkSvc := application.NewNetworkService(networkRepo, serviceRepo, registry, txManager)
 	volumeSvc := application.NewVolumeService(volumeRepo, serviceRepo)
-	secretSvc := application.NewSecretService(secretRepo, serviceRepo)
-	configSvc := application.NewConfigService(configRepo, serviceRepo)
+	secretSvc := application.NewSecretService(secretRepo, serviceRepo, registry, txManager)
+	configSvc := application.NewConfigService(configRepo, serviceRepo, registry, txManager)
 	templateSvc := application.NewTemplateService(templateRepo, serviceSvc, networkSvc)
 	deploymentSvc := application.NewDeploymentService(serviceRepo, hiveRepo, deploymentRepo, networkRepo, secretRepo, configRepo, registry, nil)
 	snapshotSvc := application.NewSnapshotService(snapshotRepo, serviceRepo, networkRepo, secretRepo, configRepo, deploymentSvc)

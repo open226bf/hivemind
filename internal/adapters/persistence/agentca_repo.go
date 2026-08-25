@@ -26,7 +26,7 @@ func NewAgentCARepository(db *gorm.DB, cipher Cipher) *AgentCARepository {
 // LoadOrCreate returns the persisted CA, generating and storing one on first use.
 func (r *AgentCARepository) LoadOrCreate(ctx context.Context) (*agentca.CA, error) {
 	var m agentCAModel
-	err := r.db.WithContext(ctx).Where("id = ?", agentCAID).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", agentCAID).First(&m).Error
 	switch {
 	case err == nil:
 		keyPEM, derr := r.cipher.Decrypt(m.EncryptedKeyPEM)
@@ -44,7 +44,7 @@ func (r *AgentCARepository) LoadOrCreate(ctx context.Context) (*agentca.CA, erro
 			return nil, fmt.Errorf("encrypt ca key: %w", eerr)
 		}
 		row := &agentCAModel{ID: agentCAID, CertPEM: string(ca.CertPEM()), EncryptedKeyPEM: encKey, CreatedAt: time.Now().UTC()}
-		if cerr := r.db.WithContext(ctx).Create(row).Error; cerr != nil {
+		if cerr := dbFor(ctx, r.db).Create(row).Error; cerr != nil {
 			return nil, fmt.Errorf("save ca: %w", cerr)
 		}
 		return ca, nil

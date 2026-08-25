@@ -18,7 +18,7 @@ type UserRepository struct{ db *gorm.DB }
 func NewUserRepository(db *gorm.DB) *UserRepository { return &UserRepository{db: db} }
 
 func (r *UserRepository) Save(ctx context.Context, u *user.User) error {
-	if err := r.db.WithContext(ctx).Create(userToModel(u)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(userToModel(u)).Error; err != nil {
 		return fmt.Errorf("save user: %w", err)
 	}
 	return nil
@@ -26,7 +26,7 @@ func (r *UserRepository) Save(ctx context.Context, u *user.User) error {
 
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*user.User, error) {
 	var m userModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -38,7 +38,7 @@ func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*user.User
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*user.User, error) {
 	var m userModel
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&m).Error
+	err := dbFor(ctx, r.db).Where("email = ?", email).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -52,7 +52,7 @@ func (r *UserRepository) List(ctx context.Context, p pagination.Page) ([]*user.U
 	var models []userModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&userModel{})
+	q := dbFor(ctx, r.db).Model(&userModel{})
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
 	}
@@ -72,14 +72,14 @@ func (r *UserRepository) List(ctx context.Context, p pagination.Page) ([]*user.U
 }
 
 func (r *UserRepository) Update(ctx context.Context, u *user.User) error {
-	if err := r.db.WithContext(ctx).Save(userToModel(u)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Save(userToModel(u)).Error; err != nil {
 		return fmt.Errorf("update user: %w", err)
 	}
 	return nil
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	res := r.db.WithContext(ctx).Where("id = ?", id.String()).Delete(&userModel{})
+	res := dbFor(ctx, r.db).Where("id = ?", id.String()).Delete(&userModel{})
 	if res.Error != nil {
 		return fmt.Errorf("delete user: %w", res.Error)
 	}
@@ -92,7 +92,7 @@ func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 // TokenVersion returns the user's revocation epoch via a single indexed read.
 func (r *UserRepository) TokenVersion(ctx context.Context, id uuid.UUID) (int, error) {
 	var m userModel
-	err := r.db.WithContext(ctx).Select("token_version").
+	err := dbFor(ctx, r.db).Select("token_version").
 		Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return 0, domainerrors.ErrNotFound
@@ -105,7 +105,7 @@ func (r *UserRepository) TokenVersion(ctx context.Context, id uuid.UUID) (int, e
 
 func (r *UserRepository) CountActiveAdmins(ctx context.Context) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&userModel{}).
+	err := dbFor(ctx, r.db).Model(&userModel{}).
 		Where("role = ? AND active = ?", string(user.RoleAdmin), true).
 		Count(&count).Error
 	if err != nil {

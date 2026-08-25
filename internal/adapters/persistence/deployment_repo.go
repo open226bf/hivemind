@@ -22,7 +22,7 @@ func NewDeploymentRepository(db *gorm.DB) *DeploymentRepository {
 }
 
 func (r *DeploymentRepository) Save(ctx context.Context, d *deployment.Deployment) error {
-	if err := r.db.WithContext(ctx).Create(deploymentToModel(d)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(deploymentToModel(d)).Error; err != nil {
 		return fmt.Errorf("save deployment: %w", err)
 	}
 	return nil
@@ -30,7 +30,7 @@ func (r *DeploymentRepository) Save(ctx context.Context, d *deployment.Deploymen
 
 func (r *DeploymentRepository) FindByID(ctx context.Context, id uuid.UUID) (*deployment.Deployment, error) {
 	var m deploymentModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -43,7 +43,7 @@ func (r *DeploymentRepository) FindByID(ctx context.Context, id uuid.UUID) (*dep
 // FindActiveByServiceID returns the in-progress deployment for a service, if any.
 func (r *DeploymentRepository) FindActiveByServiceID(ctx context.Context, serviceID uuid.UUID) (*deployment.Deployment, error) {
 	var m deploymentModel
-	err := r.db.WithContext(ctx).
+	err := dbFor(ctx, r.db).
 		Where("service_id = ? AND status IN ?", serviceID.String(),
 			[]string{string(deployment.StatusPending), string(deployment.StatusInProgress)}).
 		First(&m).Error
@@ -68,7 +68,7 @@ func (r *DeploymentRepository) list(ctx context.Context, filter ports.Deployment
 	var models []deploymentModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&deploymentModel{})
+	q := dbFor(ctx, r.db).Model(&deploymentModel{})
 	if filter.ServiceID != nil {
 		q = q.Where("service_id = ?", filter.ServiceID.String())
 	}
@@ -97,7 +97,7 @@ func (r *DeploymentRepository) list(ctx context.Context, filter ports.Deployment
 }
 
 func (r *DeploymentRepository) Update(ctx context.Context, d *deployment.Deployment) error {
-	if err := r.db.WithContext(ctx).Save(deploymentToModel(d)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Save(deploymentToModel(d)).Error; err != nil {
 		return fmt.Errorf("update deployment: %w", err)
 	}
 	return nil
@@ -107,7 +107,7 @@ func (r *DeploymentRepository) Update(ctx context.Context, d *deployment.Deploym
 // called at server startup to clean up deployments whose convergence goroutine
 // was killed by a previous shutdown.
 func (r *DeploymentRepository) FailOrphaned(ctx context.Context) (int64, error) {
-	result := r.db.WithContext(ctx).
+	result := dbFor(ctx, r.db).
 		Model(&deploymentModel{}).
 		Where("status IN ?", []string{string(deployment.StatusPending), string(deployment.StatusInProgress)}).
 		Updates(map[string]any{

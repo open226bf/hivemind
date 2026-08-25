@@ -18,7 +18,7 @@ type NetworkRepository struct{ db *gorm.DB }
 func NewNetworkRepository(db *gorm.DB) *NetworkRepository { return &NetworkRepository{db: db} }
 
 func (r *NetworkRepository) Save(ctx context.Context, n *network.Network) error {
-	if err := r.db.WithContext(ctx).Create(networkToModel(n)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(networkToModel(n)).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: network name %q already exists", domainerrors.ErrConflict, n.Name)
 		}
@@ -29,7 +29,7 @@ func (r *NetworkRepository) Save(ctx context.Context, n *network.Network) error 
 
 func (r *NetworkRepository) FindByID(ctx context.Context, id uuid.UUID) (*network.Network, error) {
 	var m networkModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -43,7 +43,7 @@ func (r *NetworkRepository) List(ctx context.Context, clusterID uuid.UUID, p pag
 	var models []networkModel
 	var count int64
 
-	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&networkModel{}), clusterID), "")
+	q := scopeACL(scopeCluster(dbFor(ctx, r.db).Model(&networkModel{}), clusterID), "")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count networks: %w", err)
 	}
@@ -58,8 +58,22 @@ func (r *NetworkRepository) List(ctx context.Context, clusterID uuid.UUID, p pag
 	return out, count, nil
 }
 
+// SetSwarmID records the id the orchestrator assigned to the network, so a
+// later deploy (or a reconciliation) knows the overlay already exists.
+func (r *NetworkRepository) SetSwarmID(ctx context.Context, id uuid.UUID, swarmID string) error {
+	res := dbFor(ctx, r.db).Model(&networkModel{}).
+		Where("id = ?", id.String()).Update("swarm_id", swarmID)
+	if res.Error != nil {
+		return fmt.Errorf("set network swarm id: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return domainerrors.ErrNotFound
+	}
+	return nil
+}
+
 func (r *NetworkRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	res := r.db.WithContext(ctx).Where("id = ?", id.String()).Delete(&networkModel{})
+	res := dbFor(ctx, r.db).Where("id = ?", id.String()).Delete(&networkModel{})
 	if res.Error != nil {
 		return fmt.Errorf("delete network: %w", res.Error)
 	}
@@ -71,7 +85,7 @@ func (r *NetworkRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *NetworkRepository) IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&serviceNetworkModel{}).
+	if err := dbFor(ctx, r.db).Model(&serviceNetworkModel{}).
 		Where("network_id = ?", id.String()).Count(&count).Error; err != nil {
 		return false, fmt.Errorf("check network attachment: %w", err)
 	}

@@ -26,7 +26,7 @@ func NewServiceRepository(db *gorm.DB, cipher Cipher) *ServiceRepository {
 }
 
 func (r *ServiceRepository) Save(ctx context.Context, s *service.Service) error {
-	if err := r.db.WithContext(ctx).Create(serviceToModel(s)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(serviceToModel(s)).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: service name %q already exists", domainerrors.ErrConflict, s.Name)
 		}
@@ -37,7 +37,7 @@ func (r *ServiceRepository) Save(ctx context.Context, s *service.Service) error 
 
 func (r *ServiceRepository) FindByID(ctx context.Context, id uuid.UUID) (*service.Service, error) {
 	var m serviceModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -49,7 +49,7 @@ func (r *ServiceRepository) FindByID(ctx context.Context, id uuid.UUID) (*servic
 
 func (r *ServiceRepository) FindByName(ctx context.Context, name string) (*service.Service, error) {
 	var m serviceModel
-	err := r.db.WithContext(ctx).Where("name = ?", name).First(&m).Error
+	err := dbFor(ctx, r.db).Where("name = ?", name).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -63,7 +63,7 @@ func (r *ServiceRepository) List(ctx context.Context, filter ports.ServiceFilter
 	var models []serviceModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&serviceModel{})
+	q := dbFor(ctx, r.db).Model(&serviceModel{})
 	if filter.Name != "" {
 		q = q.Where("name ILIKE ?", "%"+filter.Name+"%")
 	}
@@ -95,14 +95,14 @@ func (r *ServiceRepository) List(ctx context.Context, filter ports.ServiceFilter
 }
 
 func (r *ServiceRepository) Update(ctx context.Context, s *service.Service) error {
-	if err := r.db.WithContext(ctx).Save(serviceToModel(s)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Save(serviceToModel(s)).Error; err != nil {
 		return fmt.Errorf("update service: %w", err)
 	}
 	return nil
 }
 
 func (r *ServiceRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		sid := id.String()
 		for _, table := range []string{"env_vars", "service_networks", "service_secrets", "service_configs", "service_mounts", "service_ports"} {
 			if err := tx.Exec(fmt.Sprintf("DELETE FROM %s WHERE service_id = ?", table), sid).Error; err != nil {
@@ -123,7 +123,7 @@ func (r *ServiceRepository) Delete(ctx context.Context, id uuid.UUID) error {
 // ─── Env vars ─────────────────────────────────────────────────────────────────
 
 func (r *ServiceRepository) SetEnvVars(ctx context.Context, serviceID uuid.UUID, vars []service.EnvVar) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("service_id = ?", serviceID.String()).Delete(&envVarModel{}).Error; err != nil {
 			return fmt.Errorf("clear env vars: %w", err)
 		}
@@ -154,7 +154,7 @@ func (r *ServiceRepository) SetEnvVars(ctx context.Context, serviceID uuid.UUID,
 
 func (r *ServiceRepository) GetEnvVars(ctx context.Context, serviceID uuid.UUID) ([]service.EnvVar, error) {
 	var models []envVarModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("service_id = ?", serviceID.String()).
 		Order("key ASC").
 		Find(&models).Error; err != nil {
@@ -188,7 +188,7 @@ func (r *ServiceRepository) GetEnvVars(ctx context.Context, serviceID uuid.UUID)
 
 func (r *ServiceRepository) AttachNetwork(ctx context.Context, serviceID, networkID uuid.UUID) error {
 	m := serviceNetworkModel{ServiceID: serviceID.String(), NetworkID: networkID.String()}
-	if err := r.db.WithContext(ctx).Create(&m).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(&m).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: network already attached", domainerrors.ErrConflict)
 		}
@@ -198,7 +198,7 @@ func (r *ServiceRepository) AttachNetwork(ctx context.Context, serviceID, networ
 }
 
 func (r *ServiceRepository) DetachNetwork(ctx context.Context, serviceID, networkID uuid.UUID) error {
-	res := r.db.WithContext(ctx).
+	res := dbFor(ctx, r.db).
 		Where("service_id = ? AND network_id = ?", serviceID.String(), networkID.String()).
 		Delete(&serviceNetworkModel{})
 	if res.Error != nil {
@@ -212,7 +212,7 @@ func (r *ServiceRepository) DetachNetwork(ctx context.Context, serviceID, networ
 
 func (r *ServiceRepository) GetNetworkIDs(ctx context.Context, serviceID uuid.UUID) ([]uuid.UUID, error) {
 	var rows []serviceNetworkModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("service_id = ?", serviceID.String()).
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("get networks: %w", err)
@@ -233,7 +233,7 @@ func (r *ServiceRepository) AttachSecret(ctx context.Context, serviceID, secretI
 		SecretID:   secretID.String(),
 		TargetPath: targetPath,
 	}
-	if err := r.db.WithContext(ctx).Create(&m).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(&m).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: secret already attached", domainerrors.ErrConflict)
 		}
@@ -243,7 +243,7 @@ func (r *ServiceRepository) AttachSecret(ctx context.Context, serviceID, secretI
 }
 
 func (r *ServiceRepository) DetachSecret(ctx context.Context, serviceID, secretID uuid.UUID) error {
-	res := r.db.WithContext(ctx).
+	res := dbFor(ctx, r.db).
 		Where("service_id = ? AND secret_id = ?", serviceID.String(), secretID.String()).
 		Delete(&serviceSecretModel{})
 	if res.Error != nil {
@@ -257,7 +257,7 @@ func (r *ServiceRepository) DetachSecret(ctx context.Context, serviceID, secretI
 
 func (r *ServiceRepository) GetSecretAttachments(ctx context.Context, serviceID uuid.UUID) ([]ports.ServiceSecretAttachment, error) {
 	var rows []serviceSecretModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("service_id = ?", serviceID.String()).
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("get secret attachments: %w", err)
@@ -278,7 +278,7 @@ func (r *ServiceRepository) AttachConfig(ctx context.Context, serviceID, configI
 		ConfigID:   configID.String(),
 		TargetPath: targetPath,
 	}
-	if err := r.db.WithContext(ctx).Create(&m).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(&m).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: config already attached", domainerrors.ErrConflict)
 		}
@@ -288,7 +288,7 @@ func (r *ServiceRepository) AttachConfig(ctx context.Context, serviceID, configI
 }
 
 func (r *ServiceRepository) DetachConfig(ctx context.Context, serviceID, configID uuid.UUID) error {
-	res := r.db.WithContext(ctx).
+	res := dbFor(ctx, r.db).
 		Where("service_id = ? AND config_id = ?", serviceID.String(), configID.String()).
 		Delete(&serviceConfigModel{})
 	if res.Error != nil {
@@ -302,7 +302,7 @@ func (r *ServiceRepository) DetachConfig(ctx context.Context, serviceID, configI
 
 func (r *ServiceRepository) ServiceIDsByConfigID(ctx context.Context, configID uuid.UUID) ([]uuid.UUID, error) {
 	var rows []serviceConfigModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("config_id = ?", configID.String()).
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("services by config: %w", err)
@@ -317,7 +317,7 @@ func (r *ServiceRepository) ServiceIDsByConfigID(ctx context.Context, configID u
 
 func (r *ServiceRepository) GetConfigAttachments(ctx context.Context, serviceID uuid.UUID) ([]ports.ServiceConfigAttachment, error) {
 	var rows []serviceConfigModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("service_id = ?", serviceID.String()).
 		Find(&rows).Error; err != nil {
 		return nil, fmt.Errorf("get config attachments: %w", err)
@@ -333,7 +333,7 @@ func (r *ServiceRepository) GetConfigAttachments(ctx context.Context, serviceID 
 // ─── Mounts (F-V2-06) ─────────────────────────────────────────────────────────
 
 func (r *ServiceRepository) SetMounts(ctx context.Context, serviceID uuid.UUID, mounts []volume.Mount) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("service_id = ?", serviceID.String()).Delete(&serviceMountModel{}).Error; err != nil {
 			return fmt.Errorf("clear mounts: %w", err)
 		}
@@ -358,7 +358,7 @@ func (r *ServiceRepository) SetMounts(ctx context.Context, serviceID uuid.UUID, 
 
 func (r *ServiceRepository) GetMounts(ctx context.Context, serviceID uuid.UUID) ([]volume.Mount, error) {
 	var models []serviceMountModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("service_id = ?", serviceID.String()).
 		Order("position ASC").
 		Find(&models).Error; err != nil {
@@ -379,7 +379,7 @@ func (r *ServiceRepository) GetMounts(ctx context.Context, serviceID uuid.UUID) 
 // ─── Published ports ──────────────────────────────────────────────────────────
 
 func (r *ServiceRepository) SetPorts(ctx context.Context, serviceID uuid.UUID, ports []service.Port) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("service_id = ?", serviceID.String()).Delete(&servicePortModel{}).Error; err != nil {
 			return fmt.Errorf("clear ports: %w", err)
 		}
@@ -404,7 +404,7 @@ func (r *ServiceRepository) SetPorts(ctx context.Context, serviceID uuid.UUID, p
 
 func (r *ServiceRepository) GetPorts(ctx context.Context, serviceID uuid.UUID) ([]service.Port, error) {
 	var models []servicePortModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("service_id = ?", serviceID.String()).
 		Order("position ASC").
 		Find(&models).Error; err != nil {
@@ -424,7 +424,7 @@ func (r *ServiceRepository) GetPorts(ctx context.Context, serviceID uuid.UUID) (
 
 func (r *ServiceRepository) CountMountsByVolumeName(ctx context.Context, name string) (int64, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&serviceMountModel{}).
+	if err := dbFor(ctx, r.db).Model(&serviceMountModel{}).
 		Where("type = ? AND source = ?", string(volume.MountVolume), name).
 		Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("count mounts by volume: %w", err)
@@ -434,7 +434,7 @@ func (r *ServiceRepository) CountMountsByVolumeName(ctx context.Context, name st
 
 func (r *ServiceRepository) CountServicesByHive(ctx context.Context, hiveID uuid.UUID) (int64, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&serviceModel{}).
+	if err := dbFor(ctx, r.db).Model(&serviceModel{}).
 		Where("hive_id = ?", hiveID.String()).
 		Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("count services by hive: %w", err)
@@ -444,7 +444,7 @@ func (r *ServiceRepository) CountServicesByHive(ctx context.Context, hiveID uuid
 
 func (r *ServiceRepository) CountServicesByCluster(ctx context.Context, clusterID uuid.UUID) (int64, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&serviceModel{}).
+	if err := dbFor(ctx, r.db).Model(&serviceModel{}).
 		Where("cluster_id = ?", clusterID.String()).
 		Count(&count).Error; err != nil {
 		return 0, fmt.Errorf("count services by cluster: %w", err)

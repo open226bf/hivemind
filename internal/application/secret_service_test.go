@@ -17,8 +17,9 @@ import (
 // ─── Fake secret repo ─────────────────────────────────────────────────────────
 
 type storedSecret struct {
-	sec    *secret.Secret
-	values [][]byte // one entry per version, latest last
+	sec      *secret.Secret
+	values   [][]byte // one entry per version, latest last
+	swarmIDs []string // orchestrator id recorded per version, latest last
 }
 
 type fakeSecretRepo struct {
@@ -69,6 +70,23 @@ func (r *fakeSecretRepo) Update(_ context.Context, s *secret.Secret, _ *secret.S
 	return nil
 }
 
+func (r *fakeSecretRepo) SetVersionSwarmID(_ context.Context, secretID uuid.UUID, version int, swarmID string) error {
+	ss, ok := r.byID[secretID]
+	if !ok || version > len(ss.values) {
+		return domainerrors.ErrNotFound
+	}
+	ss.swarmIDs = append(ss.swarmIDs, swarmID)
+	return nil
+}
+
+func (r *fakeSecretRepo) ListVersionSwarmIDs(_ context.Context, secretID uuid.UUID) ([]string, error) {
+	ss, ok := r.byID[secretID]
+	if !ok {
+		return nil, domainerrors.ErrNotFound
+	}
+	return ss.swarmIDs, nil
+}
+
 func (r *fakeSecretRepo) Delete(_ context.Context, id uuid.UUID) error {
 	ss, ok := r.byID[id]
 	if !ok {
@@ -94,7 +112,7 @@ func (r *fakeSecretRepo) GetValue(_ context.Context, id uuid.UUID) ([]byte, erro
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func newSecretSvc(secrets *fakeSecretRepo, services *fakeServiceRepo) *application.SecretService {
-	return application.NewSecretService(secrets, services)
+	return application.NewSecretService(secrets, services, nil, nil)
 }
 
 // ─── Create ───────────────────────────────────────────────────────────────────
