@@ -3240,6 +3240,84 @@ const docTemplate = `{
             }
         },
         "/services/{id}/configs/{configId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the mount path, owner and permission bits of an already-attached config. Applied on the service's next deployment.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "configs"
+                ],
+                "summary": "Update a config's mount on a service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Config ID (UUID)",
+                        "name": "configId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "File mount",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigAttachmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "validation_error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "service, config or attachment not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "invalid owner or mode",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -4459,6 +4537,84 @@ const docTemplate = `{
             }
         },
         "/services/{id}/secrets/{secretId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the mount path, owner and permission bits of an already-attached secret. Applied on the service's next deployment.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Update a secret's mount on a service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Secret ID (UUID)",
+                        "name": "secretId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "File mount",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateSecretAttachmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "validation_error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "service, secret or attachment not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "invalid owner or mode",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -5921,9 +6077,23 @@ const docTemplate = `{
                     "type": "string",
                     "example": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
                 },
+                "gid": {
+                    "type": "string",
+                    "example": "101"
+                },
+                "mode": {
+                    "description": "Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or\nsend 0 to keep the default 0444 (288 in decimal).",
+                    "type": "integer",
+                    "example": 288
+                },
                 "target_path": {
                     "type": "string",
                     "example": "/etc/nginx/nginx.conf"
+                },
+                "uid": {
+                    "description": "UID and GID own the mounted file. Leave them empty to let the orchestrator\ndecide (root); \"0\" is root chosen deliberately. Named users are rejected —\nthe container runtime only understands numeric ids.",
+                    "type": "string",
+                    "example": "101"
                 }
             }
         },
@@ -5945,6 +6115,15 @@ const docTemplate = `{
                 "secret_id"
             ],
             "properties": {
+                "gid": {
+                    "type": "string",
+                    "example": "101"
+                },
+                "mode": {
+                    "description": "Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or\nsend 0 to keep the default 0444 (288 in decimal).",
+                    "type": "integer",
+                    "example": 288
+                },
                 "secret_id": {
                     "type": "string",
                     "example": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
@@ -5952,6 +6131,11 @@ const docTemplate = `{
                 "target_path": {
                     "type": "string",
                     "example": "/run/secrets/db_password"
+                },
+                "uid": {
+                    "description": "UID and GID own the mounted file. Leave them empty to let the orchestrator\ndecide (root); \"0\" is root chosen deliberately. Named users are rejected —\nthe container runtime only understands numeric ids.",
+                    "type": "string",
+                    "example": "101"
                 }
             }
         },
@@ -7263,10 +7447,19 @@ const docTemplate = `{
                 "config_id": {
                     "type": "string"
                 },
+                "gid": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
                 },
                 "target_path": {
+                    "type": "string"
+                },
+                "uid": {
                     "type": "string"
                 }
             }
@@ -7359,6 +7552,12 @@ const docTemplate = `{
         "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceSecretResponse": {
             "type": "object",
             "properties": {
+                "gid": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -7366,6 +7565,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "target_path": {
+                    "type": "string"
+                },
+                "uid": {
                     "type": "string"
                 }
             }
@@ -7901,6 +8103,29 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigAttachmentRequest": {
+            "type": "object",
+            "properties": {
+                "gid": {
+                    "type": "string",
+                    "example": "101"
+                },
+                "mode": {
+                    "description": "Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or\nsend 0 to keep the default 0444 (288 in decimal).",
+                    "type": "integer",
+                    "example": 288
+                },
+                "target_path": {
+                    "type": "string",
+                    "example": "/etc/nginx/nginx.conf"
+                },
+                "uid": {
+                    "description": "UID and GID own the mounted file. Leave them empty to let the orchestrator\ndecide (root); \"0\" is root chosen deliberately. Named users are rejected —\nthe container runtime only understands numeric ids.",
+                    "type": "string",
+                    "example": "101"
+                }
+            }
+        },
         "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO": {
             "type": "object",
             "properties": {
@@ -7947,6 +8172,29 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateSecretAttachmentRequest": {
+            "type": "object",
+            "properties": {
+                "gid": {
+                    "type": "string",
+                    "example": "101"
+                },
+                "mode": {
+                    "description": "Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or\nsend 0 to keep the default 0444 (288 in decimal).",
+                    "type": "integer",
+                    "example": 288
+                },
+                "target_path": {
+                    "type": "string",
+                    "example": "/run/secrets/db_password"
+                },
+                "uid": {
+                    "description": "UID and GID own the mounted file. Leave them empty to let the orchestrator\ndecide (root); \"0\" is root chosen deliberately. Named users are rejected —\nthe container runtime only understands numeric ids.",
+                    "type": "string",
+                    "example": "101"
                 }
             }
         },

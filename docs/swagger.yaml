@@ -127,8 +127,24 @@ definitions:
       config_id:
         example: 3f2504e0-4f89-11d3-9a0c-0305e82c3301
         type: string
+      gid:
+        example: "101"
+        type: string
+      mode:
+        description: |-
+          Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or
+          send 0 to keep the default 0444 (288 in decimal).
+        example: 288
+        type: integer
       target_path:
         example: /etc/nginx/nginx.conf
+        type: string
+      uid:
+        description: |-
+          UID and GID own the mounted file. Leave them empty to let the orchestrator
+          decide (root); "0" is root chosen deliberately. Named users are rejected —
+          the container runtime only understands numeric ids.
+        example: "101"
         type: string
     required:
     - config_id
@@ -143,11 +159,27 @@ definitions:
     type: object
   github_com_open226bf_hivemind_internal_adapters_api_dto.AttachSecretRequest:
     properties:
+      gid:
+        example: "101"
+        type: string
+      mode:
+        description: |-
+          Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or
+          send 0 to keep the default 0444 (288 in decimal).
+        example: 288
+        type: integer
       secret_id:
         example: 3f2504e0-4f89-11d3-9a0c-0305e82c3301
         type: string
       target_path:
         example: /run/secrets/db_password
+        type: string
+      uid:
+        description: |-
+          UID and GID own the mounted file. Leave them empty to let the orchestrator
+          decide (root); "0" is root chosen deliberately. Named users are rejected —
+          the container runtime only understands numeric ids.
+        example: "101"
         type: string
     required:
     - secret_id
@@ -1033,9 +1065,15 @@ definitions:
     properties:
       config_id:
         type: string
+      gid:
+        type: string
+      mode:
+        type: integer
       name:
         type: string
       target_path:
+        type: string
+      uid:
         type: string
     type: object
   github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListResponse:
@@ -1096,11 +1134,17 @@ definitions:
     type: object
   github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceSecretResponse:
     properties:
+      gid:
+        type: string
+      mode:
+        type: integer
       name:
         type: string
       secret_id:
         type: string
       target_path:
+        type: string
+      uid:
         type: string
     type: object
   github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceStatusResponse:
@@ -1454,6 +1498,28 @@ definitions:
       name:
         type: string
     type: object
+  github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigAttachmentRequest:
+    properties:
+      gid:
+        example: "101"
+        type: string
+      mode:
+        description: |-
+          Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or
+          send 0 to keep the default 0444 (288 in decimal).
+        example: 288
+        type: integer
+      target_path:
+        example: /etc/nginx/nginx.conf
+        type: string
+      uid:
+        description: |-
+          UID and GID own the mounted file. Leave them empty to let the orchestrator
+          decide (root); "0" is root chosen deliberately. Named users are rejected —
+          the container runtime only understands numeric ids.
+        example: "101"
+        type: string
+    type: object
   github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO:
     properties:
       delay_seconds:
@@ -1488,6 +1554,28 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateSecretAttachmentRequest:
+    properties:
+      gid:
+        example: "101"
+        type: string
+      mode:
+        description: |-
+          Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or
+          send 0 to keep the default 0444 (288 in decimal).
+        example: 288
+        type: integer
+      target_path:
+        example: /run/secrets/db_password
+        type: string
+      uid:
+        description: |-
+          UID and GID own the mounted file. Leave them empty to let the orchestrator
+          decide (root); "0" is root chosen deliberately. Named users are rejected —
+          the container runtime only understands numeric ids.
+        example: "101"
+        type: string
     type: object
   github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateServiceRequest:
     properties:
@@ -3685,6 +3773,58 @@ paths:
       summary: Detach a config from a service
       tags:
       - configs
+    put:
+      consumes:
+      - application/json
+      description: Replaces the mount path, owner and permission bits of an already-attached
+        config. Applied on the service's next deployment.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Config ID (UUID)
+        in: path
+        name: configId
+        required: true
+        type: string
+      - description: File mount
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigAttachmentRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: service, config or attachment not found
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid owner or mode
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a config's mount on a service
+      tags:
+      - configs
   /services/{id}/deploy:
     post:
       description: 'Triggers a deployment of the service to the orchestrator. Runs
@@ -4490,6 +4630,58 @@ paths:
       security:
       - BearerAuth: []
       summary: Detach a secret from a service
+      tags:
+      - secrets
+    put:
+      consumes:
+      - application/json
+      description: Replaces the mount path, owner and permission bits of an already-attached
+        secret. Applied on the service's next deployment.
+      parameters:
+      - description: Service ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Secret ID (UUID)
+        in: path
+        name: secretId
+        required: true
+        type: string
+      - description: File mount
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateSecretAttachmentRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: validation_error
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "404":
+          description: service, secret or attachment not found
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+        "422":
+          description: invalid owner or mode
+          schema:
+            $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a secret's mount on a service
       tags:
       - secrets
   /services/{id}/snapshots:
