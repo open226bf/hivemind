@@ -107,7 +107,13 @@ type Secret struct {
 	Version    int    `json:"version"`
 	Checksum   string `json:"checksum"`
 	TargetPath string `json:"target_path,omitempty"`
-	Value      string `json:"value"` // sensitive; encrypted at rest, masked by the API
+	// UID, GID and Mode are the mounted file's ownership and permission bits, so
+	// a rollback restores how the secret was exposed, not just which one it was.
+	// Absent in snapshots taken before mounts became configurable.
+	UID   string `json:"uid,omitempty"`
+	GID   string `json:"gid,omitempty"`
+	Mode  uint32 `json:"mode,omitempty"`
+	Value string `json:"value"` // sensitive; encrypted at rest, masked by the API
 }
 
 // Config embeds the resolved content (treated as sensitive at rest) plus the
@@ -118,7 +124,11 @@ type Config struct {
 	Version    int    `json:"version"`
 	Checksum   string `json:"checksum"`
 	TargetPath string `json:"target_path,omitempty"`
-	Content    string `json:"content"`
+	// See Secret: the mount is part of what a rollback has to restore.
+	UID     string `json:"uid,omitempty"`
+	GID     string `json:"gid,omitempty"`
+	Mode    uint32 `json:"mode,omitempty"`
+	Content string `json:"content"`
 }
 
 type Mount struct {

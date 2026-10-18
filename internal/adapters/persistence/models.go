@@ -331,6 +331,12 @@ type serviceSecretModel struct {
 	ServiceID  string `gorm:"type:uuid;primaryKey;column:service_id"`
 	SecretID   string `gorm:"type:uuid;primaryKey;column:secret_id"`
 	TargetPath string `gorm:"column:target_path"`
+	// Owner and permission bits of the mounted file. UID/GID are strings so an
+	// empty value ("leave it to the orchestrator") stays distinct from "0"
+	// (root, chosen deliberately); Mode zero means "not chosen".
+	UID  string `gorm:"column:uid"`
+	GID  string `gorm:"column:gid"`
+	Mode uint32 `gorm:"column:mode"`
 }
 
 func (serviceSecretModel) TableName() string { return "service_secrets" }
@@ -370,9 +376,10 @@ type serviceConfigModel struct {
 	ServiceID  string `gorm:"type:uuid;primaryKey;column:service_id"`
 	ConfigID   string `gorm:"type:uuid;primaryKey;column:config_id"`
 	TargetPath string `gorm:"column:target_path"`
-	UID        string `gorm:"column:uid"`
-	GID        string `gorm:"column:gid"`
-	Mode       uint32 `gorm:"column:mode"`
+	// See serviceSecretModel: same meaning, same empty-vs-zero convention.
+	UID  string `gorm:"column:uid"`
+	GID  string `gorm:"column:gid"`
+	Mode uint32 `gorm:"column:mode"`
 }
 
 func (serviceConfigModel) TableName() string { return "service_configs" }

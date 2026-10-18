@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/open226bf/hivemind/internal/domain/config"
+	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/ports"
 	"github.com/open226bf/hivemind/pkg/domainerrors"
 	"github.com/open226bf/hivemind/pkg/linediff"
@@ -50,11 +51,11 @@ type CreateConfigInput struct {
 	Cluster uuid.UUID
 }
 
-// ServiceConfig pairs an attached config with the mount path chosen for a
-// specific service.
+// ServiceConfig pairs an attached config with the file mount chosen for a
+// specific service: where it lands, who owns it and its permission bits.
 type ServiceConfig struct {
-	Config     *config.Config
-	TargetPath string
+	Config *config.Config
+	service.FileMount
 }
 
 // Create stores a new config with its first version and pushes that version to
@@ -287,24 +288,48 @@ func (s *ConfigService) Delete(ctx context.Context, id uuid.UUID) error {
 	return del.run(ctx, s.tx, s.orchestrators, cfg.ClusterID, "config "+cfg.Name)
 }
 
-// AttachToService links a config to a service at the given mount path. If
-// targetPath is empty, the config's default target path is used.
-func (s *ConfigService) AttachToService(ctx context.Context, serviceID, configID uuid.UUID, targetPath string) error {
-	svc, err := s.services.FindByID(ctx, serviceID)
+// AttachToService links a config to a service with the given file mount. An
+// empty target path falls back to the config's own default; an empty owner and
+// a zero mode mean "not chosen" and are resolved at deploy time.
+func (s *ConfigService) AttachToService(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error {
+	mount, err := s.resolveMount(ctx, serviceID, configID, mount)
 	if err != nil {
 		return err
+	}
+	return s.services.AttachConfig(ctx, serviceID, configID, mount)
+}
+
+// UpdateServiceAttachment changes the file mount of an already-attached config,
+// so a path, owner or permission can be corrected in place.
+func (s *ConfigService) UpdateServiceAttachment(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error {
+	mount, err := s.resolveMount(ctx, serviceID, configID, mount)
+	if err != nil {
+		return err
+	}
+	return s.services.UpdateConfigAttachment(ctx, serviceID, configID, mount)
+}
+
+// resolveMount checks that both ends exist and target the same cluster, then
+// validates the mount and fills the catalog default path when none was given.
+func (s *ConfigService) resolveMount(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) (service.FileMount, error) {
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
+		return mount, err
 	}
 	cfg, err := s.configs.FindByID(ctx, configID)
 	if err != nil {
-		return err
+		return mount, err
 	}
 	if cfg.ClusterID != svc.ClusterID {
-		return ErrClusterMismatch
+		return mount, ErrClusterMismatch
 	}
-	if targetPath == "" {
-		targetPath = cfg.TargetPath
+	if err := mount.Validate(); err != nil {
+		return mount, err
 	}
-	return s.services.AttachConfig(ctx, serviceID, configID, targetPath)
+	if mount.TargetPath == "" {
+		mount.TargetPath = cfg.TargetPath
+	}
+	return mount, nil
 }
 
 func (s *ConfigService) DetachFromService(ctx context.Context, serviceID, configID uuid.UUID) error {
@@ -334,7 +359,7 @@ func (s *ConfigService) ListServiceConfigs(ctx context.Context, serviceID uuid.U
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, ServiceConfig{Config: cfg, TargetPath: a.TargetPath})
+		out = append(out, ServiceConfig{Config: cfg, FileMount: a.FileMount})
 	}
 	return out, nil
 }

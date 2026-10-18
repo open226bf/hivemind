@@ -142,6 +142,9 @@ func (s *SnapshotService) Capture(ctx context.Context, serviceID uuid.UUID, labe
 			Version:    sec.CurrentVersion,
 			Checksum:   sec.Checksum,
 			TargetPath: a.TargetPath,
+			UID:        a.UID,
+			GID:        a.GID,
+			Mode:       a.Mode,
 			Value:      string(value),
 		})
 	}
@@ -166,6 +169,9 @@ func (s *SnapshotService) Capture(ctx context.Context, serviceID uuid.UUID, labe
 			Version:    cfg.CurrentVersion,
 			Checksum:   checksum(content),
 			TargetPath: a.TargetPath,
+			UID:        a.UID,
+			GID:        a.GID,
+			Mode:       a.Mode,
 			Content:    string(content),
 		})
 	}
@@ -394,7 +400,8 @@ func (s *SnapshotService) restoreSecrets(ctx context.Context, serviceID uuid.UUI
 				warnings = append(warnings, fmt.Sprintf("secret %q a changé depuis le snapshot — la valeur actuelle (v%d) sera déployée", sec.Name, live.CurrentVersion))
 			}
 		}
-		if err := s.services.AttachSecret(ctx, serviceID, sid, sec.TargetPath); err != nil {
+		mount := service.FileMount{TargetPath: sec.TargetPath, UID: sec.UID, GID: sec.GID, Mode: sec.Mode}
+		if err := s.services.AttachSecret(ctx, serviceID, sid, mount); err != nil {
 			warnings = append(warnings, fmt.Sprintf("secret %q non rattaché: %v", sec.Name, err))
 		}
 	}
@@ -434,7 +441,8 @@ func (s *SnapshotService) restoreConfigs(ctx context.Context, serviceID uuid.UUI
 				warnings = append(warnings, fmt.Sprintf("config %q a changé depuis le snapshot — la version actuelle (v%d) sera déployée", cfg.Name, live.CurrentVersion))
 			}
 		}
-		if err := s.services.AttachConfig(ctx, serviceID, cid, cfg.TargetPath); err != nil {
+		mount := service.FileMount{TargetPath: cfg.TargetPath, UID: cfg.UID, GID: cfg.GID, Mode: cfg.Mode}
+		if err := s.services.AttachConfig(ctx, serviceID, cid, mount); err != nil {
 			warnings = append(warnings, fmt.Sprintf("config %q non rattachée: %v", cfg.Name, err))
 		}
 	}

@@ -369,6 +369,12 @@ type SecretAttachment struct {
 	// /run/secrets/<name> across rotations instead of moving to <name>_v<n>.
 	Name       string
 	TargetPath string
+	// UID, GID and Mode are the mounted file's ownership and permission bits.
+	// Empty UID/GID leave the choice to the orchestrator (root); Mode is always
+	// resolved by the caller, never zero.
+	UID  string
+	GID  string
+	Mode uint32
 }
 
 type ConfigAttachment struct {
@@ -378,6 +384,10 @@ type ConfigAttachment struct {
 	// TargetPath is empty (see SecretAttachment.Name).
 	Name       string
 	TargetPath string
+	// See SecretAttachment.
+	UID  string
+	GID  string
+	Mode uint32
 }
 
 // LogOptions controls a service log stream (F-V2-01).

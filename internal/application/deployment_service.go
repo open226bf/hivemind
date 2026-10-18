@@ -501,6 +501,11 @@ func (s *DeploymentService) buildSpec(ctx context.Context, orch ports.Orchestrat
 			SwarmSecretName: swarmName,
 			Name:            sec.Name,
 			TargetPath:      a.TargetPath,
+			UID:             a.UID,
+			GID:             a.GID,
+			// Resolved here rather than in the adapter: a zero mode stored
+			// before mounts were configurable must deploy as 0444, not 0000.
+			Mode: a.EffectiveMode(),
 		})
 	}
 
@@ -528,6 +533,9 @@ func (s *DeploymentService) buildSpec(ctx context.Context, orch ports.Orchestrat
 			SwarmConfigName: swarmName,
 			Name:            cfg.Name,
 			TargetPath:      a.TargetPath,
+			UID:             a.UID,
+			GID:             a.GID,
+			Mode:            a.EffectiveMode(),
 		})
 	}
 

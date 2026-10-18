@@ -27,6 +27,28 @@ type RestoreConfigRequest struct {
 type AttachConfigRequest struct {
 	ConfigID   string `json:"config_id"   binding:"required" example:"3f2504e0-4f89-11d3-9a0c-0305e82c3301"`
 	TargetPath string `json:"target_path" example:"/etc/nginx/nginx.conf"`
+	// UID and GID own the mounted file. Leave them empty to let the orchestrator
+	// decide (root); "0" is root chosen deliberately. Named users are rejected —
+	// the container runtime only understands numeric ids.
+	UID string `json:"uid,omitempty" example:"101"`
+	GID string `json:"gid,omitempty" example:"101"`
+	// Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or
+	// send 0 to keep the default 0444 (288 in decimal).
+	Mode uint32 `json:"mode,omitempty" example:"288"`
+}
+
+// UpdateConfigAttachmentRequest is the body for
+// PUT /services/{id}/configs/{configId} (see UpdateSecretAttachmentRequest).
+type UpdateConfigAttachmentRequest struct {
+	TargetPath string `json:"target_path" example:"/etc/nginx/nginx.conf"`
+	// UID and GID own the mounted file. Leave them empty to let the orchestrator
+	// decide (root); "0" is root chosen deliberately. Named users are rejected —
+	// the container runtime only understands numeric ids.
+	UID string `json:"uid,omitempty" example:"101"`
+	GID string `json:"gid,omitempty" example:"101"`
+	// Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or
+	// send 0 to keep the default 0444 (288 in decimal).
+	Mode uint32 `json:"mode,omitempty" example:"288"`
 }
 
 // ConfigResponse exposes config metadata (no content).
@@ -57,12 +79,15 @@ type ConfigVersionResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// ServiceConfigResponse is a config attached to a service, with the mount path
-// chosen for that service.
+// ServiceConfigResponse is a config attached to a service, with the file mount
+// chosen for that service (see ServiceSecretResponse on Mode).
 type ServiceConfigResponse struct {
 	ConfigID   string `json:"config_id"`
 	Name       string `json:"name"`
 	TargetPath string `json:"target_path"`
+	UID        string `json:"uid,omitempty"`
+	GID        string `json:"gid,omitempty"`
+	Mode       uint32 `json:"mode,omitempty"`
 }
 
 // DiffLineDTO is one line of a config version diff (F-V2-08).

@@ -227,17 +227,42 @@ func (r *ServiceRepository) GetNetworkIDs(ctx context.Context, serviceID uuid.UU
 
 // ─── Secret attachments ───────────────────────────────────────────────────────
 
-func (r *ServiceRepository) AttachSecret(ctx context.Context, serviceID, secretID uuid.UUID, targetPath string) error {
+func (r *ServiceRepository) AttachSecret(ctx context.Context, serviceID, secretID uuid.UUID, mount service.FileMount) error {
 	m := serviceSecretModel{
 		ServiceID:  serviceID.String(),
 		SecretID:   secretID.String(),
-		TargetPath: targetPath,
+		TargetPath: mount.TargetPath,
+		UID:        mount.UID,
+		GID:        mount.GID,
+		Mode:       mount.Mode,
 	}
 	if err := dbFor(ctx, r.db).Create(&m).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: secret already attached", domainerrors.ErrConflict)
 		}
 		return fmt.Errorf("attach secret: %w", err)
+	}
+	return nil
+}
+
+// UpdateSecretAttachment rewrites the file mount of an existing attachment.
+// Select() names the columns explicitly so a cleared owner or a zeroed mode is
+// written as such — GORM skips zero values on a struct update otherwise.
+func (r *ServiceRepository) UpdateSecretAttachment(ctx context.Context, serviceID, secretID uuid.UUID, mount service.FileMount) error {
+	res := dbFor(ctx, r.db).Model(&serviceSecretModel{}).
+		Where("service_id = ? AND secret_id = ?", serviceID.String(), secretID.String()).
+		Select("target_path", "uid", "gid", "mode").
+		Updates(serviceSecretModel{
+			TargetPath: mount.TargetPath,
+			UID:        mount.UID,
+			GID:        mount.GID,
+			Mode:       mount.Mode,
+		})
+	if res.Error != nil {
+		return fmt.Errorf("update secret attachment: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return domainerrors.ErrNotFound
 	}
 	return nil
 }
@@ -265,24 +290,56 @@ func (r *ServiceRepository) GetSecretAttachments(ctx context.Context, serviceID 
 	out := make([]ports.ServiceSecretAttachment, 0, len(rows))
 	for _, row := range rows {
 		id, _ := uuid.Parse(row.SecretID)
-		out = append(out, ports.ServiceSecretAttachment{SecretID: id, TargetPath: row.TargetPath})
+		out = append(out, ports.ServiceSecretAttachment{
+			SecretID: id,
+			FileMount: service.FileMount{
+				TargetPath: row.TargetPath,
+				UID:        row.UID,
+				GID:        row.GID,
+				Mode:       row.Mode,
+			},
+		})
 	}
 	return out, nil
 }
 
 // ─── Config attachments ───────────────────────────────────────────────────────
 
-func (r *ServiceRepository) AttachConfig(ctx context.Context, serviceID, configID uuid.UUID, targetPath string) error {
+func (r *ServiceRepository) AttachConfig(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error {
 	m := serviceConfigModel{
 		ServiceID:  serviceID.String(),
 		ConfigID:   configID.String(),
-		TargetPath: targetPath,
+		TargetPath: mount.TargetPath,
+		UID:        mount.UID,
+		GID:        mount.GID,
+		Mode:       mount.Mode,
 	}
 	if err := dbFor(ctx, r.db).Create(&m).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: config already attached", domainerrors.ErrConflict)
 		}
 		return fmt.Errorf("attach config: %w", err)
+	}
+	return nil
+}
+
+// UpdateConfigAttachment rewrites the file mount of an existing attachment
+// (see UpdateSecretAttachment on why the columns are named).
+func (r *ServiceRepository) UpdateConfigAttachment(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error {
+	res := dbFor(ctx, r.db).Model(&serviceConfigModel{}).
+		Where("service_id = ? AND config_id = ?", serviceID.String(), configID.String()).
+		Select("target_path", "uid", "gid", "mode").
+		Updates(serviceConfigModel{
+			TargetPath: mount.TargetPath,
+			UID:        mount.UID,
+			GID:        mount.GID,
+			Mode:       mount.Mode,
+		})
+	if res.Error != nil {
+		return fmt.Errorf("update config attachment: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return domainerrors.ErrNotFound
 	}
 	return nil
 }
@@ -325,7 +382,15 @@ func (r *ServiceRepository) GetConfigAttachments(ctx context.Context, serviceID 
 	out := make([]ports.ServiceConfigAttachment, 0, len(rows))
 	for _, row := range rows {
 		id, _ := uuid.Parse(row.ConfigID)
-		out = append(out, ports.ServiceConfigAttachment{ConfigID: id, TargetPath: row.TargetPath})
+		out = append(out, ports.ServiceConfigAttachment{
+			ConfigID: id,
+			FileMount: service.FileMount{
+				TargetPath: row.TargetPath,
+				UID:        row.UID,
+				GID:        row.GID,
+				Mode:       row.Mode,
+			},
+		})
 	}
 	return out, nil
 }
