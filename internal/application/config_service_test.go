@@ -11,6 +11,7 @@ import (
 
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/config"
+	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/pkg/domainerrors"
 	"github.com/open226bf/hivemind/pkg/pagination"
 )
@@ -72,6 +73,16 @@ func (r *fakeConfigRepo) Update(_ context.Context, c *config.Config, newVersion 
 	return nil
 }
 
+func (r *fakeConfigRepo) SetVersionSwarmID(_ context.Context, configID uuid.UUID, version int, swarmID string) error {
+	for _, v := range r.versions[configID] {
+		if v.Version == version {
+			v.SwarmConfigID = swarmID
+			return nil
+		}
+	}
+	return domainerrors.ErrNotFound
+}
+
 func (r *fakeConfigRepo) Delete(_ context.Context, id uuid.UUID) error {
 	c, ok := r.byID[id]
 	if !ok {
@@ -90,7 +101,7 @@ func (r *fakeConfigRepo) IsAttachedToService(_ context.Context, id uuid.UUID) (b
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func newConfigSvc(configs *fakeConfigRepo, services *fakeServiceRepo) *application.ConfigService {
-	return application.NewConfigService(configs, services)
+	return application.NewConfigService(configs, services, nil, nil)
 }
 
 // ─── Create ───────────────────────────────────────────────────────────────────
@@ -189,7 +200,7 @@ func TestConfigAttach_DefaultsTargetPath(t *testing.T) {
 		Name: "nginx.conf", TargetPath: "/etc/nginx/nginx.conf", Content: []byte("x"), Comment: "initial", CreatedBy: uuid.New(),
 	})
 
-	require.NoError(t, svc.AttachToService(context.Background(), s.ID, c.ID, ""))
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, c.ID, service.FileMount{}))
 
 	attached, err := svc.ListServiceConfigs(context.Background(), s.ID)
 	require.NoError(t, err)
@@ -205,8 +216,8 @@ func TestConfigAttach_AlreadyAttached(t *testing.T) {
 	svc := newConfigSvc(cfgRepo, svcRepo)
 	c, _ := svc.Create(context.Background(), application.CreateConfigInput{Name: "c.conf", Content: []byte("x"), Comment: "initial", CreatedBy: uuid.New()})
 
-	require.NoError(t, svc.AttachToService(context.Background(), s.ID, c.ID, "/x"))
-	err := svc.AttachToService(context.Background(), s.ID, c.ID, "/x")
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, c.ID, service.FileMount{TargetPath: "/x"}))
+	err := svc.AttachToService(context.Background(), s.ID, c.ID, service.FileMount{TargetPath: "/x"})
 	assert.ErrorIs(t, err, domainerrors.ErrConflict)
 }
 
@@ -291,10 +302,68 @@ func TestConfigImpactedServices(t *testing.T) {
 	})
 	s := mkService(t, "api")
 	svcRepo.add(s)
-	require.NoError(t, svc.AttachToService(context.Background(), s.ID, c.ID, "/etc/app.yml"))
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, c.ID, service.FileMount{TargetPath: "/etc/app.yml"}))
 
 	impacted, err := svc.ImpactedServices(context.Background(), c.ID)
 	require.NoError(t, err)
 	require.Len(t, impacted, 1)
 	assert.Equal(t, "api", impacted[0].Name)
+}
+
+// ─── Mount permissions ────────────────────────────────────────────────────────
+
+func TestConfigAttach_StoresOwnerAndMode(t *testing.T) {
+	svcRepo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	svcRepo.add(s)
+	svc := newConfigSvc(newFakeConfigRepo(), svcRepo)
+	c, _ := svc.Create(context.Background(), application.CreateConfigInput{
+		Name: "nginx.conf", TargetPath: "/etc/nginx/nginx.conf", Content: []byte("x"),
+		Comment: "initial", CreatedBy: uuid.New(),
+	})
+
+	mount := service.FileMount{TargetPath: "/etc/nginx/nginx.conf", UID: "101", GID: "0", Mode: 0o640}
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, c.ID, mount))
+
+	attached, err := svc.ListServiceConfigs(context.Background(), s.ID)
+	require.NoError(t, err)
+	require.Len(t, attached, 1)
+	assert.Equal(t, "101", attached[0].UID)
+	assert.Equal(t, "0", attached[0].GID, `"0" is root chosen deliberately, not "unset"`)
+	assert.Equal(t, uint32(0o640), attached[0].Mode)
+}
+
+func TestConfigAttach_RejectsModeAbovePermissionBits(t *testing.T) {
+	svcRepo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	svcRepo.add(s)
+	svc := newConfigSvc(newFakeConfigRepo(), svcRepo)
+	c, _ := svc.Create(context.Background(), application.CreateConfigInput{
+		Name: "app.yml", Content: []byte("x"), Comment: "v1", CreatedBy: uuid.New(),
+	})
+
+	err := svc.AttachToService(context.Background(), s.ID, c.ID, service.FileMount{Mode: 0o4755})
+
+	assert.ErrorIs(t, err, service.ErrInvalidFileMode)
+}
+
+func TestConfigUpdateAttachment_RewritesTheMount(t *testing.T) {
+	svcRepo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	svcRepo.add(s)
+	svc := newConfigSvc(newFakeConfigRepo(), svcRepo)
+	c, _ := svc.Create(context.Background(), application.CreateConfigInput{
+		Name: "app.yml", TargetPath: "/etc/app.yml", Content: []byte("x"),
+		Comment: "v1", CreatedBy: uuid.New(),
+	})
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, c.ID, service.FileMount{}))
+
+	require.NoError(t, svc.UpdateServiceAttachment(context.Background(), s.ID, c.ID,
+		service.FileMount{TargetPath: "/etc/app/other.yml", UID: "1000", Mode: 0o444}))
+
+	attached, err := svc.ListServiceConfigs(context.Background(), s.ID)
+	require.NoError(t, err)
+	require.Len(t, attached, 1)
+	assert.Equal(t, "/etc/app/other.yml", attached[0].TargetPath)
+	assert.Equal(t, "1000", attached[0].UID)
 }

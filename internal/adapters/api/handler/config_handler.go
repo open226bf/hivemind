@@ -12,6 +12,7 @@ import (
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/config"
+	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/domain/user"
 )
 
@@ -39,6 +40,7 @@ func (h *ConfigHandler) Register(protected *gin.RouterGroup) {
 	s := protected.Group("/services/:id/configs")
 	s.GET("", middleware.RequireRole(user.RoleViewer), h.ListForService)
 	s.POST("", middleware.RequireRole(user.RoleOperator), h.AttachToService)
+	s.PUT("/:configId", middleware.RequireRole(user.RoleOperator), h.UpdateServiceAttachment)
 	s.DELETE("/:configId", middleware.RequireRole(user.RoleOperator), h.DetachFromService)
 }
 
@@ -77,7 +79,7 @@ func (h *ConfigHandler) List(c *gin.Context) {
 // Create godoc
 //
 //	@Summary		Create a config
-//	@Description	Stores a cleartext config file (UTF-8, max 500 KB) as version 1.
+//	@Description	Stores a cleartext config file (UTF-8, max 500 KB) as version 1 and creates it on the target cluster in the same transaction.
 //	@Tags			configs
 //	@Security		BearerAuth
 //	@Accept			json
@@ -89,6 +91,8 @@ func (h *ConfigHandler) List(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		409		{object}	dto.ErrorResponse	"name already taken"
 //	@Failure		422		{object}	dto.ErrorResponse	"invalid name, content too large or invalid UTF-8"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the config version"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/configs [post]
 func (h *ConfigHandler) Create(c *gin.Context) {
 	var req dto.CreateConfigRequest
@@ -178,7 +182,7 @@ func (h *ConfigHandler) ListVersions(c *gin.Context) {
 // AddVersion godoc
 //
 //	@Summary		Add a config version
-//	@Description	Stores new content as the next version. Attached services pick it up on their next deployment.
+//	@Description	Stores new content as the next version and creates it on the cluster in the same transaction. Attached services pick it up on their next deployment.
 //	@Tags			configs
 //	@Security		BearerAuth
 //	@Accept			json
@@ -191,6 +195,8 @@ func (h *ConfigHandler) ListVersions(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		404		{object}	dto.ErrorResponse
 //	@Failure		422		{object}	dto.ErrorResponse	"content too large or invalid UTF-8"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the config version"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/configs/{id}/versions [post]
 func (h *ConfigHandler) AddVersion(c *gin.Context) {
 	id, ok := parseUUID(c, "id")
@@ -266,6 +272,8 @@ func (h *ConfigHandler) Diff(c *gin.Context) {
 //	@Failure		401		{object}	dto.ErrorResponse
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		404		{object}	dto.ErrorResponse	"config or version not found"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the config version"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/configs/{id}/versions/{version}/restore [post]
 func (h *ConfigHandler) RestoreVersion(c *gin.Context) {
 	id, ok := parseUUID(c, "id")
@@ -376,6 +384,9 @@ func (h *ConfigHandler) ListForService(c *gin.Context) {
 			ConfigID:   a.Config.ID.String(),
 			Name:       a.Config.Name,
 			TargetPath: a.TargetPath,
+			UID:        a.UID,
+			GID:        a.GID,
+			Mode:       a.Mode,
 		}
 	}
 	c.JSON(http.StatusOK, out)
@@ -411,7 +422,49 @@ func (h *ConfigHandler) AttachToService(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.AttachToService(c.Request.Context(), serviceID, configID, req.TargetPath); err != nil {
+	mount := service.FileMount{TargetPath: req.TargetPath, UID: req.UID, GID: req.GID, Mode: req.Mode}
+	if err := h.svc.AttachToService(c.Request.Context(), serviceID, configID, mount); err != nil {
+		h.writeConfigError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// UpdateServiceAttachment godoc
+//
+//	@Summary		Update a config's mount on a service
+//	@Description	Replaces the mount path, owner and permission bits of an already-attached config. Applied on the service's next deployment.
+//	@Tags			configs
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path	string								true	"Service ID (UUID)"
+//	@Param			configId	path	string								true	"Config ID (UUID)"
+//	@Param			body		body	dto.UpdateConfigAttachmentRequest	true	"File mount"
+//	@Success		204
+//	@Failure		400	{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse	"service, config or attachment not found"
+//	@Failure		422	{object}	dto.ErrorResponse	"invalid owner or mode"
+//	@Router			/services/{id}/configs/{configId} [put]
+func (h *ConfigHandler) UpdateServiceAttachment(c *gin.Context) {
+	serviceID, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	configID, ok := parseUUID(c, "configId")
+	if !ok {
+		return
+	}
+	var req dto.UpdateConfigAttachmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	mount := service.FileMount{TargetPath: req.TargetPath, UID: req.UID, GID: req.GID, Mode: req.Mode}
+	if err := h.svc.UpdateServiceAttachment(c.Request.Context(), serviceID, configID, mount); err != nil {
 		h.writeConfigError(c, err)
 		return
 	}
@@ -457,7 +510,10 @@ func (h *ConfigHandler) writeConfigError(c *gin.Context, err error) {
 	case errors.Is(err, config.ErrInvalidName),
 		errors.Is(err, config.ErrContentTooLarge),
 		errors.Is(err, config.ErrInvalidUTF8),
-		errors.Is(err, config.ErrCommentRequired):
+		errors.Is(err, config.ErrCommentRequired),
+		errors.Is(err, service.ErrInvalidFileOwner),
+		errors.Is(err, service.ErrInvalidFileMode),
+		errors.Is(err, service.ErrRelativeMount):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
 		writeError(c, err, "resource not found")

@@ -66,7 +66,7 @@ func (r *fakeTemplateRepo) Delete(_ context.Context, id uuid.UUID) error {
 
 func newTemplateSvc(tmplRepo *fakeTemplateRepo, svcRepo *fakeServiceRepo, netRepo *fakeNetworkRepo) *application.TemplateService {
 	svcSvc := application.NewServiceService(svcRepo, nil) // nil orch → capacity check skipped
-	netSvc := application.NewNetworkService(netRepo, svcRepo)
+	netSvc := application.NewNetworkService(netRepo, svcRepo, nil, nil)
 	return application.NewTemplateService(tmplRepo, svcSvc, netSvc)
 }
 

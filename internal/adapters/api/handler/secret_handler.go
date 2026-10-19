@@ -10,6 +10,7 @@ import (
 	"github.com/open226bf/hivemind/internal/adapters/api/middleware"
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/secret"
+	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/domain/user"
 )
 
@@ -35,6 +36,7 @@ func (h *SecretHandler) Register(protected *gin.RouterGroup) {
 	s := protected.Group("/services/:id/secrets")
 	s.GET("", middleware.RequireRole(user.RoleViewer), h.ListForService)
 	s.POST("", middleware.RequireRole(user.RoleOperator), h.AttachToService)
+	s.PUT("/:secretId", middleware.RequireRole(user.RoleOperator), h.UpdateServiceAttachment)
 	s.DELETE("/:secretId", middleware.RequireRole(user.RoleOperator), h.DetachFromService)
 }
 
@@ -74,7 +76,7 @@ func (h *SecretHandler) List(c *gin.Context) {
 // Create godoc
 //
 //	@Summary		Create a secret
-//	@Description	Stores a write-only secret. The value is encrypted at rest and never returned by any endpoint.
+//	@Description	Stores a write-only secret and creates its first version on the target cluster in the same transaction. The value is encrypted at rest and never returned by any endpoint.
 //	@Tags			secrets
 //	@Security		BearerAuth
 //	@Accept			json
@@ -86,6 +88,8 @@ func (h *SecretHandler) List(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		409		{object}	dto.ErrorResponse	"name already taken"
 //	@Failure		422		{object}	dto.ErrorResponse	"invalid name or empty value"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the secret"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/secrets [post]
 func (h *SecretHandler) Create(c *gin.Context) {
 	var req dto.CreateSecretRequest
@@ -144,7 +148,7 @@ func (h *SecretHandler) Get(c *gin.Context) {
 // Rotate godoc
 //
 //	@Summary		Rotate a secret
-//	@Description	Stores a new encrypted version and increments the version counter. Attached services pick up the new version on their next deployment.
+//	@Description	Stores a new encrypted version, increments the version counter and pushes the version to the cluster in the same transaction. Attached services pick it up on their next deployment.
 //	@Tags			secrets
 //	@Security		BearerAuth
 //	@Accept			json
@@ -157,6 +161,8 @@ func (h *SecretHandler) Get(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		404		{object}	dto.ErrorResponse
 //	@Failure		422		{object}	dto.ErrorResponse	"empty value"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the secret version"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/secrets/{id}/rotate [post]
 func (h *SecretHandler) Rotate(c *gin.Context) {
 	id, ok := parseUUID(c, "id")
@@ -230,6 +236,9 @@ func (h *SecretHandler) ListForService(c *gin.Context) {
 			SecretID:   a.Secret.ID.String(),
 			Name:       a.Secret.Name,
 			TargetPath: a.TargetPath,
+			UID:        a.UID,
+			GID:        a.GID,
+			Mode:       a.Mode,
 		}
 	}
 	c.JSON(http.StatusOK, out)
@@ -265,7 +274,49 @@ func (h *SecretHandler) AttachToService(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.AttachToService(c.Request.Context(), serviceID, secretID, req.TargetPath); err != nil {
+	mount := service.FileMount{TargetPath: req.TargetPath, UID: req.UID, GID: req.GID, Mode: req.Mode}
+	if err := h.svc.AttachToService(c.Request.Context(), serviceID, secretID, mount); err != nil {
+		h.writeSecretError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// UpdateServiceAttachment godoc
+//
+//	@Summary		Update a secret's mount on a service
+//	@Description	Replaces the mount path, owner and permission bits of an already-attached secret. Applied on the service's next deployment.
+//	@Tags			secrets
+//	@Security		BearerAuth
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path	string								true	"Service ID (UUID)"
+//	@Param			secretId	path	string								true	"Secret ID (UUID)"
+//	@Param			body		body	dto.UpdateSecretAttachmentRequest	true	"File mount"
+//	@Success		204
+//	@Failure		400	{object}	dto.ErrorResponse	"validation_error"
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse	"service, secret or attachment not found"
+//	@Failure		422	{object}	dto.ErrorResponse	"invalid owner or mode"
+//	@Router			/services/{id}/secrets/{secretId} [put]
+func (h *SecretHandler) UpdateServiceAttachment(c *gin.Context) {
+	serviceID, ok := parseUUID(c, "id")
+	if !ok {
+		return
+	}
+	secretID, ok := parseUUID(c, "secretId")
+	if !ok {
+		return
+	}
+	var req dto.UpdateSecretAttachmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.Abort(c, http.StatusBadRequest, dto.CodeValidation, "invalid request body", err.Error())
+		return
+	}
+
+	mount := service.FileMount{TargetPath: req.TargetPath, UID: req.UID, GID: req.GID, Mode: req.Mode}
+	if err := h.svc.UpdateServiceAttachment(c.Request.Context(), serviceID, secretID, mount); err != nil {
 		h.writeSecretError(c, err)
 		return
 	}
@@ -306,7 +357,9 @@ func (h *SecretHandler) writeSecretError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, secret.ErrSecretInUse):
 		dto.Abort(c, http.StatusConflict, dto.CodeConflict, err.Error())
-	case errors.Is(err, secret.ErrInvalidName), errors.Is(err, secret.ErrEmptyValue):
+	case errors.Is(err, secret.ErrInvalidName), errors.Is(err, secret.ErrEmptyValue),
+		errors.Is(err, service.ErrInvalidFileOwner), errors.Is(err, service.ErrInvalidFileMode),
+		errors.Is(err, service.ErrRelativeMount):
 		dto.Abort(c, http.StatusUnprocessableEntity, dto.CodeUnprocessable, err.Error())
 	default:
 		writeError(c, err, "resource not found")

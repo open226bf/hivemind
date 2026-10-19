@@ -30,7 +30,7 @@ func (r *SecretRepository) Save(ctx context.Context, s *secret.Secret, v *secret
 	vm := secretVersionToModel(v)
 	vm.EncryptedValue = enc
 
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(secretToModel(s)).Error; err != nil {
 			if errors.Is(err, gorm.ErrDuplicatedKey) {
 				return fmt.Errorf("%w: secret name %q already exists", domainerrors.ErrConflict, s.Name)
@@ -46,7 +46,7 @@ func (r *SecretRepository) Save(ctx context.Context, s *secret.Secret, v *secret
 
 func (r *SecretRepository) FindByID(ctx context.Context, id uuid.UUID) (*secret.Secret, error) {
 	var m secretModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -60,7 +60,7 @@ func (r *SecretRepository) List(ctx context.Context, clusterID uuid.UUID, p pagi
 	var models []secretModel
 	var count int64
 
-	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&secretModel{}), clusterID), "")
+	q := scopeACL(scopeCluster(dbFor(ctx, r.db).Model(&secretModel{}), clusterID), "")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count secrets: %w", err)
 	}
@@ -84,7 +84,7 @@ func (r *SecretRepository) Update(ctx context.Context, s *secret.Secret, newVers
 	vm := secretVersionToModel(newVersion)
 	vm.EncryptedValue = enc
 
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(secretToModel(s)).Error; err != nil {
 			return fmt.Errorf("update secret: %w", err)
 		}
@@ -95,8 +95,37 @@ func (r *SecretRepository) Update(ctx context.Context, s *secret.Secret, newVers
 	})
 }
 
+// SetVersionSwarmID records the id the orchestrator assigned to a secret
+// version. Each version is its own Swarm object (secrets are immutable there),
+// so the id is stored on the version rather than the secret.
+func (r *SecretRepository) SetVersionSwarmID(ctx context.Context, secretID uuid.UUID, version int, swarmID string) error {
+	res := dbFor(ctx, r.db).Model(&secretVersionModel{}).
+		Where("secret_id = ? AND version = ?", secretID.String(), version).
+		Update("swarm_secret_id", swarmID)
+	if res.Error != nil {
+		return fmt.Errorf("set secret version swarm id: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return domainerrors.ErrNotFound
+	}
+	return nil
+}
+
+// ListVersionSwarmIDs returns the orchestrator id of every version of a secret,
+// so deleting the secret can remove the objects it owns on the cluster. Versions
+// created before secrets were materialised up front have an empty id.
+func (r *SecretRepository) ListVersionSwarmIDs(ctx context.Context, secretID uuid.UUID) ([]string, error) {
+	var ids []string
+	if err := dbFor(ctx, r.db).Model(&secretVersionModel{}).
+		Where("secret_id = ?", secretID.String()).
+		Order("version ASC").Pluck("swarm_secret_id", &ids).Error; err != nil {
+		return nil, fmt.Errorf("list secret version swarm ids: %w", err)
+	}
+	return ids, nil
+}
+
 func (r *SecretRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		sid := id.String()
 		if err := tx.Where("secret_id = ?", sid).Delete(&secretVersionModel{}).Error; err != nil {
 			return fmt.Errorf("delete secret versions: %w", err)
@@ -115,7 +144,7 @@ func (r *SecretRepository) Delete(ctx context.Context, id uuid.UUID) error {
 // GetValue returns the decrypted value of the secret's current version.
 func (r *SecretRepository) GetValue(ctx context.Context, id uuid.UUID) ([]byte, error) {
 	var sm secretModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&sm).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&sm).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -124,7 +153,7 @@ func (r *SecretRepository) GetValue(ctx context.Context, id uuid.UUID) ([]byte, 
 	}
 
 	var vm secretVersionModel
-	err = r.db.WithContext(ctx).
+	err = dbFor(ctx, r.db).
 		Where("secret_id = ? AND version = ?", sm.ID, sm.CurrentVersion).
 		First(&vm).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -143,7 +172,7 @@ func (r *SecretRepository) GetValue(ctx context.Context, id uuid.UUID) ([]byte, 
 
 func (r *SecretRepository) IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&serviceSecretModel{}).
+	if err := dbFor(ctx, r.db).Model(&serviceSecretModel{}).
 		Where("secret_id = ?", id.String()).Count(&count).Error; err != nil {
 		return false, fmt.Errorf("check secret attachment: %w", err)
 	}

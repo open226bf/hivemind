@@ -21,7 +21,7 @@ func NewAclRepository(db *gorm.DB) *AclRepository { return &AclRepository{db: db
 // repeated grant updates the verb/expiry instead of failing on a duplicate.
 func (r *AclRepository) Save(ctx context.Context, g *acl.Grant) error {
 	m := aclToModel(g)
-	err := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+	err := dbFor(ctx, r.db).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "subject_id"}, {Name: "resource_type"}, {Name: "resource_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"verb", "created_by", "created_at", "expires_at"}),
 	}).Create(m).Error
@@ -33,7 +33,7 @@ func (r *AclRepository) Save(ctx context.Context, g *acl.Grant) error {
 
 func (r *AclRepository) FindByID(ctx context.Context, id uuid.UUID) (*acl.Grant, error) {
 	var m aclGrantModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -44,7 +44,7 @@ func (r *AclRepository) FindByID(ctx context.Context, id uuid.UUID) (*acl.Grant,
 }
 
 func (r *AclRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
-	res := r.db.WithContext(ctx).Where("id = ?", id.String()).Delete(&aclGrantModel{})
+	res := dbFor(ctx, r.db).Where("id = ?", id.String()).Delete(&aclGrantModel{})
 	if res.Error != nil {
 		return fmt.Errorf("delete acl grant: %w", res.Error)
 	}
@@ -56,7 +56,7 @@ func (r *AclRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
 
 func (r *AclRepository) ListBySubject(ctx context.Context, subjectID uuid.UUID) ([]*acl.Grant, error) {
 	var models []aclGrantModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("subject_id = ?", subjectID.String()).
 		Find(&models).Error; err != nil {
 		return nil, fmt.Errorf("list acl grants by subject: %w", err)
@@ -66,7 +66,7 @@ func (r *AclRepository) ListBySubject(ctx context.Context, subjectID uuid.UUID) 
 
 func (r *AclRepository) ListByResource(ctx context.Context, rt acl.ResourceType, resourceID uuid.UUID) ([]*acl.Grant, error) {
 	var models []aclGrantModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("resource_type = ? AND resource_id = ?", string(rt), resourceID.String()).
 		Order("created_at ASC").
 		Find(&models).Error; err != nil {
@@ -76,7 +76,7 @@ func (r *AclRepository) ListByResource(ctx context.Context, rt acl.ResourceType,
 }
 
 func (r *AclRepository) DeleteByResource(ctx context.Context, rt acl.ResourceType, resourceID uuid.UUID) error {
-	err := r.db.WithContext(ctx).
+	err := dbFor(ctx, r.db).
 		Where("resource_type = ? AND resource_id = ?", string(rt), resourceID.String()).
 		Delete(&aclGrantModel{}).Error
 	if err != nil {

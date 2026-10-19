@@ -52,7 +52,7 @@ func (r *SnapshotRepository) Save(ctx context.Context, s *snapshot.ServiceSnapsh
 		EncryptedPayload: enc,
 		CreatedAt:        s.CreatedAt,
 	}
-	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(m).Error; err != nil {
 		return fmt.Errorf("save snapshot: %w", err)
 	}
 	return nil
@@ -60,7 +60,7 @@ func (r *SnapshotRepository) Save(ctx context.Context, s *snapshot.ServiceSnapsh
 
 func (r *SnapshotRepository) FindByID(ctx context.Context, id uuid.UUID) (*snapshot.ServiceSnapshot, error) {
 	var m serviceSnapshotModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -74,7 +74,7 @@ func (r *SnapshotRepository) ListByServiceID(ctx context.Context, serviceID uuid
 	var models []serviceSnapshotModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&serviceSnapshotModel{}).Where("service_id = ?", serviceID.String())
+	q := dbFor(ctx, r.db).Model(&serviceSnapshotModel{}).Where("service_id = ?", serviceID.String())
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count snapshots: %w", err)
 	}
@@ -94,7 +94,7 @@ func (r *SnapshotRepository) ListByServiceID(ctx context.Context, serviceID uuid
 }
 
 func (r *SnapshotRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	res := r.db.WithContext(ctx).Where("id = ?", id.String()).Delete(&serviceSnapshotModel{})
+	res := dbFor(ctx, r.db).Where("id = ?", id.String()).Delete(&serviceSnapshotModel{})
 	if res.Error != nil {
 		return fmt.Errorf("delete snapshot: %w", res.Error)
 	}

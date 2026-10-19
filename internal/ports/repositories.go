@@ -99,12 +99,17 @@ type ServiceRepository interface {
 	GetNetworkIDs(ctx context.Context, serviceID uuid.UUID) ([]uuid.UUID, error)
 
 	// Secret attachments
-	AttachSecret(ctx context.Context, serviceID, secretID uuid.UUID, targetPath string) error
+	AttachSecret(ctx context.Context, serviceID, secretID uuid.UUID, mount service.FileMount) error
+	// UpdateSecretAttachment changes the file mount of an already-attached
+	// secret, so a path or permission can be corrected without detaching (which
+	// would lose nothing here, but reads as destructive to the operator).
+	UpdateSecretAttachment(ctx context.Context, serviceID, secretID uuid.UUID, mount service.FileMount) error
 	DetachSecret(ctx context.Context, serviceID, secretID uuid.UUID) error
 	GetSecretAttachments(ctx context.Context, serviceID uuid.UUID) ([]ServiceSecretAttachment, error)
 
 	// Config attachments
-	AttachConfig(ctx context.Context, serviceID, configID uuid.UUID, targetPath string) error
+	AttachConfig(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error
+	UpdateConfigAttachment(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error
 	DetachConfig(ctx context.Context, serviceID, configID uuid.UUID) error
 	GetConfigAttachments(ctx context.Context, serviceID uuid.UUID) ([]ServiceConfigAttachment, error)
 	// ServiceIDsByConfigID returns the IDs of services that attach a given config
@@ -118,6 +123,10 @@ type ServiceRepository interface {
 	// Published ports (atomic replacement)
 	SetPorts(ctx context.Context, serviceID uuid.UUID, ports []service.Port) error
 	GetPorts(ctx context.Context, serviceID uuid.UUID) ([]service.Port, error)
+	// GetPortsByServices reads the ports of many services in one query, so a list
+	// page costs one round trip rather than one per row. A service without ports
+	// has no entry in the map.
+	GetPortsByServices(ctx context.Context, serviceIDs []uuid.UUID) (map[uuid.UUID][]service.Port, error)
 	// CountMountsByVolumeName returns how many service mounts reference a named
 	// volume — used to refuse deletion of an in-use volume.
 	CountMountsByVolumeName(ctx context.Context, name string) (int64, error)
@@ -142,14 +151,18 @@ type ServiceFilter struct {
 	ClusterID *uuid.UUID
 }
 
+// ServiceSecretAttachment is one secret mounted into a service, with the file
+// mount chosen for that service (path, owner, permission bits).
 type ServiceSecretAttachment struct {
-	SecretID   uuid.UUID
-	TargetPath string
+	SecretID uuid.UUID
+	service.FileMount
 }
 
+// ServiceConfigAttachment is one config mounted into a service, with the file
+// mount chosen for that service.
 type ServiceConfigAttachment struct {
-	ConfigID   uuid.UUID
-	TargetPath string
+	ConfigID uuid.UUID
+	service.FileMount
 }
 
 // ─── Deployment ───────────────────────────────────────────────────────────────
@@ -181,6 +194,12 @@ type SecretRepository interface {
 	// Update rotates a secret: bumps the parent record and stores the new
 	// encrypted version value.
 	Update(ctx context.Context, s *secret.Secret, newVersion *secret.SecretVersion, value []byte) error
+	// SetVersionSwarmID records the orchestrator id of a version once it has
+	// been materialised on the cluster.
+	SetVersionSwarmID(ctx context.Context, secretID uuid.UUID, version int, swarmID string) error
+	// ListVersionSwarmIDs returns the orchestrator id of every version, so a
+	// delete can remove the objects the secret owns on the cluster.
+	ListVersionSwarmIDs(ctx context.Context, secretID uuid.UUID) ([]string, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
 	// GetValue returns the decrypted value of the secret's current version.
@@ -195,6 +214,9 @@ type NetworkRepository interface {
 	Save(ctx context.Context, n *network.Network) error
 	FindByID(ctx context.Context, id uuid.UUID) (*network.Network, error)
 	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*network.Network, int64, error)
+	// SetSwarmID records the orchestrator id of the overlay once it has been
+	// materialised on the cluster.
+	SetSwarmID(ctx context.Context, id uuid.UUID, swarmID string) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
 }
@@ -241,6 +263,9 @@ type ConfigRepository interface {
 	ListVersions(ctx context.Context, configID uuid.UUID) ([]*config.ConfigVersion, error)
 	List(ctx context.Context, clusterID uuid.UUID, p pagination.Page) ([]*config.Config, int64, error)
 	Update(ctx context.Context, c *config.Config, newVersion *config.ConfigVersion) error
+	// SetVersionSwarmID records the orchestrator id of a version once it has
+	// been materialised on the cluster.
+	SetVersionSwarmID(ctx context.Context, configID uuid.UUID, version int, swarmID string) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error)
 }

@@ -32,6 +32,10 @@ func writeError(c *gin.Context, err error, notFound string) {
 		dto.Abort(c, http.StatusForbidden, dto.CodeForbidden, err.Error())
 	case errors.Is(err, application.ErrOrchestratorUnavailable):
 		dto.Abort(c, http.StatusServiceUnavailable, dto.CodeInternal, err.Error())
+	case errors.Is(err, application.ErrClusterRejected):
+		// The cluster answered and said no: relay its reason rather than a
+		// generic 500, so the operator sees what Swarm actually complained about.
+		dto.Abort(c, http.StatusBadGateway, dto.CodeInternal, err.Error())
 	default:
 		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "internal error")
 	}

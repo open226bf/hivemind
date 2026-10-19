@@ -176,6 +176,17 @@ func (s *ServiceService) List(
 	return s.services.List(ctx, filter, page)
 }
 
+// PortsFor returns the published ports of the given services, keyed by service
+// id, in a single query. It exists for list pages that show the ports of every
+// row; a service with none is simply absent from the map.
+func (s *ServiceService) PortsFor(ctx context.Context, services []*service.Service) (map[uuid.UUID][]service.Port, error) {
+	ids := make([]uuid.UUID, len(services))
+	for i, svc := range services {
+		ids[i] = svc.ID
+	}
+	return s.services.GetPortsByServices(ctx, ids)
+}
+
 // Update applies the non-nil fields from UpdateServiceInput to the service.
 // The service name is immutable.
 func (s *ServiceService) Update(ctx context.Context, id uuid.UUID, in UpdateServiceInput) (*service.Service, error) {

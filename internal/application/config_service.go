@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/open226bf/hivemind/internal/domain/config"
+	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/internal/ports"
 	"github.com/open226bf/hivemind/pkg/domainerrors"
 	"github.com/open226bf/hivemind/pkg/linediff"
@@ -22,12 +23,22 @@ var ErrVersionNotFound = errors.New("config version not found")
 // attachment to services (F-MVP-07). Unlike secrets, config content is
 // readable through the API.
 type ConfigService struct {
-	configs  ports.ConfigRepository
-	services ports.ServiceRepository
+	configs       ports.ConfigRepository
+	services      ports.ServiceRepository
+	orchestrators ports.OrchestratorRegistry
+	tx            ports.TxManager
 }
 
-func NewConfigService(configs ports.ConfigRepository, services ports.ServiceRepository) *ConfigService {
-	return &ConfigService{configs: configs, services: services}
+// NewConfigService wires the config use case. orchestrators and tx may be nil
+// (tests, or a deployment with no orchestrator): writes then only touch the
+// database, as they did before configs were pushed to the cluster up front.
+func NewConfigService(
+	configs ports.ConfigRepository,
+	services ports.ServiceRepository,
+	orchestrators ports.OrchestratorRegistry,
+	tx ports.TxManager,
+) *ConfigService {
+	return &ConfigService{configs: configs, services: services, orchestrators: orchestrators, tx: tx}
 }
 
 type CreateConfigInput struct {
@@ -40,24 +51,69 @@ type CreateConfigInput struct {
 	Cluster uuid.UUID
 }
 
-// ServiceConfig pairs an attached config with the mount path chosen for a
-// specific service.
+// ServiceConfig pairs an attached config with the file mount chosen for a
+// specific service: where it lands, who owns it and its permission bits.
 type ServiceConfig struct {
-	Config     *config.Config
-	TargetPath string
+	Config *config.Config
+	service.FileMount
 }
 
-// Create stores a new config with its first version.
+// Create stores a new config with its first version and pushes that version to
+// the target cluster in the same transaction: either the config exists on both
+// sides, or on neither.
 func (s *ConfigService) Create(ctx context.Context, in CreateConfigInput) (*config.Config, error) {
 	cfg, ver, err := config.New(in.Name, in.TargetPath, in.Content, in.Comment, in.CreatedBy)
 	if err != nil {
 		return nil, err
 	}
 	cfg.ClusterID = in.Cluster
-	if err := s.configs.Save(ctx, cfg, ver); err != nil {
+
+	res := clusterResource{
+		Persist: func(ctx context.Context) error { return s.configs.Save(ctx, cfg, ver) },
+		Create:  s.pushVersion(cfg, ver),
+		Record:  s.recordVersion(cfg, ver),
+		Remove: func(ctx context.Context, orch ports.Orchestrator, swarmID string) error {
+			return orch.RemoveConfig(ctx, swarmID)
+		},
+	}
+	if err := res.create(ctx, s.tx, s.orchestrators, cfg.ClusterID, "config "+cfg.Name); err != nil {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+// SwarmConfigName is the name a config version carries on the cluster. Swarm
+// configs are immutable, so every version is its own object.
+func SwarmConfigName(name string, version int) string {
+	return fmt.Sprintf("%s_v%d", name, version)
+}
+
+func (s *ConfigService) pushVersion(cfg *config.Config, ver *config.ConfigVersion) func(context.Context, ports.Orchestrator) (string, error) {
+	return func(ctx context.Context, orch ports.Orchestrator) (string, error) {
+		return orch.CreateConfig(ctx, SwarmConfigName(cfg.Name, ver.Version), ver.Content)
+	}
+}
+
+func (s *ConfigService) recordVersion(cfg *config.Config, ver *config.ConfigVersion) func(context.Context, string) error {
+	return func(ctx context.Context, swarmID string) error {
+		ver.SwarmConfigID = swarmID
+		return s.configs.SetVersionSwarmID(ctx, cfg.ID, ver.Version, swarmID)
+	}
+}
+
+// addVersion persists a new version and materialises it on the cluster as one
+// unit. Shared by AddVersion and RestoreVersion, which differ only in where the
+// content comes from.
+func (s *ConfigService) addVersion(ctx context.Context, cfg *config.Config, ver *config.ConfigVersion) error {
+	res := clusterResource{
+		Persist: func(ctx context.Context) error { return s.configs.Update(ctx, cfg, ver) },
+		Create:  s.pushVersion(cfg, ver),
+		Record:  s.recordVersion(cfg, ver),
+		Remove: func(ctx context.Context, orch ports.Orchestrator, swarmID string) error {
+			return orch.RemoveConfig(ctx, swarmID)
+		},
+	}
+	return res.create(ctx, s.tx, s.orchestrators, cfg.ClusterID, "config "+cfg.Name)
 }
 
 func (s *ConfigService) Get(ctx context.Context, id uuid.UUID) (*config.Config, error) {
@@ -77,7 +133,9 @@ func (s *ConfigService) ListVersions(ctx context.Context, id uuid.UUID) ([]*conf
 	return s.configs.ListVersions(ctx, id)
 }
 
-// AddVersion stores a new content version and bumps the current version.
+// AddVersion stores a new content version, bumps the current version and pushes
+// it to the cluster in the same transaction. Without it the cluster would hold
+// every version but the current one until the next deployment.
 func (s *ConfigService) AddVersion(ctx context.Context, id uuid.UUID, content []byte, comment string, createdBy uuid.UUID) (*config.Config, error) {
 	cfg, err := s.configs.FindByID(ctx, id)
 	if err != nil {
@@ -87,7 +145,7 @@ func (s *ConfigService) AddVersion(ctx context.Context, id uuid.UUID, content []
 	if err != nil {
 		return nil, err
 	}
-	if err := s.configs.Update(ctx, cfg, ver); err != nil {
+	if err := s.addVersion(ctx, cfg, ver); err != nil {
 		return nil, err
 	}
 	return cfg, nil
@@ -147,7 +205,7 @@ func (s *ConfigService) RestoreVersion(ctx context.Context, id uuid.UUID, versio
 	if err != nil {
 		return nil, err
 	}
-	if err := s.configs.Update(ctx, cfg, ver); err != nil {
+	if err := s.addVersion(ctx, cfg, ver); err != nil {
 		return nil, err
 	}
 	return cfg, nil
@@ -193,9 +251,13 @@ func contentForVersion(versions []*config.ConfigVersion, version int) ([]byte, b
 	return nil, false
 }
 
-// Delete removes a config, refusing if it is still attached to any service.
+// Delete removes a config and every Swarm object its versions own in the same
+// transaction, refusing if it is still attached to any service. Leaving the
+// cluster objects behind would make a config re-created under the same name
+// serve the old content (Swarm addresses configs by name).
 func (s *ConfigService) Delete(ctx context.Context, id uuid.UUID) error {
-	if _, err := s.configs.FindByID(ctx, id); err != nil {
+	cfg, err := s.configs.FindByID(ctx, id)
+	if err != nil {
 		return err
 	}
 	attached, err := s.configs.IsAttachedToService(ctx, id)
@@ -205,27 +267,69 @@ func (s *ConfigService) Delete(ctx context.Context, id uuid.UUID) error {
 	if attached {
 		return config.ErrConfigInUse
 	}
-	return s.configs.Delete(ctx, id)
+
+	del := clusterDeletion{
+		SwarmIDs: func(ctx context.Context) ([]string, error) {
+			versions, err := s.configs.ListVersions(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+			ids := make([]string, 0, len(versions))
+			for _, v := range versions {
+				ids = append(ids, v.SwarmConfigID)
+			}
+			return ids, nil
+		},
+		Delete: func(ctx context.Context) error { return s.configs.Delete(ctx, id) },
+		Remove: func(ctx context.Context, orch ports.Orchestrator, swarmID string) error {
+			return orch.RemoveConfig(ctx, swarmID)
+		},
+	}
+	return del.run(ctx, s.tx, s.orchestrators, cfg.ClusterID, "config "+cfg.Name)
 }
 
-// AttachToService links a config to a service at the given mount path. If
-// targetPath is empty, the config's default target path is used.
-func (s *ConfigService) AttachToService(ctx context.Context, serviceID, configID uuid.UUID, targetPath string) error {
-	svc, err := s.services.FindByID(ctx, serviceID)
+// AttachToService links a config to a service with the given file mount. An
+// empty target path falls back to the config's own default; an empty owner and
+// a zero mode mean "not chosen" and are resolved at deploy time.
+func (s *ConfigService) AttachToService(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error {
+	mount, err := s.resolveMount(ctx, serviceID, configID, mount)
 	if err != nil {
 		return err
+	}
+	return s.services.AttachConfig(ctx, serviceID, configID, mount)
+}
+
+// UpdateServiceAttachment changes the file mount of an already-attached config,
+// so a path, owner or permission can be corrected in place.
+func (s *ConfigService) UpdateServiceAttachment(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error {
+	mount, err := s.resolveMount(ctx, serviceID, configID, mount)
+	if err != nil {
+		return err
+	}
+	return s.services.UpdateConfigAttachment(ctx, serviceID, configID, mount)
+}
+
+// resolveMount checks that both ends exist and target the same cluster, then
+// validates the mount and fills the catalog default path when none was given.
+func (s *ConfigService) resolveMount(ctx context.Context, serviceID, configID uuid.UUID, mount service.FileMount) (service.FileMount, error) {
+	svc, err := s.services.FindByID(ctx, serviceID)
+	if err != nil {
+		return mount, err
 	}
 	cfg, err := s.configs.FindByID(ctx, configID)
 	if err != nil {
-		return err
+		return mount, err
 	}
 	if cfg.ClusterID != svc.ClusterID {
-		return ErrClusterMismatch
+		return mount, ErrClusterMismatch
 	}
-	if targetPath == "" {
-		targetPath = cfg.TargetPath
+	if err := mount.Validate(); err != nil {
+		return mount, err
 	}
-	return s.services.AttachConfig(ctx, serviceID, configID, targetPath)
+	if mount.TargetPath == "" {
+		mount.TargetPath = cfg.TargetPath
+	}
+	return mount, nil
 }
 
 func (s *ConfigService) DetachFromService(ctx context.Context, serviceID, configID uuid.UUID) error {
@@ -255,7 +359,7 @@ func (s *ConfigService) ListServiceConfigs(ctx context.Context, serviceID uuid.U
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, ServiceConfig{Config: cfg, TargetPath: a.TargetPath})
+		out = append(out, ServiceConfig{Config: cfg, FileMount: a.FileMount})
 	}
 	return out, nil
 }

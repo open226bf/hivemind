@@ -18,7 +18,7 @@ type VolumeRepository struct{ db *gorm.DB }
 func NewVolumeRepository(db *gorm.DB) *VolumeRepository { return &VolumeRepository{db: db} }
 
 func (r *VolumeRepository) Save(ctx context.Context, v *volume.Volume) error {
-	if err := r.db.WithContext(ctx).Create(volumeToModel(v)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(volumeToModel(v)).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fmt.Errorf("%w: volume name %q already exists", domainerrors.ErrConflict, v.Name)
 		}
@@ -29,7 +29,7 @@ func (r *VolumeRepository) Save(ctx context.Context, v *volume.Volume) error {
 
 func (r *VolumeRepository) FindByID(ctx context.Context, id uuid.UUID) (*volume.Volume, error) {
 	var m volumeModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -41,7 +41,7 @@ func (r *VolumeRepository) FindByID(ctx context.Context, id uuid.UUID) (*volume.
 
 func (r *VolumeRepository) FindByName(ctx context.Context, name string) (*volume.Volume, error) {
 	var m volumeModel
-	err := r.db.WithContext(ctx).Where("name = ?", name).First(&m).Error
+	err := dbFor(ctx, r.db).Where("name = ?", name).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -55,7 +55,7 @@ func (r *VolumeRepository) List(ctx context.Context, clusterID uuid.UUID, p pagi
 	var models []volumeModel
 	var count int64
 
-	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&volumeModel{}), clusterID), "")
+	q := scopeACL(scopeCluster(dbFor(ctx, r.db).Model(&volumeModel{}), clusterID), "")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count volumes: %w", err)
 	}
@@ -71,7 +71,7 @@ func (r *VolumeRepository) List(ctx context.Context, clusterID uuid.UUID, p pagi
 }
 
 func (r *VolumeRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	res := r.db.WithContext(ctx).Where("id = ?", id.String()).Delete(&volumeModel{})
+	res := dbFor(ctx, r.db).Where("id = ?", id.String()).Delete(&volumeModel{})
 	if res.Error != nil {
 		return fmt.Errorf("delete volume: %w", res.Error)
 	}

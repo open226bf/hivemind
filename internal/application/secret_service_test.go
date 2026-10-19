@@ -10,6 +10,7 @@ import (
 
 	"github.com/open226bf/hivemind/internal/application"
 	"github.com/open226bf/hivemind/internal/domain/secret"
+	"github.com/open226bf/hivemind/internal/domain/service"
 	"github.com/open226bf/hivemind/pkg/domainerrors"
 	"github.com/open226bf/hivemind/pkg/pagination"
 )
@@ -17,8 +18,9 @@ import (
 // ─── Fake secret repo ─────────────────────────────────────────────────────────
 
 type storedSecret struct {
-	sec    *secret.Secret
-	values [][]byte // one entry per version, latest last
+	sec      *secret.Secret
+	values   [][]byte // one entry per version, latest last
+	swarmIDs []string // orchestrator id recorded per version, latest last
 }
 
 type fakeSecretRepo struct {
@@ -69,6 +71,23 @@ func (r *fakeSecretRepo) Update(_ context.Context, s *secret.Secret, _ *secret.S
 	return nil
 }
 
+func (r *fakeSecretRepo) SetVersionSwarmID(_ context.Context, secretID uuid.UUID, version int, swarmID string) error {
+	ss, ok := r.byID[secretID]
+	if !ok || version > len(ss.values) {
+		return domainerrors.ErrNotFound
+	}
+	ss.swarmIDs = append(ss.swarmIDs, swarmID)
+	return nil
+}
+
+func (r *fakeSecretRepo) ListVersionSwarmIDs(_ context.Context, secretID uuid.UUID) ([]string, error) {
+	ss, ok := r.byID[secretID]
+	if !ok {
+		return nil, domainerrors.ErrNotFound
+	}
+	return ss.swarmIDs, nil
+}
+
 func (r *fakeSecretRepo) Delete(_ context.Context, id uuid.UUID) error {
 	ss, ok := r.byID[id]
 	if !ok {
@@ -94,7 +113,7 @@ func (r *fakeSecretRepo) GetValue(_ context.Context, id uuid.UUID) ([]byte, erro
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func newSecretSvc(secrets *fakeSecretRepo, services *fakeServiceRepo) *application.SecretService {
-	return application.NewSecretService(secrets, services)
+	return application.NewSecretService(secrets, services, nil, nil)
 }
 
 // ─── Create ───────────────────────────────────────────────────────────────────
@@ -195,7 +214,7 @@ func TestSecretAttach_DefaultsTargetPath(t *testing.T) {
 	})
 
 	// Empty target path -> falls back to the secret's default.
-	require.NoError(t, svc.AttachToService(context.Background(), s.ID, sec.ID, ""))
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, sec.ID, service.FileMount{}))
 
 	attached, err := svc.ListServiceSecrets(context.Background(), s.ID)
 	require.NoError(t, err)
@@ -211,8 +230,8 @@ func TestSecretAttach_AlreadyAttached(t *testing.T) {
 	svc := newSecretSvc(secRepo, svcRepo)
 	sec, _ := svc.Create(context.Background(), application.CreateSecretInput{Name: "db", Value: []byte("v"), CreatedBy: uuid.New()})
 
-	require.NoError(t, svc.AttachToService(context.Background(), s.ID, sec.ID, "/x"))
-	err := svc.AttachToService(context.Background(), s.ID, sec.ID, "/x")
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, sec.ID, service.FileMount{TargetPath: "/x"}))
+	err := svc.AttachToService(context.Background(), s.ID, sec.ID, service.FileMount{TargetPath: "/x"})
 	assert.ErrorIs(t, err, domainerrors.ErrConflict)
 }
 
@@ -222,7 +241,7 @@ func TestSecretAttach_UnknownSecret(t *testing.T) {
 	svcRepo.add(s)
 	svc := newSecretSvc(newFakeSecretRepo(), svcRepo)
 
-	err := svc.AttachToService(context.Background(), s.ID, uuid.New(), "/x")
+	err := svc.AttachToService(context.Background(), s.ID, uuid.New(), service.FileMount{TargetPath: "/x"})
 	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
 }
 
@@ -233,5 +252,80 @@ func TestSecretDetach_NotAttached(t *testing.T) {
 	svc := newSecretSvc(newFakeSecretRepo(), svcRepo)
 
 	err := svc.DetachFromService(context.Background(), s.ID, uuid.New())
+	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
+}
+
+// ─── Mount permissions ────────────────────────────────────────────────────────
+
+func TestSecretAttach_StoresOwnerAndMode(t *testing.T) {
+	svcRepo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	svcRepo.add(s)
+	svc := newSecretSvc(newFakeSecretRepo(), svcRepo)
+	sec, _ := svc.Create(context.Background(), application.CreateSecretInput{
+		Name: "db", TargetPath: "/run/secrets/db", Value: []byte("v"), CreatedBy: uuid.New(),
+	})
+
+	mount := service.FileMount{TargetPath: "/run/secrets/db", UID: "101", GID: "102", Mode: 0o400}
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, sec.ID, mount))
+
+	attached, err := svc.ListServiceSecrets(context.Background(), s.ID)
+	require.NoError(t, err)
+	require.Len(t, attached, 1)
+	assert.Equal(t, "101", attached[0].UID)
+	assert.Equal(t, "102", attached[0].GID)
+	assert.Equal(t, uint32(0o400), attached[0].Mode)
+}
+
+func TestSecretAttach_RejectsNamedOwner(t *testing.T) {
+	svcRepo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	svcRepo.add(s)
+	svc := newSecretSvc(newFakeSecretRepo(), svcRepo)
+	sec, _ := svc.Create(context.Background(), application.CreateSecretInput{
+		Name: "db", Value: []byte("v"), CreatedBy: uuid.New(),
+	})
+
+	err := svc.AttachToService(context.Background(), s.ID, sec.ID, service.FileMount{UID: "nginx"})
+
+	assert.ErrorIs(t, err, service.ErrInvalidFileOwner)
+	attached, _ := svc.ListServiceSecrets(context.Background(), s.ID)
+	assert.Empty(t, attached, "a rejected mount must not attach the secret")
+}
+
+func TestSecretUpdateAttachment_RewritesTheMount(t *testing.T) {
+	svcRepo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	svcRepo.add(s)
+	svc := newSecretSvc(newFakeSecretRepo(), svcRepo)
+	sec, _ := svc.Create(context.Background(), application.CreateSecretInput{
+		Name: "db", TargetPath: "/run/secrets/db", Value: []byte("v"), CreatedBy: uuid.New(),
+	})
+	require.NoError(t, svc.AttachToService(context.Background(), s.ID, sec.ID,
+		service.FileMount{UID: "101", Mode: 0o400}))
+
+	// Clearing the owner must actually clear it, not be read as "unchanged".
+	require.NoError(t, svc.UpdateServiceAttachment(context.Background(), s.ID, sec.ID,
+		service.FileMount{TargetPath: "/run/secrets/other", Mode: 0o440}))
+
+	attached, err := svc.ListServiceSecrets(context.Background(), s.ID)
+	require.NoError(t, err)
+	require.Len(t, attached, 1)
+	assert.Equal(t, "/run/secrets/other", attached[0].TargetPath)
+	assert.Empty(t, attached[0].UID)
+	assert.Equal(t, uint32(0o440), attached[0].Mode)
+}
+
+func TestSecretUpdateAttachment_UnattachedSecret(t *testing.T) {
+	svcRepo := newFakeServiceRepo()
+	s := mkService(t, "my-service")
+	svcRepo.add(s)
+	svc := newSecretSvc(newFakeSecretRepo(), svcRepo)
+	sec, _ := svc.Create(context.Background(), application.CreateSecretInput{
+		Name: "db", Value: []byte("v"), CreatedBy: uuid.New(),
+	})
+
+	err := svc.UpdateServiceAttachment(context.Background(), s.ID, sec.ID, service.FileMount{Mode: 0o400})
+
 	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
 }

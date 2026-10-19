@@ -17,7 +17,7 @@ type AuditLogRepository struct{ db *gorm.DB }
 func NewAuditLogRepository(db *gorm.DB) *AuditLogRepository { return &AuditLogRepository{db: db} }
 
 func (r *AuditLogRepository) Save(ctx context.Context, log *auditlog.AuditLog) error {
-	if err := r.db.WithContext(ctx).Create(auditLogToModel(log)).Error; err != nil {
+	if err := dbFor(ctx, r.db).Create(auditLogToModel(log)).Error; err != nil {
 		return fmt.Errorf("save audit log: %w", err)
 	}
 	return nil
@@ -27,7 +27,7 @@ func (r *AuditLogRepository) List(ctx context.Context, filter ports.AuditLogFilt
 	var models []auditLogModel
 	var count int64
 
-	q := r.db.WithContext(ctx).Model(&auditLogModel{})
+	q := dbFor(ctx, r.db).Model(&auditLogModel{})
 	if filter.UserID != nil {
 		q = q.Where("user_id = ?", filter.UserID.String())
 	}

@@ -129,14 +129,24 @@ func (r *fakeServiceRepo) DetachNetwork(_ context.Context, serviceID, networkID 
 func (r *fakeServiceRepo) GetNetworkIDs(_ context.Context, serviceID uuid.UUID) ([]uuid.UUID, error) {
 	return r.networks[serviceID], nil
 }
-func (r *fakeServiceRepo) AttachSecret(_ context.Context, serviceID, secretID uuid.UUID, targetPath string) error {
+func (r *fakeServiceRepo) AttachSecret(_ context.Context, serviceID, secretID uuid.UUID, mount service.FileMount) error {
 	for _, a := range r.secrets[serviceID] {
 		if a.SecretID == secretID {
 			return domainerrors.ErrConflict
 		}
 	}
-	r.secrets[serviceID] = append(r.secrets[serviceID], ports.ServiceSecretAttachment{SecretID: secretID, TargetPath: targetPath})
+	r.secrets[serviceID] = append(r.secrets[serviceID],
+		ports.ServiceSecretAttachment{SecretID: secretID, FileMount: mount})
 	return nil
+}
+func (r *fakeServiceRepo) UpdateSecretAttachment(_ context.Context, serviceID, secretID uuid.UUID, mount service.FileMount) error {
+	for i, a := range r.secrets[serviceID] {
+		if a.SecretID == secretID {
+			r.secrets[serviceID][i].FileMount = mount
+			return nil
+		}
+	}
+	return domainerrors.ErrNotFound
 }
 func (r *fakeServiceRepo) DetachSecret(_ context.Context, serviceID, secretID uuid.UUID) error {
 	as := r.secrets[serviceID]
@@ -151,14 +161,24 @@ func (r *fakeServiceRepo) DetachSecret(_ context.Context, serviceID, secretID uu
 func (r *fakeServiceRepo) GetSecretAttachments(_ context.Context, serviceID uuid.UUID) ([]ports.ServiceSecretAttachment, error) {
 	return r.secrets[serviceID], nil
 }
-func (r *fakeServiceRepo) AttachConfig(_ context.Context, serviceID, configID uuid.UUID, targetPath string) error {
+func (r *fakeServiceRepo) AttachConfig(_ context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error {
 	for _, a := range r.configs[serviceID] {
 		if a.ConfigID == configID {
 			return domainerrors.ErrConflict
 		}
 	}
-	r.configs[serviceID] = append(r.configs[serviceID], ports.ServiceConfigAttachment{ConfigID: configID, TargetPath: targetPath})
+	r.configs[serviceID] = append(r.configs[serviceID],
+		ports.ServiceConfigAttachment{ConfigID: configID, FileMount: mount})
 	return nil
+}
+func (r *fakeServiceRepo) UpdateConfigAttachment(_ context.Context, serviceID, configID uuid.UUID, mount service.FileMount) error {
+	for i, a := range r.configs[serviceID] {
+		if a.ConfigID == configID {
+			r.configs[serviceID][i].FileMount = mount
+			return nil
+		}
+	}
+	return domainerrors.ErrNotFound
 }
 func (r *fakeServiceRepo) DetachConfig(_ context.Context, serviceID, configID uuid.UUID) error {
 	as := r.configs[serviceID]
@@ -200,6 +220,15 @@ func (r *fakeServiceRepo) SetPorts(_ context.Context, serviceID uuid.UUID, p []s
 }
 func (r *fakeServiceRepo) GetPorts(_ context.Context, serviceID uuid.UUID) ([]service.Port, error) {
 	return r.ports[serviceID], nil
+}
+func (r *fakeServiceRepo) GetPortsByServices(_ context.Context, ids []uuid.UUID) (map[uuid.UUID][]service.Port, error) {
+	out := map[uuid.UUID][]service.Port{}
+	for _, id := range ids {
+		if p := r.ports[id]; len(p) > 0 {
+			out[id] = p
+		}
+	}
+	return out, nil
 }
 func (r *fakeServiceRepo) CountMountsByVolumeName(_ context.Context, name string) (int64, error) {
 	var n int64
@@ -647,4 +676,25 @@ func TestServiceDelete_NotFound(t *testing.T) {
 	svc := newServiceSvc(newFakeServiceRepo())
 	err := svc.Delete(context.Background(), uuid.New())
 	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
+}
+
+func TestServicePortsFor_KeysPortsByService(t *testing.T) {
+	repo := newFakeServiceRepo()
+	svc := newServiceSvc(repo)
+	web, err := svc.Create(context.Background(), application.CreateServiceInput{Name: "web", Image: "nginx"})
+	require.NoError(t, err)
+	worker, err := svc.Create(context.Background(), application.CreateServiceInput{Name: "worker", Image: "busybox"})
+	require.NoError(t, err)
+	_, err = svc.SetPorts(context.Background(), web.ID, []service.Port{
+		{TargetPort: 80, PublishedPort: 8080, Protocol: "tcp", Mode: "ingress"},
+	})
+	require.NoError(t, err)
+
+	got, err := svc.PortsFor(context.Background(), []*service.Service{web, worker})
+
+	require.NoError(t, err)
+	require.Len(t, got[web.ID], 1)
+	assert.Equal(t, uint32(8080), got[web.ID][0].PublishedPort)
+	_, present := got[worker.ID]
+	assert.False(t, present, "a service without ports has no entry")
 }

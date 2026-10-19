@@ -90,9 +90,18 @@ type ServiceResponse struct {
 	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
+// ServiceListItem is a service as shown in a list: the service itself plus the
+// ports it publishes, so a table can display them without one request per row.
+// Ports are read only here — every other endpoint returns a plain ServiceResponse,
+// where an empty "ports" would wrongly read as "no port published".
+type ServiceListItem struct {
+	ServiceResponse
+	Ports []PortDTO `json:"ports"`
+}
+
 // ServiceListResponse wraps a paginated list of services.
 type ServiceListResponse struct {
-	Items []ServiceResponse `json:"items"`
+	Items []ServiceListItem `json:"items"`
 	Total int64             `json:"total"`
 	Page  int               `json:"page"`
 	Size  int               `json:"size"`

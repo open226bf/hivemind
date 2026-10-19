@@ -54,6 +54,15 @@ func (r *fakeNetworkRepo) List(_ context.Context, _ uuid.UUID, _ pagination.Page
 	return out, int64(len(out)), nil
 }
 
+func (r *fakeNetworkRepo) SetSwarmID(_ context.Context, id uuid.UUID, swarmID string) error {
+	n, ok := r.byID[id]
+	if !ok {
+		return domainerrors.ErrNotFound
+	}
+	n.SwarmID = swarmID
+	return nil
+}
+
 func (r *fakeNetworkRepo) Delete(_ context.Context, id uuid.UUID) error {
 	n, ok := r.byID[id]
 	if !ok {
@@ -80,7 +89,7 @@ func mkNetwork(t *testing.T, name string) *network.Network {
 // ─── Create ───────────────────────────────────────────────────────────────────
 
 func TestNetworkCreate_Success(t *testing.T) {
-	svc := application.NewNetworkService(newFakeNetworkRepo(), newFakeServiceRepo())
+	svc := application.NewNetworkService(newFakeNetworkRepo(), newFakeServiceRepo(), nil, nil)
 	n, err := svc.Create(context.Background(), application.CreateNetworkInput{Name: "backend-net", Attachable: true})
 	require.NoError(t, err)
 	assert.Equal(t, "backend-net", n.Name)
@@ -88,7 +97,7 @@ func TestNetworkCreate_Success(t *testing.T) {
 }
 
 func TestNetworkCreate_InvalidName(t *testing.T) {
-	svc := application.NewNetworkService(newFakeNetworkRepo(), newFakeServiceRepo())
+	svc := application.NewNetworkService(newFakeNetworkRepo(), newFakeServiceRepo(), nil, nil)
 	_, err := svc.Create(context.Background(), application.CreateNetworkInput{Name: "-bad name"})
 	assert.ErrorIs(t, err, network.ErrInvalidName)
 }
@@ -96,7 +105,7 @@ func TestNetworkCreate_InvalidName(t *testing.T) {
 func TestNetworkCreate_DuplicateName(t *testing.T) {
 	repo := newFakeNetworkRepo()
 	repo.byName["dup"] = mkNetwork(t, "dup")
-	svc := application.NewNetworkService(repo, newFakeServiceRepo())
+	svc := application.NewNetworkService(repo, newFakeServiceRepo(), nil, nil)
 	_, err := svc.Create(context.Background(), application.CreateNetworkInput{Name: "dup"})
 	assert.ErrorIs(t, err, domainerrors.ErrConflict)
 }
@@ -108,7 +117,7 @@ func TestNetworkDelete_InUse(t *testing.T) {
 	n := mkNetwork(t, "net")
 	repo.byID[n.ID] = n
 	repo.attached[n.ID] = true
-	svc := application.NewNetworkService(repo, newFakeServiceRepo())
+	svc := application.NewNetworkService(repo, newFakeServiceRepo(), nil, nil)
 
 	err := svc.Delete(context.Background(), n.ID)
 	assert.ErrorIs(t, err, network.ErrNetworkInUse)
@@ -118,7 +127,7 @@ func TestNetworkDelete_Success(t *testing.T) {
 	repo := newFakeNetworkRepo()
 	n := mkNetwork(t, "net")
 	repo.byID[n.ID] = n
-	svc := application.NewNetworkService(repo, newFakeServiceRepo())
+	svc := application.NewNetworkService(repo, newFakeServiceRepo(), nil, nil)
 
 	require.NoError(t, svc.Delete(context.Background(), n.ID))
 	_, err := repo.FindByID(context.Background(), n.ID)
@@ -134,7 +143,7 @@ func TestNetworkAttach_Success(t *testing.T) {
 	netRepo.byID[n.ID] = n
 	s := mkService(t, "my-service")
 	svcRepo.add(s)
-	svc := application.NewNetworkService(netRepo, svcRepo)
+	svc := application.NewNetworkService(netRepo, svcRepo, nil, nil)
 
 	require.NoError(t, svc.AttachToService(context.Background(), s.ID, n.ID))
 
@@ -151,7 +160,7 @@ func TestNetworkAttach_AlreadyAttached(t *testing.T) {
 	netRepo.byID[n.ID] = n
 	s := mkService(t, "my-service")
 	svcRepo.add(s)
-	svc := application.NewNetworkService(netRepo, svcRepo)
+	svc := application.NewNetworkService(netRepo, svcRepo, nil, nil)
 
 	require.NoError(t, svc.AttachToService(context.Background(), s.ID, n.ID))
 	err := svc.AttachToService(context.Background(), s.ID, n.ID)
@@ -162,7 +171,7 @@ func TestNetworkAttach_UnknownNetwork(t *testing.T) {
 	svcRepo := newFakeServiceRepo()
 	s := mkService(t, "my-service")
 	svcRepo.add(s)
-	svc := application.NewNetworkService(newFakeNetworkRepo(), svcRepo)
+	svc := application.NewNetworkService(newFakeNetworkRepo(), svcRepo, nil, nil)
 
 	err := svc.AttachToService(context.Background(), s.ID, uuid.New())
 	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
@@ -172,7 +181,7 @@ func TestNetworkAttach_UnknownService(t *testing.T) {
 	netRepo := newFakeNetworkRepo()
 	n := mkNetwork(t, "net")
 	netRepo.byID[n.ID] = n
-	svc := application.NewNetworkService(netRepo, newFakeServiceRepo())
+	svc := application.NewNetworkService(netRepo, newFakeServiceRepo(), nil, nil)
 
 	err := svc.AttachToService(context.Background(), uuid.New(), n.ID)
 	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
@@ -182,7 +191,7 @@ func TestNetworkDetach_NotAttached(t *testing.T) {
 	svcRepo := newFakeServiceRepo()
 	s := mkService(t, "my-service")
 	svcRepo.add(s)
-	svc := application.NewNetworkService(newFakeNetworkRepo(), svcRepo)
+	svc := application.NewNetworkService(newFakeNetworkRepo(), svcRepo, nil, nil)
 
 	err := svc.DetachFromService(context.Background(), s.ID, uuid.New())
 	assert.ErrorIs(t, err, domainerrors.ErrNotFound)

@@ -76,7 +76,7 @@ func (h *NetworkHandler) List(c *gin.Context) {
 // Create godoc
 //
 //	@Summary		Create a network
-//	@Description	Registers an overlay network definition. It is materialised on Swarm when a service using it is deployed.
+//	@Description	Registers an overlay network and creates it on the target cluster in the same transaction; an external network is only referenced.
 //	@Tags			networks
 //	@Security		BearerAuth
 //	@Accept			json
@@ -88,6 +88,8 @@ func (h *NetworkHandler) List(c *gin.Context) {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		409		{object}	dto.ErrorResponse	"name already taken"
 //	@Failure		422		{object}	dto.ErrorResponse	"invalid name"
+//	@Failure		502		{object}	dto.ErrorResponse	"the cluster refused to create the overlay"
+//	@Failure		503		{object}	dto.ErrorResponse	"target cluster unreachable"
 //	@Router			/networks [post]
 func (h *NetworkHandler) Create(c *gin.Context) {
 	var req dto.CreateNetworkRequest

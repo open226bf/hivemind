@@ -33,8 +33,10 @@ type CreateVolumeInput struct {
 	Cluster uuid.UUID
 }
 
-// Create registers a named volume. Like networks, it is materialised on Swarm
-// only when a service mounting it is deployed.
+// Create registers a named volume. Unlike networks, secrets and configs — which
+// are created on the cluster as they are saved — a volume is materialised by
+// Docker on each node the first time a task mounts it, so there is nothing to
+// create up front.
 func (s *VolumeService) Create(ctx context.Context, in CreateVolumeInput) (*volume.Volume, error) {
 	v, err := volume.New(in.Name, in.Driver)
 	if err != nil {

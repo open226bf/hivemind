@@ -37,7 +37,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentHeartbeatRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AgentHeartbeatRequest"
                         }
                     }
                 ],
@@ -48,7 +48,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -83,7 +83,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -108,7 +108,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AgentRegisterRequest"
                         }
                     }
                 ],
@@ -116,13 +116,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AgentRegisterResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -148,7 +148,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.LoginRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.LoginRequest"
                         }
                     }
                 ],
@@ -156,31 +156,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "invalid email or password",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "account inactive",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "429": {
                         "description": "account temporarily locked",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -205,7 +205,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -230,13 +230,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MeResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.MeResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -262,7 +262,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.RefreshRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.RefreshRequest"
                         }
                     }
                 ],
@@ -270,19 +270,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TokenResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "invalid or expired token",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -307,25 +307,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterOverviewResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -349,7 +349,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterListResponse"
                         }
                     }
                 }
@@ -377,7 +377,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateClusterRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateClusterRequest"
                         }
                     }
                 ],
@@ -385,19 +385,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -430,13 +430,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -467,7 +467,7 @@ const docTemplate = `{
                     "409": {
                         "description": "default or non-empty cluster",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -502,7 +502,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateClusterRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateClusterRequest"
                         }
                     }
                 ],
@@ -510,13 +510,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -549,7 +549,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterResponse"
                         }
                     }
                 }
@@ -583,13 +583,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnrollClusterResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.EnrollClusterResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -623,19 +623,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterOverviewResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -668,13 +668,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterResponse"
                         }
                     },
                     "503": {
                         "description": "unreachable",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -712,19 +712,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -735,7 +735,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Stores a cleartext config file (UTF-8, max 500 KB) as version 1.",
+                "description": "Stores a cleartext config file (UTF-8, max 500 KB) as version 1 and creates it on the target cluster in the same transaction.",
                 "consumes": [
                     "application/json"
                 ],
@@ -753,7 +753,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateConfigRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateConfigRequest"
                         }
                     }
                 ],
@@ -761,37 +761,49 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "name already taken",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid name, content too large or invalid UTF-8",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the cluster refused to create the config version",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "target cluster unreachable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -825,25 +837,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -875,25 +887,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "config in use",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -941,19 +953,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigDiffResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigDiffResponse"
                         }
                     },
                     "400": {
                         "description": "missing or invalid from/to",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "config or version not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -989,14 +1001,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ImpactedServiceResponse"
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ImpactedServiceResponse"
                             }
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1032,26 +1044,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigVersionResponse"
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigVersionResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1062,7 +1074,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Stores new content as the next version. Attached services pick it up on their next deployment.",
+                "description": "Stores new content as the next version and creates it on the cluster in the same transaction. Attached services pick it up on their next deployment.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1087,7 +1099,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AddConfigVersionRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AddConfigVersionRequest"
                         }
                     }
                 ],
@@ -1095,37 +1107,49 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "content too large or invalid UTF-8",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the cluster refused to create the config version",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "target cluster unreachable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1169,7 +1193,7 @@ const docTemplate = `{
                         "name": "body",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.RestoreConfigRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.RestoreConfigRequest"
                         }
                     }
                 ],
@@ -1177,25 +1201,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "config or version not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the cluster refused to create the config version",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "target cluster unreachable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1258,25 +1294,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.DeploymentListResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1309,25 +1345,311 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.DeploymentResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/discovered-services": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns every Swarm service on the active cluster, each classified as managed (owned by Hivemind), foreign (created out-of-band), or orphan (labelled but unknown). Read-only; nothing is mutated.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "discovery"
+                ],
+                "summary": "List services running on the cluster (brownfield discovery)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.DiscoveredService"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "orchestrator unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/discovered-services/{swarmId}/adopt": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Takes over a service running on the cluster: reconstructs its spec, creates a deployed Hivemind service (optionally in a hive), seals the ownership label, and snapshots it. The live service keeps running. Returns warnings for anything not fully reconstructed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "discovery"
+                ],
+                "summary": "Adopt a foreign service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Swarm service ID",
+                        "name": "swarmId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Target hive",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AdoptServiceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AdoptServiceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "already managed",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "spec cannot be adopted (e.g. invalid name)",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "orchestrator unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/discovered-services/{swarmId}/logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Streams the aggregated container logs of any service running on the cluster, addressed by Swarm id — including services Hivemind does not manage (foreign / orphan). Each line is a ` + "`" + `data:` + "`" + ` event; an ` + "`" + `event: end` + "`" + ` frame closes a non-follow stream. Authenticate with a Bearer token (use fetch/ReadableStream, not EventSource).",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "discovery"
+                ],
+                "summary": "Stream a discovered service's logs (SSE)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Swarm service ID",
+                        "name": "swarmId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Keep the stream open (default true)",
+                        "name": "follow",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Number of trailing lines, or 'all' (default 200)",
+                        "name": "tail",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Prefix each line with an RFC3339 timestamp",
+                        "name": "timestamps",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Only logs since this time (RFC3339 or duration like 10m)",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "text/event-stream of log lines",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no such Swarm service",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "orchestrator unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/discovered-services/{swarmId}/release": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hands an adopted service back to unmanaged: clears the Hivemind ownership label and deletes the Hivemind record. The live service keeps running untouched.",
+                "tags": [
+                    "discovery"
+                ],
+                "summary": "Release an adopted service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Swarm service ID",
+                        "name": "swarmId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "no managed service owns this Swarm service",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "orchestrator unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/discovered-services/{swarmId}/restart": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Rolls every task of a live Swarm service and re-pulls the image, WITHOUT changing its spec. The service's own definition is reused verbatim, so the secrets, configs, mounts, networks and environment it already uses keep working exactly as before — Hivemind only asks Swarm to recreate the tasks. Intended for services Hivemind does not manage; managed services should be redeployed through their own deployment flow.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "discovery"
+                ],
+                "summary": "Force-restart a discovered service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Swarm service ID",
+                        "name": "swarmId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "restart accepted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no such Swarm service",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "orchestrator unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1365,13 +1687,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.HiveListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1399,7 +1721,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateHiveRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateHiveRequest"
                         }
                     }
                 ],
@@ -1407,25 +1729,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.HiveResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "name already taken",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid name or color",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1458,13 +1780,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.HiveResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1499,7 +1821,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateHiveRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateHiveRequest"
                         }
                     }
                 ],
@@ -1507,19 +1829,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.HiveResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1551,13 +1873,109 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "hive not empty",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/hives/{id}/env": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Environment variables applied to every service in the hive at deploy time. Secret values are masked (empty string).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "hives"
+                ],
+                "summary": "Get a hive's global env vars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Hive ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the full set of hive-global env vars applied to every service in the hive. A service-level variable with the same key overrides the hive value. Changes take effect on the next deploy of each service. A secret submitted with an empty value keeps its stored value.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "hives"
+                ],
+                "summary": "Replace a hive's global env vars",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Hive ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Full env var set",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SetEnvVarsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "invalid or duplicate key",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1592,14 +2010,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                             }
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1624,19 +2042,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AlertListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AlertListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1661,25 +2079,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterHealthResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterHealthResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "cluster telemetry unavailable",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1704,25 +2122,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MetricsResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.MetricsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "cluster telemetry unavailable",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1760,19 +2178,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.NetworkListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1783,7 +2201,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Registers an overlay network definition. It is materialised on Swarm when a service using it is deployed.",
+                "description": "Registers an overlay network and creates it on the target cluster in the same transaction; an external network is only referenced.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1801,7 +2219,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateNetworkRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateNetworkRequest"
                         }
                     }
                 ],
@@ -1809,37 +2227,49 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.NetworkResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "name already taken",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid name",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the cluster refused to create the overlay",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "target cluster unreachable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1866,26 +2296,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SwarmNetworkInfo"
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SwarmNetworkInfo"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "orchestrator unavailable",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1918,25 +2348,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.NetworkResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -1968,25 +2398,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "network in use",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2025,19 +2455,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SecretListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2048,7 +2478,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Stores a write-only secret. The value is encrypted at rest and never returned by any endpoint.",
+                "description": "Stores a write-only secret and creates its first version on the target cluster in the same transaction. The value is encrypted at rest and never returned by any endpoint.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2066,7 +2496,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateSecretRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateSecretRequest"
                         }
                     }
                 ],
@@ -2074,37 +2504,49 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SecretResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "name already taken",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid name or empty value",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the cluster refused to create the secret",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "target cluster unreachable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2138,25 +2580,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SecretResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2188,25 +2630,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "secret in use",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2219,7 +2661,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Stores a new encrypted version and increments the version counter. Attached services pick up the new version on their next deployment.",
+                "description": "Stores a new encrypted version, increments the version counter and pushes the version to the cluster in the same transaction. Attached services pick it up on their next deployment.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2244,7 +2686,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.RotateSecretRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.RotateSecretRequest"
                         }
                     }
                 ],
@@ -2252,37 +2694,49 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SecretResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "empty value",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the cluster refused to create the secret version",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "target cluster unreachable",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2333,19 +2787,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2374,7 +2828,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateServiceRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateServiceRequest"
                         }
                     }
                 ],
@@ -2382,37 +2836,37 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "name already taken",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid name format or resource constraint",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2450,7 +2904,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.InstantiateTemplateRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.InstantiateTemplateRequest"
                         }
                     }
                 ],
@@ -2458,31 +2912,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "template not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "service name already taken",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "locked field overridden or invalid value",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2516,25 +2970,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2570,7 +3024,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateServiceRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateServiceRequest"
                         }
                     }
                 ],
@@ -2578,37 +3032,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid resource constraint",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2640,25 +3094,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "service is deployed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2693,26 +3147,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceConfigResponse"
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceConfigResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2744,7 +3198,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AttachConfigRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AttachConfigRequest"
                         }
                     }
                 ],
@@ -2755,37 +3209,115 @@ const docTemplate = `{
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "service or config not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "already attached",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
             }
         },
         "/services/{id}/configs/{configId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the mount path, owner and permission bits of an already-attached config. Applied on the service's next deployment.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "configs"
+                ],
+                "summary": "Update a config's mount on a service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Config ID (UUID)",
+                        "name": "configId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "File mount",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigAttachmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "validation_error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "service, config or attachment not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "invalid owner or mode",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -2819,19 +3351,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "attachment not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2865,37 +3397,37 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.DeploymentResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "a deployment is already in progress",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "deployment engine not configured",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2940,25 +3472,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.DeploymentListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -2992,25 +3524,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarsResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3046,7 +3578,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SetEnvVarsRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SetEnvVarsRequest"
                         }
                     }
                 ],
@@ -3054,37 +3586,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarsResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarsResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid or duplicate key",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3136,25 +3668,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "service not deployed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3192,13 +3724,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3236,7 +3768,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AssignHiveRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AssignHiveRequest"
                         }
                     }
                 ],
@@ -3244,19 +3776,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "service or hive not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3320,31 +3852,31 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "service not deployed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "deployment engine not configured",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3377,13 +3909,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountsResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.MountsResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3419,7 +3951,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SetMountsRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SetMountsRequest"
                         }
                     }
                 ],
@@ -3427,31 +3959,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountsResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.MountsResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "bind mounts require Admin",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid mount or unknown volume",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3486,26 +4018,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse"
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.NetworkResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3537,7 +4069,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AttachNetworkRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AttachNetworkRequest"
                         }
                     }
                 ],
@@ -3548,31 +4080,31 @@ const docTemplate = `{
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "service or network not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "already attached",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3612,19 +4144,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "attachment not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3662,7 +4194,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO"
                         }
                     }
                 ],
@@ -3670,37 +4202,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "malformed constraint or empty preference",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3733,13 +4265,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PortsResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3775,7 +4307,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SetPortsRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SetPortsRequest"
                         }
                     }
                 ],
@@ -3783,25 +4315,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PortsResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid port",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3839,7 +4371,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO"
                         }
                     }
                 ],
@@ -3847,37 +4379,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "limit below reservation or negative value",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3912,26 +4444,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceSecretResponse"
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceSecretResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -3963,7 +4495,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AttachSecretRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AttachSecretRequest"
                         }
                     }
                 ],
@@ -3974,37 +4506,115 @@ const docTemplate = `{
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "service or secret not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "already attached",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
             }
         },
         "/services/{id}/secrets/{secretId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the mount path, owner and permission bits of an already-attached secret. Applied on the service's next deployment.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Update a secret's mount on a service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service ID (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Secret ID (UUID)",
+                        "name": "secretId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "File mount",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateSecretAttachmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "validation_error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "service, secret or attachment not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "invalid owner or mode",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -4038,19 +4648,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "attachment not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4095,25 +4705,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4148,7 +4758,7 @@ const docTemplate = `{
                         "name": "body",
                         "in": "body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateSnapshotRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateSnapshotRequest"
                         }
                     }
                 ],
@@ -4156,25 +4766,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4208,31 +4818,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceStatusResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceStatusResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "deployment engine not configured",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4271,7 +4881,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4309,7 +4919,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4343,31 +4953,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceTasksResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceTasksResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "deployment engine not configured",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4401,37 +5011,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "a deployment is still in progress",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "deployment engine not configured",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4464,25 +5074,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4513,19 +5123,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4559,37 +5169,37 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.RollbackResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.RollbackResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "a deployment is already in progress",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "503": {
                         "description": "deployment engine not configured",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4627,19 +5237,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4668,7 +5278,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateTemplateRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateTemplateRequest"
                         }
                     }
                 ],
@@ -4676,25 +5286,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "name already taken",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid template",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4727,13 +5337,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4769,7 +5379,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateTemplateRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateTemplateRequest"
                         }
                     }
                 ],
@@ -4777,19 +5387,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4820,7 +5430,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4858,19 +5468,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UserListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4898,7 +5508,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateUserRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateUserRequest"
                         }
                     }
                 ],
@@ -4906,31 +5516,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "email already in use",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -4967,7 +5577,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateUserRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateUserRequest"
                         }
                     }
                 ],
@@ -4975,25 +5585,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UserResponse"
                         }
                     },
                     "403": {
                         "description": "last admin / self-demote",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "Unprocessable Entity",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5024,13 +5634,13 @@ const docTemplate = `{
                     "403": {
                         "description": "last admin / self-delete",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5068,19 +5678,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.VolumeListResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.VolumeListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5109,7 +5719,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CreateVolumeRequest"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CreateVolumeRequest"
                         }
                     }
                 ],
@@ -5117,37 +5727,37 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.VolumeResponse"
                         }
                     },
                     "400": {
                         "description": "validation_error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "name already taken",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "422": {
                         "description": "invalid name",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5173,14 +5783,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SwarmVolumeInfo"
+                                "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SwarmVolumeInfo"
                             }
                         }
                     },
                     "503": {
                         "description": "orchestrator unavailable",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5213,13 +5823,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.VolumeResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5251,19 +5861,19 @@ const docTemplate = `{
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "volume in use",
                         "schema": {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse"
                         }
                     }
                 }
@@ -5271,7 +5881,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_orange_hivemind_internal_adapters_api_dto.ActivitySummaryDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ActivitySummaryDTO": {
             "type": "object",
             "properties": {
                 "failed": {
@@ -5288,7 +5898,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AddConfigVersionRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AddConfigVersionRequest": {
             "type": "object",
             "required": [
                 "comment",
@@ -5304,7 +5914,29 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AgentHeartbeatRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AdoptServiceRequest": {
+            "type": "object",
+            "properties": {
+                "hive_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AdoptServiceResponse": {
+            "type": "object",
+            "properties": {
+                "service_id": {
+                    "type": "string"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AgentHeartbeatRequest": {
             "type": "object",
             "required": [
                 "agent_id"
@@ -5314,14 +5946,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "metrics": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeMetricsDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.NodeMetricsDTO"
                 },
                 "node": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AgentNodeDTO"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AgentNodeDTO": {
             "type": "object",
             "properties": {
                 "engine_version": {
@@ -5347,7 +5979,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AgentRegisterRequest": {
             "type": "object",
             "properties": {
                 "agent_id": {
@@ -5357,11 +5989,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "node": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AgentNodeDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AgentNodeDTO"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AgentRegisterResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AgentRegisterResponse": {
             "type": "object",
             "properties": {
                 "agent_id": {
@@ -5375,13 +6007,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AlertListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AlertListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.AlertResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.AlertResponse"
                     }
                 },
                 "total": {
@@ -5389,7 +6021,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AlertResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AlertResponse": {
             "type": "object",
             "properties": {
                 "cluster_id": {
@@ -5426,7 +6058,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AssignHiveRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AssignHiveRequest": {
             "type": "object",
             "properties": {
                 "hive_id": {
@@ -5435,7 +6067,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AttachConfigRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AttachConfigRequest": {
             "type": "object",
             "required": [
                 "config_id"
@@ -5445,13 +6077,27 @@ const docTemplate = `{
                     "type": "string",
                     "example": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
                 },
+                "gid": {
+                    "type": "string",
+                    "example": "101"
+                },
+                "mode": {
+                    "description": "Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or\nsend 0 to keep the default 0444 (288 in decimal).",
+                    "type": "integer",
+                    "example": 288
+                },
                 "target_path": {
                     "type": "string",
                     "example": "/etc/nginx/nginx.conf"
+                },
+                "uid": {
+                    "description": "UID and GID own the mounted file. Leave them empty to let the orchestrator\ndecide (root); \"0\" is root chosen deliberately. Named users are rejected —\nthe container runtime only understands numeric ids.",
+                    "type": "string",
+                    "example": "101"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AttachNetworkRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AttachNetworkRequest": {
             "type": "object",
             "required": [
                 "network_id"
@@ -5463,12 +6109,21 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.AttachSecretRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.AttachSecretRequest": {
             "type": "object",
             "required": [
                 "secret_id"
             ],
             "properties": {
+                "gid": {
+                    "type": "string",
+                    "example": "101"
+                },
+                "mode": {
+                    "description": "Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or\nsend 0 to keep the default 0444 (288 in decimal).",
+                    "type": "integer",
+                    "example": 288
+                },
                 "secret_id": {
                     "type": "string",
                     "example": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
@@ -5476,10 +6131,15 @@ const docTemplate = `{
                 "target_path": {
                     "type": "string",
                     "example": "/run/secrets/db_password"
+                },
+                "uid": {
+                    "description": "UID and GID own the mounted file. Leave them empty to let the orchestrator\ndecide (root); \"0\" is root chosen deliberately. Named users are rejected —\nthe container runtime only understands numeric ids.",
+                    "type": "string",
+                    "example": "101"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CatalogSummaryDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CatalogSummaryDTO": {
             "type": "object",
             "properties": {
                 "configs": {
@@ -5493,7 +6153,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ClusterHealthResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterHealthResponse": {
             "type": "object",
             "properties": {
                 "cluster_id": {
@@ -5506,7 +6166,7 @@ const docTemplate = `{
                 "nodes": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeHealthResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.NodeHealthResponse"
                     }
                 },
                 "observed_at": {
@@ -5514,13 +6174,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ClusterListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterResponse"
                     }
                 },
                 "page": {
@@ -5534,30 +6194,30 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ClusterOverviewResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterOverviewResponse": {
             "type": "object",
             "properties": {
                 "activity": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ActivitySummaryDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ActivitySummaryDTO"
                 },
                 "catalog": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.CatalogSummaryDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.CatalogSummaryDTO"
                 },
                 "cluster": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ClusterSummaryDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterSummaryDTO"
                 },
                 "nodes": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NodeDTO"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.NodeDTO"
                     }
                 },
                 "services": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceSummaryDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceSummaryDTO"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ClusterResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterResponse": {
             "type": "object",
             "properties": {
                 "agent_last_seen": {
@@ -5604,7 +6264,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ClusterSummaryDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ClusterSummaryDTO": {
             "type": "object",
             "properties": {
                 "engine_version": {
@@ -5636,7 +6296,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ConfigDiffResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigDiffResponse": {
             "type": "object",
             "properties": {
                 "from_version": {
@@ -5645,7 +6305,7 @@ const docTemplate = `{
                 "lines": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DiffLineDTO"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.DiffLineDTO"
                     }
                 },
                 "to_version": {
@@ -5653,13 +6313,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ConfigListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigResponse"
                     }
                 },
                 "page": {
@@ -5673,7 +6333,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ConfigResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigResponse": {
             "type": "object",
             "properties": {
                 "cluster_id": {
@@ -5699,7 +6359,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ConfigVersionResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ConfigVersionResponse": {
             "type": "object",
             "properties": {
                 "comment": {
@@ -5719,7 +6379,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ContainerHealthResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ContainerHealthResponse": {
             "type": "object",
             "properties": {
                 "container_id": {
@@ -5758,7 +6418,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateClusterRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateClusterRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -5793,7 +6453,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateConfigRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateConfigRequest": {
             "type": "object",
             "required": [
                 "content",
@@ -5817,7 +6477,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateHiveRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateHiveRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -5836,7 +6496,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateNetworkRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateNetworkRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -5860,7 +6520,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateSecretRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateSecretRequest": {
             "type": "object",
             "required": [
                 "name",
@@ -5880,7 +6540,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateServiceRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateServiceRequest": {
             "type": "object",
             "required": [
                 "image",
@@ -5912,23 +6572,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "placement": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO"
                 },
                 "replicas": {
                     "type": "integer"
                 },
                 "resources": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO"
                 },
                 "tag": {
                     "type": "string"
                 },
                 "update_config": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateSnapshotRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateSnapshotRequest": {
             "type": "object",
             "properties": {
                 "label": {
@@ -5936,7 +6596,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateTemplateRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateTemplateRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -5959,11 +6619,11 @@ const docTemplate = `{
                     "example": "java-api"
                 },
                 "spec": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateSpecDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateSpecDTO"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateUserRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateUserRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -5984,7 +6644,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.CreateVolumeRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.CreateVolumeRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -5999,13 +6659,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.DeploymentListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.DeploymentListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.DeploymentResponse"
                     }
                 },
                 "page": {
@@ -6019,7 +6679,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.DeploymentResponse": {
             "type": "object",
             "properties": {
                 "duration_ms": {
@@ -6054,7 +6714,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.DiffLineDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.DiffLineDTO": {
             "type": "object",
             "properties": {
                 "new_line": {
@@ -6072,7 +6732,36 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.EnrollClusterResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.DiscoveredService": {
+            "type": "object",
+            "properties": {
+                "class": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "hive_id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "replicas": {
+                    "type": "integer"
+                },
+                "service_id": {
+                    "type": "string"
+                },
+                "swarm_service_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.EnrollClusterResponse": {
             "type": "object",
             "properties": {
                 "ca_cert": {
@@ -6106,7 +6795,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.EnvVarDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarDTO": {
             "type": "object",
             "properties": {
                 "is_secret": {
@@ -6120,7 +6809,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.EnvVarInput": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarInput": {
             "type": "object",
             "required": [
                 "key"
@@ -6139,7 +6828,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.EnvVarsResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarsResponse": {
             "type": "object",
             "properties": {
                 "count": {
@@ -6148,12 +6837,12 @@ const docTemplate = `{
                 "vars": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarDTO"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarDTO"
                     }
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ErrorResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -6165,13 +6854,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.HiveListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.HiveListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.HiveResponse"
                     }
                 },
                 "page": {
@@ -6185,7 +6874,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.HiveResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.HiveResponse": {
             "type": "object",
             "properties": {
                 "cluster_id": {
@@ -6214,7 +6903,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.HostUsageDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.HostUsageDTO": {
             "type": "object",
             "properties": {
                 "cpu_percent": {
@@ -6228,7 +6917,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ImpactedServiceResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ImpactedServiceResponse": {
             "type": "object",
             "properties": {
                 "name": {
@@ -6242,7 +6931,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.InstantiateTemplateRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.InstantiateTemplateRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -6259,14 +6948,14 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "resources": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO"
                 },
                 "tag": {
                     "type": "string"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.LoginRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.LoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -6281,21 +6970,34 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.MeResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.MeResponse": {
             "type": "object",
             "properties": {
+                "acl_enforced": {
+                    "description": "AclEnforced mirrors HIVEMIND_ACL_ENFORCED so the UI gates on grants only\nwhen enforcement is live. In shadow mode (false) the server doesn't filter\nor block, so the UI must keep its pre-ACL behaviour (no lock-out).",
+                    "type": "boolean"
+                },
                 "email": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
+                "is_admin": {
+                    "type": "boolean"
+                },
                 "role": {
                     "type": "string"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ScopeDTO"
+                    }
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.MetricSampleResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.MetricSampleResponse": {
             "type": "object",
             "properties": {
                 "at": {
@@ -6321,13 +7023,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.MetricsResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.MetricsResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MetricSampleResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.MetricSampleResponse"
                     }
                 },
                 "metrics_coverage": {
@@ -6336,7 +7038,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.MountDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.MountDTO": {
             "type": "object",
             "properties": {
                 "read_only": {
@@ -6358,13 +7060,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.MountsResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.MountsResponse": {
             "type": "object",
             "properties": {
                 "mounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountDTO"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.MountDTO"
                     }
                 },
                 "warnings": {
@@ -6375,13 +7077,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.NetworkListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.NetworkListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.NetworkResponse"
                     }
                 },
                 "page": {
@@ -6395,7 +7097,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.NetworkResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.NetworkResponse": {
             "type": "object",
             "properties": {
                 "attachable": {
@@ -6430,7 +7132,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.NodeDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.NodeDTO": {
             "type": "object",
             "properties": {
                 "addr": {
@@ -6472,13 +7174,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.NodeHealthResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.NodeHealthResponse": {
             "type": "object",
             "properties": {
                 "containers": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ContainerHealthResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ContainerHealthResponse"
                     }
                 },
                 "cpus": {
@@ -6492,7 +7194,7 @@ const docTemplate = `{
                     "description": "HostUsage is the node's real host-level usage (whole node, from the agent's\n/proc reading). Present only in agent mode with a recent heartbeat.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.HostUsageDTO"
+                            "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.HostUsageDTO"
                         }
                     ]
                 },
@@ -6527,7 +7229,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.NodeMetricsDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.NodeMetricsDTO": {
             "type": "object",
             "properties": {
                 "cpu_count": {
@@ -6544,7 +7246,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO": {
             "type": "object",
             "properties": {
                 "constraints": {
@@ -6571,7 +7273,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.PortDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.PortDTO": {
             "type": "object",
             "properties": {
                 "mode": {
@@ -6592,18 +7294,18 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.PortsResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.PortsResponse": {
             "type": "object",
             "properties": {
                 "ports": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortDTO"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PortDTO"
                     }
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.RefreshRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.RefreshRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -6614,7 +7316,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO": {
             "type": "object",
             "properties": {
                 "cpu_limit": {
@@ -6637,7 +7339,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.RestoreConfigRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.RestoreConfigRequest": {
             "type": "object",
             "properties": {
                 "comment": {
@@ -6646,11 +7348,11 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.RollbackResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.RollbackResponse": {
             "type": "object",
             "properties": {
                 "deployment": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.DeploymentResponse"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.DeploymentResponse"
                 },
                 "warnings": {
                     "type": "array",
@@ -6660,7 +7362,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.RotateSecretRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.RotateSecretRequest": {
             "type": "object",
             "required": [
                 "value"
@@ -6671,13 +7373,29 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SecretListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ScopeDTO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"cluster\" | \"hive\"",
+                    "type": "string"
+                },
+                "verb": {
+                    "description": "\"read\" | \"write\" | \"manage\"",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SecretListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SecretResponse"
                     }
                 },
                 "page": {
@@ -6691,7 +7409,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SecretResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SecretResponse": {
             "type": "object",
             "properties": {
                 "checksum": {
@@ -6723,41 +7441,30 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ServiceConfigResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceConfigResponse": {
             "type": "object",
             "properties": {
                 "config_id": {
                     "type": "string"
+                },
+                "gid": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
                 },
                 "target_path": {
                     "type": "string"
+                },
+                "uid": {
+                    "type": "string"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ServiceListResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "size": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ServiceResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListItem": {
             "type": "object",
             "properties": {
                 "cluster_id": {
@@ -6797,13 +7504,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "placement": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO"
+                },
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PortDTO"
+                    }
                 },
                 "replicas": {
                     "type": "integer"
                 },
                 "resources": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO"
                 },
                 "status": {
                     "type": "string"
@@ -6815,16 +7528,107 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "update_config": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
                 },
                 "updated_at": {
                     "type": "string"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ServiceSecretResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListResponse": {
             "type": "object",
             "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse": {
+            "type": "object",
+            "properties": {
+                "cluster_id": {
+                    "type": "string"
+                },
+                "command": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "entrypoint": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "full_image": {
+                    "type": "string"
+                },
+                "hive_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "placement": {
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO"
+                },
+                "replicas": {
+                    "type": "integer"
+                },
+                "resources": {
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "swarm_service_id": {
+                    "type": "string"
+                },
+                "tag": {
+                    "type": "string"
+                },
+                "update_config": {
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceSecretResponse": {
+            "type": "object",
+            "properties": {
+                "gid": {
+                    "type": "string"
+                },
+                "mode": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -6833,10 +7637,13 @@ const docTemplate = `{
                 },
                 "target_path": {
                     "type": "string"
+                },
+                "uid": {
+                    "type": "string"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ServiceStatusResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceStatusResponse": {
             "type": "object",
             "properties": {
                 "desired": {
@@ -6860,7 +7667,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ServiceSummaryDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceSummaryDTO": {
             "type": "object",
             "properties": {
                 "deployed": {
@@ -6877,51 +7684,51 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.ServiceTasksResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceTasksResponse": {
             "type": "object",
             "properties": {
                 "tasks": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TaskStateResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TaskStateResponse"
                     }
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SetEnvVarsRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SetEnvVarsRequest": {
             "type": "object",
             "properties": {
                 "vars": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.EnvVarInput"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.EnvVarInput"
                     }
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SetMountsRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SetMountsRequest": {
             "type": "object",
             "properties": {
                 "mounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.MountDTO"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.MountDTO"
                     }
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SetPortsRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SetPortsRequest": {
             "type": "object",
             "properties": {
                 "ports": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PortDTO"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PortDTO"
                     }
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotConfigRef": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotConfigRef": {
             "type": "object",
             "properties": {
                 "checksum": {
@@ -6938,7 +7745,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotDetail": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotDetail": {
             "type": "object",
             "properties": {
                 "command": {
@@ -6950,7 +7757,7 @@ const docTemplate = `{
                 "configs": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotConfigRef"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotConfigRef"
                     }
                 },
                 "description": {
@@ -6965,7 +7772,7 @@ const docTemplate = `{
                 "env_vars": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotEnvVar"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotEnvVar"
                     }
                 },
                 "hive_id": {
@@ -6977,7 +7784,7 @@ const docTemplate = `{
                 "mounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotMount"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotMount"
                     }
                 },
                 "name": {
@@ -6986,7 +7793,7 @@ const docTemplate = `{
                 "networks": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotNetwork"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotNetwork"
                     }
                 },
                 "replicas": {
@@ -6995,7 +7802,7 @@ const docTemplate = `{
                 "secrets": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotSecretRef"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotSecretRef"
                     }
                 },
                 "tag": {
@@ -7003,7 +7810,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotEnvVar": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotEnvVar": {
             "type": "object",
             "properties": {
                 "is_secret": {
@@ -7018,13 +7825,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotResponse"
                     }
                 },
                 "page": {
@@ -7038,7 +7845,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotMount": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotMount": {
             "type": "object",
             "properties": {
                 "read_only": {
@@ -7055,7 +7862,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotNetwork": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotNetwork": {
             "type": "object",
             "properties": {
                 "name": {
@@ -7066,7 +7873,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -7076,7 +7883,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "detail": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotDetail"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotDetail"
                 },
                 "id": {
                     "type": "string"
@@ -7091,11 +7898,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "summary": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.SnapshotSummary"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotSummary"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotSecretRef": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotSecretRef": {
             "type": "object",
             "properties": {
                 "checksum": {
@@ -7113,7 +7920,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SnapshotSummary": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SnapshotSummary": {
             "type": "object",
             "properties": {
                 "config_count": {
@@ -7139,7 +7946,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SwarmNetworkInfo": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SwarmNetworkInfo": {
             "type": "object",
             "properties": {
                 "driver": {
@@ -7159,7 +7966,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.SwarmVolumeInfo": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.SwarmVolumeInfo": {
             "type": "object",
             "properties": {
                 "driver": {
@@ -7176,7 +7983,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.TaskNetworkDetail": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.TaskNetworkDetail": {
             "type": "object",
             "properties": {
                 "address": {
@@ -7187,7 +7994,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.TaskStateResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.TaskStateResponse": {
             "type": "object",
             "properties": {
                 "container_id": {
@@ -7220,7 +8027,7 @@ const docTemplate = `{
                 "networks": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TaskNetworkDetail"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TaskNetworkDetail"
                     }
                 },
                 "node": {
@@ -7237,13 +8044,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.TemplateListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateResponse"
                     }
                 },
                 "page": {
@@ -7257,7 +8064,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.TemplateResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -7279,7 +8086,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "spec": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateSpecDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateSpecDTO"
                 },
                 "updated_at": {
                     "type": "string"
@@ -7289,7 +8096,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.TemplateSpecDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateSpecDTO": {
             "type": "object",
             "required": [
                 "image"
@@ -7306,25 +8113,25 @@ const docTemplate = `{
                     }
                 },
                 "placement": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO"
                 },
                 "replicas": {
                     "type": "integer",
                     "example": 2
                 },
                 "resources": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO"
                 },
                 "tag": {
                     "type": "string",
                     "example": "1.25"
                 },
                 "update_config": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.TokenResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.TokenResponse": {
             "type": "object",
             "properties": {
                 "access_expires_at": {
@@ -7341,7 +8148,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.UpdateClusterRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateClusterRequest": {
             "type": "object",
             "properties": {
                 "ca_cert": {
@@ -7367,7 +8174,30 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigAttachmentRequest": {
+            "type": "object",
+            "properties": {
+                "gid": {
+                    "type": "string",
+                    "example": "101"
+                },
+                "mode": {
+                    "description": "Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or\nsend 0 to keep the default 0444 (288 in decimal).",
+                    "type": "integer",
+                    "example": 288
+                },
+                "target_path": {
+                    "type": "string",
+                    "example": "/etc/nginx/nginx.conf"
+                },
+                "uid": {
+                    "description": "UID and GID own the mounted file. Leave them empty to let the orchestrator\ndecide (root); \"0\" is root chosen deliberately. Named users are rejected —\nthe container runtime only understands numeric ids.",
+                    "type": "string",
+                    "example": "101"
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO": {
             "type": "object",
             "properties": {
                 "delay_seconds": {
@@ -7398,7 +8228,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.UpdateHiveRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateHiveRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -7416,7 +8246,30 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.UpdateServiceRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateSecretAttachmentRequest": {
+            "type": "object",
+            "properties": {
+                "gid": {
+                    "type": "string",
+                    "example": "101"
+                },
+                "mode": {
+                    "description": "Mode holds permission bits only (0000–0777, decimal in JSON). Omit it or\nsend 0 to keep the default 0444 (288 in decimal).",
+                    "type": "integer",
+                    "example": 288
+                },
+                "target_path": {
+                    "type": "string",
+                    "example": "/run/secrets/db_password"
+                },
+                "uid": {
+                    "description": "UID and GID own the mounted file. Leave them empty to let the orchestrator\ndecide (root); \"0\" is root chosen deliberately. Named users are rejected —\nthe container runtime only understands numeric ids.",
+                    "type": "string",
+                    "example": "101"
+                }
+            }
+        },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateServiceRequest": {
             "type": "object",
             "properties": {
                 "command": {
@@ -7438,23 +8291,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "placement": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.PlacementDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO"
                 },
                 "replicas": {
                     "type": "integer"
                 },
                 "resources": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.ResourcesDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO"
                 },
                 "tag": {
                     "type": "string"
                 },
                 "update_config": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.UpdateTemplateRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateTemplateRequest": {
             "type": "object",
             "properties": {
                 "description": {
@@ -7467,11 +8320,11 @@ const docTemplate = `{
                     }
                 },
                 "spec": {
-                    "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.TemplateSpecDTO"
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.TemplateSpecDTO"
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.UpdateUserRequest": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "active": {
@@ -7485,13 +8338,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.UserListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UserListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.UserResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UserResponse"
                     }
                 },
                 "page": {
@@ -7505,7 +8358,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.UserResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.UserResponse": {
             "type": "object",
             "properties": {
                 "active": {
@@ -7528,13 +8381,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.VolumeListResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.VolumeListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.VolumeResponse"
                     }
                 },
                 "page": {
@@ -7548,7 +8401,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_orange_hivemind_internal_adapters_api_dto.VolumeResponse": {
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.VolumeResponse": {
             "type": "object",
             "properties": {
                 "cluster_id": {

@@ -18,7 +18,7 @@ type ConfigRepository struct{ db *gorm.DB }
 func NewConfigRepository(db *gorm.DB) *ConfigRepository { return &ConfigRepository{db: db} }
 
 func (r *ConfigRepository) Save(ctx context.Context, c *config.Config, v *config.ConfigVersion) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(configToModel(c)).Error; err != nil {
 			if errors.Is(err, gorm.ErrDuplicatedKey) {
 				return fmt.Errorf("%w: config name %q already exists", domainerrors.ErrConflict, c.Name)
@@ -34,7 +34,7 @@ func (r *ConfigRepository) Save(ctx context.Context, c *config.Config, v *config
 
 func (r *ConfigRepository) FindByID(ctx context.Context, id uuid.UUID) (*config.Config, error) {
 	var m configModel
-	err := r.db.WithContext(ctx).Where("id = ?", id.String()).First(&m).Error
+	err := dbFor(ctx, r.db).Where("id = ?", id.String()).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, domainerrors.ErrNotFound
 	}
@@ -46,7 +46,7 @@ func (r *ConfigRepository) FindByID(ctx context.Context, id uuid.UUID) (*config.
 
 func (r *ConfigRepository) ListVersions(ctx context.Context, configID uuid.UUID) ([]*config.ConfigVersion, error) {
 	var models []configVersionModel
-	if err := r.db.WithContext(ctx).
+	if err := dbFor(ctx, r.db).
 		Where("config_id = ?", configID.String()).
 		Order("version DESC").
 		Find(&models).Error; err != nil {
@@ -63,7 +63,7 @@ func (r *ConfigRepository) List(ctx context.Context, clusterID uuid.UUID, p pagi
 	var models []configModel
 	var count int64
 
-	q := scopeACL(scopeCluster(r.db.WithContext(ctx).Model(&configModel{}), clusterID), "")
+	q := scopeACL(scopeCluster(dbFor(ctx, r.db).Model(&configModel{}), clusterID), "")
 	if err := q.Count(&count).Error; err != nil {
 		return nil, 0, fmt.Errorf("count configs: %w", err)
 	}
@@ -80,7 +80,7 @@ func (r *ConfigRepository) List(ctx context.Context, clusterID uuid.UUID, p pagi
 
 // Update adds a new version and bumps the config's current_version.
 func (r *ConfigRepository) Update(ctx context.Context, c *config.Config, newVersion *config.ConfigVersion) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(configToModel(c)).Error; err != nil {
 			return fmt.Errorf("update config: %w", err)
 		}
@@ -91,8 +91,24 @@ func (r *ConfigRepository) Update(ctx context.Context, c *config.Config, newVers
 	})
 }
 
+// SetVersionSwarmID records the id the orchestrator assigned to a config
+// version. Each version is its own Swarm object (configs are immutable there),
+// so the id is stored on the version rather than the config.
+func (r *ConfigRepository) SetVersionSwarmID(ctx context.Context, configID uuid.UUID, version int, swarmID string) error {
+	res := dbFor(ctx, r.db).Model(&configVersionModel{}).
+		Where("config_id = ? AND version = ?", configID.String(), version).
+		Update("swarm_config_id", swarmID)
+	if res.Error != nil {
+		return fmt.Errorf("set config version swarm id: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return domainerrors.ErrNotFound
+	}
+	return nil
+}
+
 func (r *ConfigRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return dbFor(ctx, r.db).Transaction(func(tx *gorm.DB) error {
 		cid := id.String()
 		if err := tx.Where("config_id = ?", cid).Delete(&configVersionModel{}).Error; err != nil {
 			return fmt.Errorf("delete config versions: %w", err)
@@ -110,7 +126,7 @@ func (r *ConfigRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *ConfigRepository) IsAttachedToService(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Model(&serviceConfigModel{}).
+	if err := dbFor(ctx, r.db).Model(&serviceConfigModel{}).
 		Where("config_id = ?", id.String()).Count(&count).Error; err != nil {
 		return false, fmt.Errorf("check config attachment: %w", err)
 	}

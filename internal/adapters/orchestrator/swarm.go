@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -776,7 +777,9 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 			SecretName: s.SwarmSecretName,
 			File: &swarm.SecretReferenceFileTarget{
 				Name: secretFileName(s.TargetPath, s.Name),
-				Mode: 0o444,
+				UID:  s.UID,
+				GID:  s.GID,
+				Mode: os.FileMode(s.Mode),
 			},
 		})
 	}
@@ -786,7 +789,9 @@ func (o *SwarmOrchestrator) toSwarmSpec(spec ports.ServiceSpec) swarm.ServiceSpe
 			ConfigName: c.SwarmConfigName,
 			File: &swarm.ConfigReferenceFileTarget{
 				Name: defaultStr(c.TargetPath, c.Name),
-				Mode: 0o444,
+				UID:  c.UID,
+				GID:  c.GID,
+				Mode: os.FileMode(c.Mode),
 			},
 		})
 	}
