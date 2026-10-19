@@ -7458,13 +7458,84 @@
                 }
             }
         },
+        "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListItem": {
+            "type": "object",
+            "properties": {
+                "cluster_id": {
+                    "type": "string"
+                },
+                "command": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "entrypoint": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "full_image": {
+                    "type": "string"
+                },
+                "hive_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "placement": {
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO"
+                },
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PortDTO"
+                    }
+                },
+                "replicas": {
+                    "type": "integer"
+                },
+                "resources": {
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "swarm_service_id": {
+                    "type": "string"
+                },
+                "tag": {
+                    "type": "string"
+                },
+                "update_config": {
+                    "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse"
+                        "$ref": "#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListItem"
                     }
                 },
                 "page": {

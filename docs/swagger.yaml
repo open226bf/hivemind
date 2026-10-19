@@ -1076,11 +1076,58 @@ definitions:
       uid:
         type: string
     type: object
+  github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListItem:
+    properties:
+      cluster_id:
+        type: string
+      command:
+        items:
+          type: string
+        type: array
+      created_at:
+        type: string
+      description:
+        type: string
+      entrypoint:
+        items:
+          type: string
+        type: array
+      full_image:
+        type: string
+      hive_id:
+        type: string
+      id:
+        type: string
+      image:
+        type: string
+      name:
+        type: string
+      placement:
+        $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PlacementDTO'
+      ports:
+        items:
+          $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.PortDTO'
+        type: array
+      replicas:
+        type: integer
+      resources:
+        $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ResourcesDTO'
+      status:
+        type: string
+      swarm_service_id:
+        type: string
+      tag:
+        type: string
+      update_config:
+        $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.UpdateConfigDTO'
+      updated_at:
+        type: string
+    type: object
   github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceResponse'
+          $ref: '#/definitions/github_com_open226bf_hivemind_internal_adapters_api_dto.ServiceListItem'
         type: array
       page:
         type: integer
