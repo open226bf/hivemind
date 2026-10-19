@@ -123,6 +123,10 @@ type ServiceRepository interface {
 	// Published ports (atomic replacement)
 	SetPorts(ctx context.Context, serviceID uuid.UUID, ports []service.Port) error
 	GetPorts(ctx context.Context, serviceID uuid.UUID) ([]service.Port, error)
+	// GetPortsByServices reads the ports of many services in one query, so a list
+	// page costs one round trip rather than one per row. A service without ports
+	// has no entry in the map.
+	GetPortsByServices(ctx context.Context, serviceIDs []uuid.UUID) (map[uuid.UUID][]service.Port, error)
 	// CountMountsByVolumeName returns how many service mounts reference a named
 	// volume — used to refuse deletion of an in-use volume.
 	CountMountsByVolumeName(ctx context.Context, name string) (int64, error)

@@ -99,14 +99,25 @@ func (h *ServiceHandler) List(c *gin.Context) {
 		return
 	}
 
+	// One query for the whole page: the table shows every row's published ports.
+	byService, err := h.svc.PortsFor(c.Request.Context(), items)
+	if err != nil {
+		dto.Abort(c, http.StatusInternalServerError, dto.CodeInternal, "failed to list services")
+		return
+	}
+
 	resp := dto.ServiceListResponse{
-		Items: make([]dto.ServiceResponse, len(items)),
+		Items: make([]dto.ServiceListItem, len(items)),
 		Total: total,
 		Page:  page.Number,
 		Size:  page.Size,
 	}
 	for i, s := range items {
-		resp.Items[i] = toServiceResponse(s)
+		resp.Items[i] = dto.ServiceListItem{
+			ServiceResponse: toServiceResponse(s),
+			// Never nil: the client iterates it, and null is not an empty list.
+			Ports: toPortsResponse(byService[s.ID]).Ports,
+		}
 	}
 	c.JSON(http.StatusOK, resp)
 }

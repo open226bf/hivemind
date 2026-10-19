@@ -487,6 +487,37 @@ func (r *ServiceRepository) GetPorts(ctx context.Context, serviceID uuid.UUID) (
 	return out, nil
 }
 
+func (r *ServiceRepository) GetPortsByServices(ctx context.Context, serviceIDs []uuid.UUID) (map[uuid.UUID][]service.Port, error) {
+	out := make(map[uuid.UUID][]service.Port, len(serviceIDs))
+	if len(serviceIDs) == 0 {
+		return out, nil
+	}
+	ids := make([]string, len(serviceIDs))
+	for i, id := range serviceIDs {
+		ids[i] = id.String()
+	}
+	var models []servicePortModel
+	if err := dbFor(ctx, r.db).
+		Where("service_id IN ?", ids).
+		Order("service_id ASC, position ASC").
+		Find(&models).Error; err != nil {
+		return nil, fmt.Errorf("get ports by services: %w", err)
+	}
+	for _, m := range models {
+		id, err := uuid.Parse(m.ServiceID)
+		if err != nil {
+			return nil, fmt.Errorf("get ports by services: bad service id %q: %w", m.ServiceID, err)
+		}
+		out[id] = append(out[id], service.Port{
+			TargetPort:    m.TargetPort,
+			PublishedPort: m.PublishedPort,
+			Protocol:      m.Protocol,
+			Mode:          m.Mode,
+		})
+	}
+	return out, nil
+}
+
 func (r *ServiceRepository) CountMountsByVolumeName(ctx context.Context, name string) (int64, error) {
 	var count int64
 	if err := dbFor(ctx, r.db).Model(&serviceMountModel{}).

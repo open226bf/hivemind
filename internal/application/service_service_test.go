@@ -221,6 +221,15 @@ func (r *fakeServiceRepo) SetPorts(_ context.Context, serviceID uuid.UUID, p []s
 func (r *fakeServiceRepo) GetPorts(_ context.Context, serviceID uuid.UUID) ([]service.Port, error) {
 	return r.ports[serviceID], nil
 }
+func (r *fakeServiceRepo) GetPortsByServices(_ context.Context, ids []uuid.UUID) (map[uuid.UUID][]service.Port, error) {
+	out := map[uuid.UUID][]service.Port{}
+	for _, id := range ids {
+		if p := r.ports[id]; len(p) > 0 {
+			out[id] = p
+		}
+	}
+	return out, nil
+}
 func (r *fakeServiceRepo) CountMountsByVolumeName(_ context.Context, name string) (int64, error) {
 	var n int64
 	for _, ms := range r.mounts {
@@ -667,4 +676,25 @@ func TestServiceDelete_NotFound(t *testing.T) {
 	svc := newServiceSvc(newFakeServiceRepo())
 	err := svc.Delete(context.Background(), uuid.New())
 	assert.ErrorIs(t, err, domainerrors.ErrNotFound)
+}
+
+func TestServicePortsFor_KeysPortsByService(t *testing.T) {
+	repo := newFakeServiceRepo()
+	svc := newServiceSvc(repo)
+	web, err := svc.Create(context.Background(), application.CreateServiceInput{Name: "web", Image: "nginx"})
+	require.NoError(t, err)
+	worker, err := svc.Create(context.Background(), application.CreateServiceInput{Name: "worker", Image: "busybox"})
+	require.NoError(t, err)
+	_, err = svc.SetPorts(context.Background(), web.ID, []service.Port{
+		{TargetPort: 80, PublishedPort: 8080, Protocol: "tcp", Mode: "ingress"},
+	})
+	require.NoError(t, err)
+
+	got, err := svc.PortsFor(context.Background(), []*service.Service{web, worker})
+
+	require.NoError(t, err)
+	require.Len(t, got[web.ID], 1)
+	assert.Equal(t, uint32(8080), got[web.ID][0].PublishedPort)
+	_, present := got[worker.ID]
+	assert.False(t, present, "a service without ports has no entry")
 }
